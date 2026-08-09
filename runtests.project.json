@@ -1,5 +1,9 @@
 {
 	"name": "Nightfall",
+	"globIgnorePaths": [
+		"src/**/*.server.lua",
+		"src/**/*.client.lua"
+	],
 	"tree": {
 		"$className": "Folder",
 		"Src": {
