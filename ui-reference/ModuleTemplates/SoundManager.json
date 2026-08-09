@@ -1,0 +1,223 @@
+{
+  "Sounds": {
+    "Children": [
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1336149560",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "Damage",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1336157251",
+          "Looped": false,
+          "PlaybackSpeed": 1.7999999523162842,
+          "Volume": 0.5
+        },
+        "Name": "SelectUnit",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1336204035",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "DataBattleLoop1",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1336204129",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "DataBattleLoop2",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1337579870",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "DataBattleLoop3",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1337580172",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "DataBattleLoop4",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1337575761",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.699999988079071
+        },
+        "Name": "MoveUnitBroken",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1337731028",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "LoseBattle",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1347506109",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "GrabCredit",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1347535735",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "MoveUnit",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1347543844",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "WinBattle",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1347499378",
+          "Looped": true,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "MainBackgroundLoop",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1336184405",
+          "Looped": false,
+          "PlaybackSpeed": 1.75,
+          "Volume": 0.5
+        },
+        "Name": "SelectNode",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://130840811",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "ErrorSound",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "Volume": 1
+        },
+        "Name": "MusicGroup",
+        "ClassName": "SoundGroup"
+      },
+      {
+        "Properties": {
+          "Volume": 1
+        },
+        "Name": "SoundEffectGroup",
+        "ClassName": "SoundGroup"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1413403674",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "EnterLuckMonkey",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1413807128",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "EnterCelularAutoma",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1413807621",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "EnterDisarray",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1413808051",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "EnterDrDonut",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1413808367",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "EnterPED",
+        "ClassName": "Sound"
+      },
+      {
+        "Properties": {
+          "SoundId": "rbxassetid://1413809028",
+          "Looped": false,
+          "PlaybackSpeed": 1,
+          "Volume": 0.5
+        },
+        "Name": "EnterPharmhaus",
+        "ClassName": "Sound"
+      }
+    ],
+    "Properties": [],
+    "Name": "Sounds",
+    "ClassName": "Folder"
+  }
+}

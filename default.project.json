@@ -1,0 +1,33 @@
+{
+	"name": "Nightfall",
+	"globIgnorePaths": [
+		"**/*.spec.lua"
+	],
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedStorage": {
+			"$path": "src/shared",
+			"$ignoreUnknownInstances": true,
+			"Packages": {
+				"$path": "Packages"
+			}
+		},
+		"ServerScriptService": {
+			"$path": "src/server",
+			"$ignoreUnknownInstances": true
+		},
+		"ReplicatedFirst": {
+			"$ignoreUnknownInstances": true,
+			"BOOTSTRAP": {
+				"$path": "src/first/BOOTSTRAP.client.lua"
+			}
+		},
+		"StarterPlayer": {
+			"$ignoreUnknownInstances": true,
+			"StarterPlayerScripts": {
+				"$path": "src/client",
+				"$ignoreUnknownInstances": true
+			}
+		}
+	}
+}

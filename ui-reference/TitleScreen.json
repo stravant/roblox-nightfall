@@ -1,0 +1,205 @@
+{
+  "Children": [
+    {
+      "Children": [
+        {
+          "Children": [
+            {
+              "Properties": {
+                "LayoutOrder": 0,
+                "Active": false,
+                "Selectable": false,
+                "AnchorPoint": "Vector2(0.5, 0)",
+                "SizeConstraint": "Enum.SizeConstraint.RelativeXY",
+                "ZIndex": 1,
+                "AutomaticSize": "Enum.AutomaticSize.None",
+                "Size": "UDim2({0, 3000}, {0, 1000})",
+                "ClipsDescendants": false,
+                "BorderColor3": "Color3(0.105882, 0.164706, 0.207843)",
+                "Rotation": 0,
+                "Transparency": 0.800000011920929,
+                "BackgroundTransparency": 0.800000011920929,
+                "Position": "UDim2({0.5, 0}, {0.5, 0})",
+                "Interactable": true,
+                "Visible": true,
+                "BorderSizePixel": 0,
+                "BackgroundColor3": "Color3(0, 0, 0)"
+              },
+              "Name": "Frame",
+              "ClassName": "Frame"
+            }
+          ],
+          "Properties": {
+            "LayoutOrder": 0,
+            "Active": false,
+            "Selectable": false,
+            "AnchorPoint": "Vector2(0, 0)",
+            "SizeConstraint": "Enum.SizeConstraint.RelativeXY",
+            "ZIndex": 1,
+            "AutomaticSize": "Enum.AutomaticSize.None",
+            "Size": "UDim2({0, 0}, {0, 0})",
+            "ClipsDescendants": false,
+            "BorderColor3": "Color3(0.105882, 0.164706, 0.207843)",
+            "Rotation": -7,
+            "Transparency": 0,
+            "BackgroundTransparency": 0,
+            "Position": "UDim2({0.5, 60}, {0.5, 5})",
+            "Interactable": true,
+            "Visible": true,
+            "BorderSizePixel": 0,
+            "BackgroundColor3": "Color3(1, 1, 1)"
+          },
+          "Name": "Frame",
+          "ClassName": "Frame"
+        },
+        {
+          "Children": [
+            {
+              "Properties": {
+                "LayoutOrder": 0,
+                "TextWrapped": false,
+                "LineHeight": 1,
+                "Active": false,
+                "TextTransparency": 0,
+                "Interactable": true,
+                "TextStrokeTransparency": 0.800000011920929,
+                "AnchorPoint": "Vector2(0.5, 0)",
+                "Selectable": false,
+                "Transparency": 1,
+                "TextColor3": "Color3(0, 1, 0.666667)",
+                "SizeConstraint": "Enum.SizeConstraint.RelativeXY",
+                "ZIndex": 1,
+                "AutomaticSize": "Enum.AutomaticSize.None",
+                "Size": "UDim2({0, 400}, {0, 50})",
+                "TextStrokeColor3": "Color3(0, 0, 0)",
+                "RichText": false,
+                "TextXAlignment": "Enum.TextXAlignment.Center",
+                "ClipsDescendants": false,
+                "BorderColor3": "Color3(0.105882, 0.164706, 0.207843)",
+                "Text": "Loading: 0%",
+                "TextSize": 32,
+                "BorderSizePixel": 1,
+                "Rotation": 0,
+                "Font": "Enum.Font.Code",
+                "BackgroundTransparency": 1,
+                "Position": "UDim2({0.5, 0}, {0.75, 0})",
+                "Visible": true,
+                "TextYAlignment": "Enum.TextYAlignment.Center",
+                "TextScaled": false,
+                "BackgroundColor3": "Color3(1, 1, 1)"
+              },
+              "Name": "LoadingText",
+              "ClassName": "TextLabel"
+            }
+          ],
+          "Properties": {
+            "LayoutOrder": 0,
+            "ImageTransparency": 0,
+            "Selectable": false,
+            "AnchorPoint": "Vector2(0.5, 0.5)",
+            "Image": "rbxassetid://1367049921",
+            "TileSize": "UDim2({1, 0}, {1, 0})",
+            "ImageRectSize": "Vector2(0, 0)",
+            "SizeConstraint": "Enum.SizeConstraint.RelativeXY",
+            "ZIndex": 2,
+            "AutomaticSize": "Enum.AutomaticSize.None",
+            "Size": "UDim2({0, 640}, {0, 480})",
+            "Interactable": true,
+            "ScaleType": "Enum.ScaleType.Stretch",
+            "Active": false,
+            "ClipsDescendants": false,
+            "BorderColor3": "Color3(0.105882, 0.164706, 0.207843)",
+            "Transparency": 1,
+            "SliceCenter": "Rect(0, 0, 0, 0)",
+            "Visible": true,
+            "Rotation": 0,
+            "ImageRectOffset": "Vector2(0, 0)",
+            "BackgroundTransparency": 1,
+            "Position": "UDim2({0.5, 0}, {0.5, -20})",
+            "SliceScale": 1,
+            "ImageColor3": "Color3(1, 1, 1)",
+            "BorderSizePixel": 1,
+            "BackgroundColor3": "Color3(1, 1, 1)"
+          },
+          "Name": "TitleImage",
+          "ClassName": "ImageLabel"
+        },
+        {
+          "Properties": {
+            "LayoutOrder": 0,
+            "Modal": false,
+            "ImageTransparency": 0,
+            "Selectable": true,
+            "Interactable": true,
+            "Active": true,
+            "Transparency": 1,
+            "AnchorPoint": "Vector2(0, 0)",
+            "Image": "",
+            "TileSize": "UDim2({1, 0}, {1, 0})",
+            "ImageRectSize": "Vector2(0, 0)",
+            "SizeConstraint": "Enum.SizeConstraint.RelativeXY",
+            "ZIndex": 3,
+            "AutomaticSize": "Enum.AutomaticSize.None",
+            "Size": "UDim2({1, 0}, {1, 0})",
+            "AutoButtonColor": true,
+            "ScaleType": "Enum.ScaleType.Stretch",
+            "Visible": true,
+            "ClipsDescendants": false,
+            "BorderColor3": "Color3(0.105882, 0.164706, 0.207843)",
+            "HoverImage": "",
+            "SliceCenter": "Rect(0, 0, 0, 0)",
+            "PressedImage": "",
+            "Rotation": 0,
+            "ImageRectOffset": "Vector2(0, 0)",
+            "BackgroundTransparency": 1,
+            "Position": "UDim2({0, 0}, {0, 0})",
+            "SliceScale": 1,
+            "ImageColor3": "Color3(1, 1, 1)",
+            "BorderSizePixel": 1,
+            "BackgroundColor3": "Color3(1, 1, 1)"
+          },
+          "Name": "ClickOverlay",
+          "ClassName": "ImageButton"
+        }
+      ],
+      "Properties": {
+        "LayoutOrder": 0,
+        "Active": true,
+        "Selectable": false,
+        "AnchorPoint": "Vector2(0, 0)",
+        "SizeConstraint": "Enum.SizeConstraint.RelativeXY",
+        "ZIndex": 1,
+        "AutomaticSize": "Enum.AutomaticSize.None",
+        "Size": "UDim2({1, 0}, {1, 0})",
+        "ClipsDescendants": false,
+        "BorderColor3": "Color3(0.105882, 0.164706, 0.207843)",
+        "Rotation": 0,
+        "Transparency": 0,
+        "BackgroundTransparency": 0,
+        "Position": "UDim2({0, 0}, {0, 0})",
+        "Interactable": true,
+        "Visible": true,
+        "BorderSizePixel": 1,
+        "BackgroundColor3": "Color3(0.45098, 0.694118, 0.882353)"
+      },
+      "Name": "Content",
+      "ClassName": "Frame"
+    },
+    {
+      "Properties": {
+        "Value": false
+      },
+      "Name": "PreloadCompleted",
+      "ClassName": "BoolValue"
+    }
+  ],
+  "Properties": {
+    "Enabled": true,
+    "DisplayOrder": 0,
+    "ResetOnSpawn": true,
+    "IgnoreGuiInset": true,
+    "ZIndexBehavior": "Enum.ZIndexBehavior.Sibling"
+  },
+  "Name": "TitleScreen",
+  "ClassName": "ScreenGui"
+}

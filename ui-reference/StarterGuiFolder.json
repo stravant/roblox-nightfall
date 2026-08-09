@@ -1,0 +1,44 @@
+{
+  "Children": [
+    {
+      "Properties": {
+        "LayoutOrder": 0,
+        "Modal": false,
+        "ImageTransparency": 0,
+        "Selectable": true,
+        "Interactable": true,
+        "Active": true,
+        "Transparency": 0,
+        "AnchorPoint": "Vector2(0, 0)",
+        "Image": "rbxassetid://924320031",
+        "TileSize": "UDim2({1, 0}, {1, 0})",
+        "ImageRectSize": "Vector2(0, 0)",
+        "SizeConstraint": "Enum.SizeConstraint.RelativeXY",
+        "ZIndex": 1,
+        "AutomaticSize": "Enum.AutomaticSize.None",
+        "Size": "UDim2({0, 100}, {0, 100})",
+        "AutoButtonColor": true,
+        "ScaleType": "Enum.ScaleType.Stretch",
+        "Visible": true,
+        "ClipsDescendants": false,
+        "BorderColor3": "Color3(0.105882, 0.164706, 0.207843)",
+        "HoverImage": "",
+        "SliceCenter": "Rect(0, 0, 0, 0)",
+        "PressedImage": "",
+        "Rotation": 0,
+        "ImageRectOffset": "Vector2(0, 0)",
+        "BackgroundTransparency": 0,
+        "Position": "UDim2({0, 0}, {0, 0})",
+        "SliceScale": 1,
+        "ImageColor3": "Color3(1, 1, 1)",
+        "BorderSizePixel": 1,
+        "BackgroundColor3": "Color3(1, 1, 1)"
+      },
+      "Name": "Button",
+      "ClassName": "ImageButton"
+    }
+  ],
+  "Properties": [],
+  "Name": "Folder",
+  "ClassName": "Folder"
+}

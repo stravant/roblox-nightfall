@@ -1,0 +1,23 @@
+{
+  "ChildNames": [
+    "ImageLabel (ImageLabel)",
+    "NotificationBox (ImageLabel)",
+    "ErrorBox (ImageLabel)",
+    "Testing (Frame)",
+    "Container (Frame)",
+    "Dialogue (Frame)",
+    "Warez (Frame)",
+    "Netmap (Frame)",
+    "MenuButton (ImageButton)",
+    "MenuMouseCatcher (ImageButton)"
+  ],
+  "Properties": {
+    "Enabled": true,
+    "DisplayOrder": 0,
+    "ResetOnSpawn": true,
+    "IgnoreGuiInset": false,
+    "ZIndexBehavior": "Enum.ZIndexBehavior.Sibling"
+  },
+  "Name": "ScreenGui",
+  "ClassName": "ScreenGui"
+}
