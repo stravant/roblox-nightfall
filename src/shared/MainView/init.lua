@@ -157,6 +157,9 @@ function MainView.new()
 			}),
 			CreditsDisplay = if props.creditsText
 				then e("ImageLabel", {
+					-- Auto-width chain: every level uses offset/automatic
+					-- widths only (a scale-sized child inside an AutomaticSize
+					-- parent measures circularly and overflows the chrome)
 					Name = "CreditsDisplay",
 					LayoutOrder = 5,
 					AutomaticSize = Enum.AutomaticSize.X,
@@ -168,18 +171,26 @@ function MainView.new()
 					ScaleType = Enum.ScaleType.Slice,
 					SliceCenter = Rect.new(16, 24, 16, 24),
 				}, {
+					UIPadding = e("UIPadding", {
+						PaddingLeft = UDim.new(0, 5),
+						PaddingRight = UDim.new(0, 5),
+						PaddingTop = UDim.new(0, 5),
+						PaddingBottom = UDim.new(0, 5),
+					}),
 					Inset = e("ImageLabel", {
 						Name = "Inset",
-						Position = UDim2.new(0, 5, 0, 5),
-						Size = UDim2.new(1, -10, 1, -10),
-						BackgroundTransparency = 1,
 						AutomaticSize = Enum.AutomaticSize.X,
+						Size = UDim2.new(0, 0, 1, 0),
+						BackgroundTransparency = 1,
 						Image = "rbxassetid://1378143823",
 						ScaleType = Enum.ScaleType.Slice,
 						SliceCenter = Rect.new(8, 8, 8, 8),
 					}, {
+						UIPadding = e("UIPadding", {
+							PaddingLeft = UDim.new(0, 8),
+							PaddingRight = UDim.new(0, 8),
+						}),
 						Text = e("TextLabel", {
-							Position = UDim2.new(0, 8, 0, 0),
 							AutomaticSize = Enum.AutomaticSize.X,
 							Size = UDim2.new(0, 0, 1, -1),
 							BackgroundTransparency = 1,
@@ -187,10 +198,6 @@ function MainView.new()
 							TextSize = 20,
 							TextColor3 = Color3.fromRGB(0, 100, 0),
 							Text = props.creditsText,
-						}, {
-							UIPadding = e("UIPadding", {
-								PaddingRight = UDim.new(0, 8),
-							}),
 						}),
 					}),
 				})
