@@ -632,7 +632,9 @@ function GameView.new(gameState, controller, menu, topbar)
 		mUnitInfoView:TutorialHide()
 		local button = mTopbar:GetStartButton()
 		if button then
-			mTutorialArrow:Show(button, 90, UDim2.new(0, 0, 0.5, 0))
+			-- On the right side of the button (the left side sits near the
+			-- Roblox topbar menu), pointing left at it
+			mTutorialArrow:Show(button, -90, UDim2.new(1, 0, 0.5, 0))
 		end
 	end
 	function this:ShowTutorialArrowProgramList(unitId)

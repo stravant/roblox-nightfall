@@ -57,8 +57,9 @@ function MainView.new()
 	mTopbarGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	mTopbarGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 	local mTopbarRoot = StatefulRoot.create(mTopbarGui, function(props)
-		-- One flex row: node name + Start Databattle size to their content on
-		-- the left, a flex-fill spacer pushes the Menu button to the right
+		-- One flex row: the node-name title sizes to its content on the left,
+		-- Start Databattle / Done Turn float centered between the two fill
+		-- spacers, and the Menu button sits at the right
 		return e("Frame", {
 			Name = "TopbarRow",
 			Size = UDim2.new(1, 0, 1, 0),
@@ -93,10 +94,19 @@ function MainView.new()
 					}),
 				})
 				else nil,
+			SpacerLeft = e("Frame", {
+				LayoutOrder = 2,
+				Size = UDim2.new(0, 0, 0, 1),
+				BackgroundTransparency = 1,
+			}, {
+				UIFlexItem = e("UIFlexItem", {
+					FlexMode = Enum.UIFlexMode.Fill,
+				}),
+			}),
 			StartGameButton = if props.startVisible
 				then e("TextButton", {
 					Name = "StartGameButton",
-					LayoutOrder = 2,
+					LayoutOrder = 3,
 					Active = true,
 					AutomaticSize = Enum.AutomaticSize.X,
 					Size = UDim2.new(0, 0, 0, 36),
@@ -120,7 +130,7 @@ function MainView.new()
 			DoneTurnButton = if props.doneTurnVisible
 				then e(WindowsButton, {
 					Name = "DoneTurnButton",
-					LayoutOrder = 2,
+					LayoutOrder = 3,
 					Size = UDim2.new(0, 130, 0, 36),
 					OnClick = props.onDoneTurnClick,
 				}, {
@@ -136,8 +146,8 @@ function MainView.new()
 					}),
 				})
 				else nil,
-			Spacer = e("Frame", {
-				LayoutOrder = 3,
+			SpacerRight = e("Frame", {
+				LayoutOrder = 4,
 				Size = UDim2.new(0, 0, 0, 1),
 				BackgroundTransparency = 1,
 			}, {
@@ -147,7 +157,7 @@ function MainView.new()
 			}),
 			MenuButton = e(WindowsButton, {
 				Name = "MenuButton",
-				LayoutOrder = 4,
+				LayoutOrder = 5,
 				Size = UDim2.new(0, 110, 0, 36),
 				OnClick = props.onMenuClick,
 			}, {

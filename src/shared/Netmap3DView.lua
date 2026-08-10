@@ -515,6 +515,36 @@ function Netmap3DView.new()
 	mHoverHighlight.Enabled = false
 	mHoverHighlight.Parent = mPlayerGui
 
+	-- Touch has no hover, so when the last input was a touch, outline EVERY
+	-- node worth tapping instead: accessible warez shops and unbeaten
+	-- infected nodes
+	local function isInterestingNode(nodeView)
+		if not nodeView.Seen or not LocalPlayerData:CanAccessNode(nodeView.Id) then
+			return false
+		end
+		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
+		return isWarez or not nodeView.Beaten
+	end
+	local function updateTouchHighlights()
+		local touchMode = UserInputService:GetLastInputType() == Enum.UserInputType.Touch
+		local show = touchMode and mGui.Visible and not ModalManager:IsModal()
+		for _, nodeView in pairs(mNodeView) do
+			local want = show and isInterestingNode(nodeView)
+			if want and not nodeView.TouchHighlight then
+				local highlight = Instance.new("Highlight")
+				highlight.FillTransparency = 1
+				highlight.OutlineColor = Color3.new(1, 1, 1)
+				highlight.OutlineTransparency = 0
+				highlight.Adornee = nodeView.VisibleModel
+				highlight.Parent = mPlayerGui
+				nodeView.TouchHighlight = highlight
+			elseif not want and nodeView.TouchHighlight then
+				nodeView.TouchHighlight:Destroy()
+				nodeView.TouchHighlight = nil
+			end
+		end
+	end
+
 	updateHoveredNode = function()
 		if DeviceInfo.Touch then
 			-- Don't show the hover thing on touch devices
@@ -698,6 +728,7 @@ function Netmap3DView.new()
 
 	local function update(dt)
 		updateHoveredNode()
+		updateTouchHighlights()
 		local t = os.clock()
 		animatePopups(t)
 		animateBlinkenlights(t)
@@ -721,6 +752,9 @@ function Netmap3DView.new()
 				this:UpdateCreditDisplay()
 			else
 				mCamera:Uninstall()
+				-- The update loop stops while hidden: clear the touch-mode
+				-- highlights now or they'd linger through the databattle
+				updateTouchHighlights()
 			end
 		end
 	end

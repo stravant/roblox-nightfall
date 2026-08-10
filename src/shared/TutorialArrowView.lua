@@ -54,17 +54,25 @@ local TutorialArrow = {}
 function TutorialArrow.new()
 	local this = {}
 
-	local mGui = Instance.new("Frame")
-	mGui.Name = "TutArrowContainer"
-	mGui.AnchorPoint = Vector2.new(0.5, 0.5)
-	mGui.Size = UDim2.new(0, 100, 0, 100)
-	mGui.BackgroundTransparency = 1
-
-	local mRoot = StatefulRoot.create(mGui, TutorialArrowContent, {
-		rotation = 0,
-	})
-
+	-- The container can be destroyed out from under us: Show may parent it
+	-- into React-rendered UI (e.g. the topbar Start button), and a re-render
+	-- that unmounts that host destroys the container with it. createGui is
+	-- called again to rebuild when Show finds the old container dead.
+	local mGui: Frame
+	local mRoot: StatefulRoot.StatefulRoot
 	local mArrow: ImageLabel? = nil
+	local function createGui()
+		mGui = Instance.new("Frame")
+		mGui.Name = "TutArrowContainer"
+		mGui.AnchorPoint = Vector2.new(0.5, 0.5)
+		mGui.Size = UDim2.new(0, 100, 0, 100)
+		mGui.BackgroundTransparency = 1
+		mRoot = StatefulRoot.create(mGui, TutorialArrowContent, {
+			rotation = 0,
+		})
+		mArrow = nil
+	end
+	createGui()
 
 	local mAnimateCn: RBXScriptConnection? = nil
 	local function mAnimateFunc()
@@ -80,16 +88,25 @@ function TutorialArrow.new()
 	end
 
 	function this:Show(container: Instance, angle: number, position: UDim2)
+		if not pcall(function()
+			mGui.Parent = container
+		end) then
+			-- Old container was destroyed (Parent locked): rebuild it
+			mRoot.unmount()
+			createGui()
+			mGui.Parent = container
+		end
 		mGui.Position = position
 		mRoot.setState({ rotation = angle })
-		mGui.Parent = container
 		if not mAnimateCn then
 			mAnimateCn = RunService.RenderStepped:Connect(mAnimateFunc)
 		end
 	end
 
 	function this:Hide()
-		mGui.Parent = nil
+		pcall(function()
+			mGui.Parent = nil
+		end)
 		if mAnimateCn then
 			mAnimateCn:Disconnect()
 			mAnimateCn = nil
