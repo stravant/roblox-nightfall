@@ -290,8 +290,8 @@ local function BattleHudContent(props: HudState)
 
 	local pane = props.pane
 
-	-- Everything on the left stacks in one column: the unit info window, its
-	-- commands right below it, then the Programs window during setup
+	-- Everything on the left stacks in one column: the Programs window during
+	-- setup, then the unit info window with its commands right below it
 	local commandCount = #props.commands
 	local commandRowHeight = commandCount * 66 + math.max(0, commandCount - 1) * 8
 
@@ -365,7 +365,7 @@ local function BattleHudContent(props: HudState)
 			then windowChrome("Programs", {
 				Name = "ProgramsWindow",
 				Size = UDim2.new(0, 240, 0, 40 * math.max(1, #props.programs) + 78),
-				LayoutOrder = 3,
+				LayoutOrder = 0,
 			}, programItems)
 			else nil,
 		}),
