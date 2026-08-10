@@ -289,9 +289,15 @@ function Netmap3DView.new()
 		updateHoveredNode()
 	end
 
-	local function ensureNodePopup(nodeView, statusText, statusColor)
+	local removeNodePopup
+	-- kind: identity for the popup style; a state change to a different kind
+	-- rebuilds the popup. flash: whether the body text blinks.
+	local function ensureNodePopup(nodeView, kind, titleText, statusText, statusColor, flash)
 		if nodeView.Popup then
-			return
+			if nodeView.Popup.Kind == kind then
+				return
+			end
+			removeNodePopup(nodeView)
 		end
 		local adornee = Instance.new("Part")
 		adornee.Name = "NodePopupAdornee"
@@ -338,7 +344,7 @@ function Netmap3DView.new()
 		title.TextSize = 13
 		title.TextColor3 = Color3.new(1, 1, 1)
 		title.TextXAlignment = Enum.TextXAlignment.Left
-		title.Text = nodeDisplayName(nodeView.Id)
+		title.Text = titleText
 		title.Parent = window
 		local inset = Instance.new("ImageLabel")
 		inset.Position = UDim2.new(0, 5, 0, 20)
@@ -377,12 +383,13 @@ function Netmap3DView.new()
 		end)
 
 		nodeView.Popup = {
+			Kind = kind,
 			Adornee = adornee,
 			Billboard = billboard,
-			FlashLabel = label,
+			FlashLabel = if flash then label else nil,
 		}
 	end
-	local function removeNodePopup(nodeView)
+	removeNodePopup = function(nodeView)
 		if nodeView.Popup then
 			if mPopupHoveredId == nodeView.Id then
 				mPopupHoveredId = nil
@@ -395,7 +402,7 @@ function Netmap3DView.new()
 	local function animatePopups(t)
 		local flash = (t % 0.9) < 0.45
 		for _, nodeView in pairs(mNodeView) do
-			if nodeView.Popup then
+			if nodeView.Popup and nodeView.Popup.FlashLabel then
 				nodeView.Popup.FlashLabel.TextTransparency = flash and 0 or 0.6
 			end
 		end
@@ -413,16 +420,21 @@ function Netmap3DView.new()
 		nodeView.HitArea.CanQuery = nodeView.Seen and LocalPlayerData:CanAccessNode(nodeView.Id)
 		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
 		if nodeView.Seen and not nodeView.Beaten then
-			if isWarez then
-				-- Warez nodes are shops: advertise, don't alarm - and only
-				-- once the player can actually reach them
-				if LocalPlayerData:CanAccessNode(nodeView.Id) then
-					ensureNodePopup(nodeView, "New!", Color3.fromRGB(0, 90, 20))
-				else
-					removeNodePopup(nodeView)
-				end
+			local name = nodeDisplayName(nodeView.Id)
+			if not LocalPlayerData:CanAccessNode(nodeView.Id) then
+				-- Revealed but unreachable: locked, titled with the reason
+				local reason = if not LocalPlayerData:HasLinkToNode(nodeView.Id)
+					then "No Link"
+					else "No Codes"
+				ensureNodePopup(nodeView, "locked:" .. reason, reason,
+					"\u{1F512}", Color3.new(0, 0, 0), false)
+			elseif isWarez then
+				-- Warez nodes are shops: advertise, don't alarm
+				ensureNodePopup(nodeView, "new", name,
+					"New!", Color3.fromRGB(0, 90, 20), true)
 			else
-				ensureNodePopup(nodeView, "\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0))
+				ensureNodePopup(nodeView, "infected", name,
+					"\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0), true)
 			end
 		else
 			removeNodePopup(nodeView)

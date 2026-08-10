@@ -126,6 +126,16 @@ function LocalPlayerData:CanAccessNode(id)
 	end
 end
 
+-- Does the player have a direct link to the node (an adjacent beaten node),
+-- regardless of whether their security level suffices?
+function LocalPlayerData:HasLinkToNode(id)
+	if DebugFlags:HasBeatenAllNodes() then
+		return true
+	else
+		return mNodeInfo[id].Accessible
+	end
+end
+
 -- Add a program to the inventory
 function LocalPlayerData:AddUnit(id)
 	for _, dat in pairs(mUnitInventory) do
