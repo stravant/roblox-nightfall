@@ -21,7 +21,7 @@ function NetmapCamera.new()
 	mCamera.CameraType = Enum.CameraType.Scriptable
 	mCamera.FieldOfView = 10
 	
-	local mZoomLevel = 400
+	local mZoomLevel = 300
 	local MIN_ZOOM = 200
 	local MAX_ZOOM = 500
 	
