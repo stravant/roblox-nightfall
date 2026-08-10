@@ -154,6 +154,10 @@ function BattleCamera.new(config: Config)
 		return mouseHit()
 	end
 
+	function this:HitAt(viewportPos: Vector2): Vector3
+		return viewportHit(viewportPos)
+	end
+
 	function this:Install()
 		mSavedFieldOfView = mCamera.FieldOfView
 		mSavedCameraType = mCamera.CameraType

@@ -47,6 +47,17 @@ mobile, and modernize presentation. Approved direction from Stravant:
       3 neon line layers at y=-12/-34/-70)
 - [x] BattleBoard3D + BattleCamera (board GUI on a SurfaceGui at y=500, straight-down
       camera, wheel/pinch zoom, threshold drag-pan, Tapped -> grid coords)
-- [ ] Floating window chrome + bottom-center command row (unified
-      desktop/mobile; retires UnitInfoViewMobile usage in battle)
-- [ ] Drag-drop upload
+- [x] Floating window chrome + bottom-center command row (BattleHud: one
+      responsive layout; retires UnitInfoView/UnitInfoViewMobile in battle)
+- [x] Drag-drop upload (BattleHud.ProgramDragBegan -> GameView drag session
+      with a ghost icon -> BattleBoard3D:GridAtViewport -> tryUploadProgram;
+      the click-zone-then-click-program flow still works as a fallback;
+      tutorial gates exact placement via GameView:SetOnlyAllowUpload)
+
+## Future polish ideas (not scheduled)
+
+- Make the floating windows literally draggable by their title bars.
+- Bring the warez shop and netmap info panel (still on the old
+  UnitInfoViewMobile / UnitInfoView) into the floating-window system.
+- Show command descriptions as a tooltip/strip when hovering or
+  long-pressing a command row button.

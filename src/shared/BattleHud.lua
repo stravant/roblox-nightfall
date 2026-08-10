@@ -174,6 +174,7 @@ type HudState = {
 	hidden: boolean,
 	onCommandClick: (entry: CommandEntry) -> (),
 	onProgramClick: (id: string) -> (),
+	onProgramPress: (id: string, viewportPos: Vector2) -> (),
 }
 
 local function BattleHudContent(props: HudState)
@@ -223,6 +224,12 @@ local function BattleHudContent(props: HudState)
 			LayoutOrder = i,
 			[React.Event.MouseButton1Click] = function()
 				props.onProgramClick(row.Id)
+			end,
+			[React.Event.InputBegan] = function(_rbx, input: InputObject)
+				if input.UserInputType == Enum.UserInputType.MouseButton1
+					or input.UserInputType == Enum.UserInputType.Touch then
+					props.onProgramPress(row.Id, Vector2.new(input.Position.X, input.Position.Y))
+				end
 			end,
 		}, {
 			Icon = e("ImageLabel", {
@@ -339,6 +346,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 
 	this.UnitSelected = Signal.new()
 	this.CommandSelected = Signal.new()
+	this.ProgramDragBegan = Signal.new() -- (id: string, viewportPos: Vector2)
 
 	local mGui = Instance.new("Frame")
 	mGui.Name = "BattleHud"
@@ -379,6 +387,11 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		onProgramClick = function(id: string)
 			if not mOnlySelectUnit or mOnlySelectUnit == id then
 				this.UnitSelected:fire(id)
+			end
+		end,
+		onProgramPress = function(id: string, viewportPos: Vector2)
+			if mProgramsById[id].Count > 0 and (not mOnlySelectUnit or mOnlySelectUnit == id) then
+				this.ProgramDragBegan:fire(id, viewportPos)
 			end
 		end,
 	})

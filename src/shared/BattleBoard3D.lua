@@ -102,13 +102,26 @@ function BattleBoard3D.new(backgroundImage: string)
 		maxHeight = 160,
 	})
 
-	mCamera.Tapped:connect(function(worldHit: Vector3)
+	local function worldToGrid(worldHit: Vector3): (number?, number?)
 		local gridX = math.floor((worldHit.X - (kCenter.X - boardStudsX / 2)) / kTileStuds) + 1
 		local gridY = math.floor((worldHit.Z - (kCenter.Z - boardStudsZ / 2)) / kTileStuds) + 1
 		if gridX >= 1 and gridX <= Places.PlaceWidth and gridY >= 1 and gridY <= Places.PlaceHeight then
+			return gridX, gridY
+		end
+		return nil, nil
+	end
+
+	mCamera.Tapped:connect(function(worldHit: Vector3)
+		local gridX, gridY = worldToGrid(worldHit)
+		if gridX and gridY then
 			this.Tapped:fire(gridX, gridY)
 		end
 	end)
+
+	-- Which grid square a viewport position is over (nil if off the board)
+	function this:GridAtViewport(viewportPos: Vector2): (number?, number?)
+		return worldToGrid(mCamera:HitAt(viewportPos))
+	end
 
 	function this:GetBoardContainer(): Frame
 		return mBoardContainer

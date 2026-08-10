@@ -794,43 +794,114 @@ function GameView.new(gameState, controller)
 		clearSelection()
 	end
 
-	-- Upload zone handling through unit info view
+	-- Upload a program onto a zone (shared by drag-drop and the click flow).
+	-- Returns true on success.
+	local mOnlyAllowUpload = nil -- {x, y} tutorial restriction
+	function this:SetOnlyAllowUpload(x, y)
+		if x then
+			mOnlyAllowUpload = { x = x, y = y }
+		else
+			mOnlyAllowUpload = nil
+		end
+	end
+	local function isUploadZone(x, y)
+		for _, zone in pairs(mUploadZones) do
+			if zone.x == x and zone.y == y then
+				return true
+			end
+		end
+		return false
+	end
+	local function tryUploadProgram(id, x, y)
+		if gameState:IsGameStarted() then
+			return false
+		end
+		if not isUploadZone(x, y) then
+			return false
+		end
+		if mOnlyAllowUpload and (mOnlyAllowUpload.x ~= x or mOnlyAllowUpload.y ~= y) then
+			return false
+		end
+		if mUnitInfoView:GetCount(id) <= 0 then
+			return false
+		end
+
+		local currentUnit = gameState:GetUnit(x, y)
+
+		-- Is there a unit of that type already there?
+		if currentUnit and currentUnit.Definition.Id == id then
+			return false -- don't need to do anything
+		end
+
+		-- First return the unit that was uploaded there before if there is one
+		if currentUnit then
+			mUnitInfoView:UpdateCount(currentUnit.Definition.Id, 1)
+		end
+
+		-- Now upload the new unit
+		mUnitInfoView:UpdateCount(id, -1)
+		gameState:UploadUnit(x, y, Scripts[id])
+
+		-- Show the start game button now that we have at least one unit uploaded
+		root().setState({ startGameVisible = true })
+		return true
+	end
+
+	-- Upload zone handling through the HUD (click a zone, then a program)
 	mUnitInfoView.UnitSelected:connect(function(id)
-		if mSelectionType == 'upload' and mUnitInfoView:GetCount(id) > 0 then
-			-- We should upload a unit there
-			local currentUnit = gameState:GetUnit(mSelection.x, mSelection.y)
-
-			-- Is there a unit of that type already there?
-			if currentUnit and currentUnit.Definition.Id == id then
-				return -- don't need to do anything
+		if mSelectionType == 'upload' then
+			if not tryUploadProgram(id, mSelection.x, mSelection.y) then
+				return
 			end
-
-			-- Do we have any of the chosen unit available?
-			local foundValidFlag = false
-			for _, info in pairs(gameState:GetAvailableUnits()) do
-				if info.Id == id then
-					if info.Count > 0 then
-						foundValidFlag = true
-					end
-					break
-				end
-			end
-
-			-- First return the unit that was uploaded there before if there is one
-			if currentUnit then
-				mUnitInfoView:UpdateCount(currentUnit.Definition.Id, 1)
-			end
-
-			-- Now upload the new unit
-			mUnitInfoView:UpdateCount(id, -1)
-			gameState:UploadUnit(mSelection.x, mSelection.y, Scripts[id])
-
-			-- Show the start game button now that we have at least one unit uploaded
-			root().setState({ startGameVisible = true })
 		else
 			-- Deselect the current selection if there is one
 			clearSelection()
 		end
+	end)
+
+	-- Drag-drop upload: drag a program row out of the Programs window onto an
+	-- upload zone on the board
+	local UserInputService = game:GetService('UserInputService')
+	mUnitInfoView.ProgramDragBegan:connect(function(id, viewportPos)
+		if gameState:IsGameStarted() or mDestroyed then
+			return
+		end
+		local def = Scripts[id]
+
+		local ghost = Instance.new("ImageLabel")
+		ghost.Name = "DragGhost"
+		ghost.AnchorPoint = Vector2.new(0.5, 0.5)
+		ghost.Size = UDim2.new(0, 48, 0, 48)
+		ghost.Position = UDim2.new(0, viewportPos.X, 0, viewportPos.Y)
+		ghost.BackgroundColor3 = def.Color
+		ghost.BackgroundTransparency = 0.3
+		ghost.BorderColor3 = Color3.new(0, 0, 0)
+		ghost.Image = def.Image
+		ghost.ImageTransparency = 0.2
+		ghost.ZIndex = 10
+		ghost.Parent = mGui
+
+		local moveCn, endCn
+		moveCn = UserInputService.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement
+				or input.UserInputType == Enum.UserInputType.Touch then
+				ghost.Position = UDim2.new(0, input.Position.X, 0, input.Position.Y)
+			end
+		end)
+		endCn = UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType ~= Enum.UserInputType.MouseButton1
+				and input.UserInputType ~= Enum.UserInputType.Touch then
+				return
+			end
+			moveCn:Disconnect()
+			endCn:Disconnect()
+			ghost:Destroy()
+			local x, y = mBattleBoard:GridAtViewport(Vector2.new(input.Position.X, input.Position.Y))
+			if x and y and tryUploadProgram(id, x, y) then
+				SoundManager:Play('SelectUnit')
+				mUnitInfoView:SetSelectedUnitDefinition(id)
+			end
+		end)
 	end)
 	mUnitInfoView.CommandSelected:connect(function(commandId)
 		if mSelectionType == 'upload' then
