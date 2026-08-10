@@ -75,8 +75,6 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, onBattleWon)
 	tutorialDialogue:GetGui().Parent = gameView:getGui()
 
 	gameView:getGui().Position = UDim2.new(0.5, 0, 0.5, 0)
-	gameView:getGui().Board.AnchorPoint = Vector2.new(0, 0)
-	gameView:getGui().Board.Position = UDim2.new(0, 160, 0, 10)
 	gameView:getGui().Parent = container
 	netmapView:GetGui().Visible = false
 	SoundManager:Stop('MainBackgroundLoop')

@@ -1,0 +1,189 @@
+--!strict
+-- Camera controller for the 3D databattle view. Straight top-down (screen-up
+-- is world -Z, NOT isometric), zoom = camera height driven by scroll wheel /
+-- pinch, pan by dragging (mouse or touch) with tap-vs-drag disambiguated by a
+-- small movement threshold. Fires Tapped with the world-space point on the
+-- board plane. Input that UIs already handled (gameProcessedEvent) is
+-- ignored, so clicks on the floating windows never reach the board.
+
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local Signal = require(game.ReplicatedStorage.Signal)
+
+local kBindName = "BattleCameraBind"
+local kFieldOfView = 20
+local kDragThresholdPx = 10
+
+export type Config = {
+	surfaceY: number, -- world Y of the board surface
+	center: Vector2, -- board center in world XZ
+	panExtents: Vector2, -- how far the focus point may wander from center (XZ)
+	minHeight: number,
+	maxHeight: number,
+}
+
+local BattleCamera = {}
+
+function BattleCamera.new(config: Config)
+	local this = {}
+
+	this.Tapped = Signal.new() -- (worldHitPoint: Vector3)
+
+	local mCamera = workspace.CurrentCamera
+	local mSavedFieldOfView = mCamera.FieldOfView
+	local mSavedCameraType = mCamera.CameraType
+
+	local mHeight = config.maxHeight
+	local mFocus = Vector2.new(config.center.X, config.center.Y)
+	local mConnections: { RBXScriptConnection } = {}
+
+	local function applyCamera()
+		local eye = Vector3.new(mFocus.X, config.surfaceY + mHeight, mFocus.Y)
+		local target = Vector3.new(mFocus.X, config.surfaceY, mFocus.Y)
+		mCamera.CFrame = CFrame.lookAt(eye, target, Vector3.new(0, 0, -1))
+		mCamera.Focus = CFrame.new(target)
+	end
+
+	local function setFocus(focus: Vector2)
+		mFocus = Vector2.new(
+			math.clamp(focus.X, config.center.X - config.panExtents.X, config.center.X + config.panExtents.X),
+			math.clamp(focus.Y, config.center.Y - config.panExtents.Y, config.center.Y + config.panExtents.Y))
+	end
+
+	local function setHeight(height: number)
+		mHeight = math.clamp(height, config.minHeight, config.maxHeight)
+	end
+
+	-- Where a viewport ray hits the board plane, in world space
+	local function viewportHit(screenPos: Vector2): Vector3
+		local unitRay = mCamera:ViewportPointToRay(screenPos.X, screenPos.Y)
+		local scale = (config.surfaceY - unitRay.Origin.Y) / unitRay.Direction.Y
+		return unitRay.Origin + unitRay.Direction * scale
+	end
+
+	local function mouseHit(): Vector3
+		local mouseAt = UserInputService:GetMouseLocation()
+		return viewportHit(Vector2.new(mouseAt.X, mouseAt.Y))
+	end
+
+	-- Drag state
+	local mDown = false
+	local mDownScreenPos = Vector2.new()
+	local mDragging = false
+	local mDragStartHit = Vector3.new()
+	local mPinching = false
+	local mPinchStartHeight = mHeight
+
+	table.insert(mConnections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then
+			return
+		end
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			mDown = true
+			mDragging = false
+			mDownScreenPos = Vector2.new(input.Position.X, input.Position.Y)
+			mDragStartHit = viewportHit(mDownScreenPos)
+		end
+	end))
+
+	table.insert(mConnections, UserInputService.InputChanged:Connect(function(input, gameProcessed)
+		if input.UserInputType == Enum.UserInputType.MouseWheel then
+			if not gameProcessed then
+				setHeight(mHeight * (1 - input.Position.Z * 0.15))
+				applyCamera()
+			end
+			return
+		end
+		if input.UserInputType ~= Enum.UserInputType.MouseMovement
+			and input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		if not mDown or mPinching then
+			return
+		end
+		local screenPos = Vector2.new(input.Position.X, input.Position.Y)
+		if not mDragging then
+			if (screenPos - mDownScreenPos).Magnitude < kDragThresholdPx then
+				return
+			end
+			mDragging = true
+		end
+		-- Keep the world point that was grabbed under the cursor
+		local hitNow = viewportHit(screenPos)
+		local delta = mDragStartHit - hitNow
+		setFocus(mFocus + Vector2.new(delta.X, delta.Z))
+		applyCamera()
+	end))
+
+	table.insert(mConnections, UserInputService.InputEnded:Connect(function(input, _gameProcessed)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			if mDown and not mDragging and not mPinching then
+				this.Tapped:fire(viewportHit(Vector2.new(input.Position.X, input.Position.Y)))
+			end
+			mDown = false
+			mDragging = false
+		end
+	end))
+
+	table.insert(mConnections, UserInputService.TouchPinch:Connect(function(_touchPositions, scale, _velocity, state, gameProcessed)
+		if gameProcessed and state == Enum.UserInputState.Begin then
+			return
+		end
+		if state == Enum.UserInputState.Begin then
+			mPinching = true
+			mPinchStartHeight = mHeight
+		elseif state == Enum.UserInputState.Change then
+			if mPinching then
+				setHeight(mPinchStartHeight / scale)
+				applyCamera()
+			end
+		else
+			mPinching = false
+		end
+	end))
+
+	function this:FocusOn(worldPos: Vector3)
+		setFocus(Vector2.new(worldPos.X, worldPos.Z))
+		applyCamera()
+	end
+
+	function this:GetMouseHit(): Vector3
+		return mouseHit()
+	end
+
+	function this:Install()
+		mSavedFieldOfView = mCamera.FieldOfView
+		mSavedCameraType = mCamera.CameraType
+		mCamera.CameraType = Enum.CameraType.Scriptable
+		mCamera.FieldOfView = kFieldOfView
+		applyCamera()
+		-- Re-apply every frame so nothing else (e.g. the netmap camera during
+		-- handover) can fight the battle view for the camera
+		RunService:BindToRenderStep(kBindName, Enum.RenderPriority.Camera.Value - 1, applyCamera)
+	end
+
+	function this:Uninstall()
+		RunService:UnbindFromRenderStep(kBindName)
+		mCamera.FieldOfView = mSavedFieldOfView
+		mCamera.CameraType = mSavedCameraType
+	end
+
+	local mDestroyed = false
+	function this:Destroy()
+		if mDestroyed then
+			return
+		end
+		mDestroyed = true
+		this:Uninstall()
+		for _, cn in mConnections do
+			cn:Disconnect()
+		end
+	end
+
+	return this
+end
+
+return BattleCamera

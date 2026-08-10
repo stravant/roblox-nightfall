@@ -57,10 +57,13 @@ return function(t)
 		return gui:FindFirstChild("LargeCommands") or gui:FindFirstChild("SmallCommands")
 	end
 
-	t.test("mounts the board with map tiles, upload zones, and background", function()
+	t.test("mounts the 3D board with map tiles, upload zones, and background", function()
 		withView(function(view, gui, gameState)
-			t.expect(gui.PlaceBackground.Image).toBe(gameState:GetPlaceBackground())
+			t.expect(view:getBoard3D():GetBackgroundImage()).toBe(gameState:GetPlaceBackground())
+			-- The board lives on a SurfaceGui in the workspace
+			t.expect(workspace:FindFirstChild("BattleBoard3D") ~= nil).toBeTruthy()
 
+			local board = view:getBoardGui()
 			local filledCount = 0
 			for x = 1, Places.PlaceWidth do
 				for y = 1, Places.PlaceHeight do
@@ -69,8 +72,8 @@ return function(t)
 					end
 				end
 			end
-			t.expect(#gui.Board.Tiles:GetChildren()).toBe(filledCount)
-			t.expect(#gui.Board.UploadZones:GetChildren()).toBe(#gameState:GetUploadZones())
+			t.expect(#board.Tiles:GetChildren()).toBe(filledCount)
+			t.expect(#board.UploadZones:GetChildren()).toBe(#gameState:GetUploadZones())
 
 			local commands = commandsFrame(gui)
 			t.expect(commands ~= nil).toBeTruthy()
@@ -91,30 +94,34 @@ return function(t)
 
 	t.test("uploading a unit and starting the game flips the chrome state", function()
 		withView(function(view, gui, gameState)
+			local board = view:getBoardGui()
 			-- The place's own enemy units are already rendered at mount
-			local unitsBefore = #gui.Board.Units:GetChildren()
+			local unitsBefore = #board.Units:GetChildren()
 			local zone = gameState:GetUploadZones()[1]
 			gameState:UploadUnit(zone.x, zone.y, Scripts.hack)
 			task.wait() -- game signals are BindableEvent-based (async)
 			ReactRoblox.act(function() end)
 			-- The uploaded unit gained a rendered tail container
-			t.expect(#gui.Board.Units:GetChildren()).toBe(unitsBefore + 1)
+			t.expect(#board.Units:GetChildren()).toBe(unitsBefore + 1)
 
 			gameState:StartGame()
 			task.wait()
 			ReactRoblox.act(function() end)
 			local commands = commandsFrame(gui)
 			t.expect(commands.DoneTurnButton.Visible).toBeTruthy()
-			t.expect(#gui.Board.UploadZones:GetChildren()).toBe(0)
+			t.expect(#board.UploadZones:GetChildren()).toBe(0)
 		end)
 	end)
 
-	t.test("Destroy removes the gui", function()
+	t.test("Destroy removes the gui and the 3D board", function()
 		withView(function(view, gui)
 			ReactRoblox.act(function()
 				view:Destroy()
 			end)
 			t.expect(gui.Parent).toBe(nil)
+			t.expect(workspace:FindFirstChild("BattleBoard3D")).toBe(nil)
+			-- Camera restored for the editor
+			t.expect(workspace.CurrentCamera.CameraType ~= Enum.CameraType.Scriptable).toBeTruthy()
 		end)
 	end)
 end

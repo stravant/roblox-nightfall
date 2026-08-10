@@ -181,6 +181,11 @@ function NetmapCamera.new()
 	end
 	
 	function this:Install()
+		-- Re-assert the camera state: the battle camera changes type/FOV/CFrame
+		-- while a databattle is up
+		mCamera.CameraType = Enum.CameraType.Scriptable
+		mCamera.FieldOfView = 10
+		setPosition(mCurrentPosition)
 		local lastTime = os.clock()
 		RunService:BindToRenderStep(BIND_NAME, Enum.RenderPriority.Camera.Value - 1, function()
 			local thisTime = os.clock()

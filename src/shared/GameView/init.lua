@@ -26,6 +26,7 @@ local TutorialArrowView = require(game.ReplicatedStorage.TutorialArrowView)
 local DeviceInfo = require(game.ReplicatedStorage.DeviceInfo)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
 local BuyLevelSkipView = require(game.ReplicatedStorage.BuyLevelSkipView)
+local BattleBoard3D = require(game.ReplicatedStorage.BattleBoard3D)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
@@ -435,20 +436,10 @@ local function GameViewChrome(props)
 end
 
 --------------------------------------------------------------------------------
--- Imperative board construction
+-- Board layer construction (renders onto the 3D board's surface)
 --------------------------------------------------------------------------------
 
-local function buildBoard(tileSize, boardScale)
-	local board = Instance.new("Frame")
-	board.Name = "Board"
-	board.AnchorPoint = Vector2.new(0.5, 0.5)
-	board.Position = UDim2.new(0.5, 75, 0.5, 16)
-	board.Size = UDim2.new(0, Places.PlaceWidth * tileSize, 0, Places.PlaceHeight * tileSize)
-	board.BackgroundTransparency = 1
-	board.ZIndex = 2
-	local scaler = Instance.new("UIScale")
-	scaler.Scale = boardScale
-	scaler.Parent = board
+local function buildBoardLayers(container: Frame)
 	local function layer(name: string, zIndex: number?)
 		local frame = Instance.new("Frame")
 		frame.Name = name
@@ -457,22 +448,13 @@ local function buildBoard(tileSize, boardScale)
 		if zIndex then
 			frame.ZIndex = zIndex
 		end
-		frame.Parent = board
-		return frame
+		frame.Parent = container
 	end
 	layer("Tiles")
 	layer("UploadZones", 2)
 	layer("Units", 3)
 	layer("HighlightedTiles", 4)
 	layer("Effects", 5)
-	local clickDetector = Instance.new("ImageButton")
-	clickDetector.Name = "ClickDetector"
-	clickDetector.Active = true
-	clickDetector.Size = UDim2.new(1, 0, 1, 0)
-	clickDetector.BackgroundTransparency = 1
-	clickDetector.Image = ""
-	clickDetector.Parent = board
-	return board
 end
 
 --------------------------------------------------------------------------------
@@ -494,40 +476,31 @@ function GameView.new(gameState, controller)
 	local mAutoSelectionEnabled = true
 	this.CommandSelected = Signal.new()
 
-	-- Big scale
-	local mBoardScale = 1
-	if DeviceInfo.ScreenHeight < 400 then
-		mBoardScale = 0.9
-	elseif DeviceInfo.ScreenHeight > 700 then
-		mBoardScale = 1.8
-	elseif DeviceInfo.ScreenHeight > 800 then
-		mBoardScale = 2
-	end
-
 	local mUseDesktopUI = DeviceInfo.ScreenHeight > 700
 
-	-- The main Roblox Gui
+	-- The chrome GUI (transparent; the board renders in 3D behind it)
 	local mTileSize = 32
 	local mGui = Instance.new("Frame")
 	mGui.Name = "Container"
 	mGui.AnchorPoint = Vector2.new(0.5, 0.5)
 	mGui.Size = UDim2.new(1, 0, 1, 0)
+	mGui.BackgroundTransparency = 1
 	mGui.ZIndex = 5
 	function this:getGui()
 		return mGui
 	end
 
-	local mPlaceBackground = Instance.new("ImageLabel")
-	mPlaceBackground.Name = "PlaceBackground"
-	mPlaceBackground.Size = UDim2.new(1, 0, 1, 0)
-	mPlaceBackground.BackgroundTransparency = 1
-	mPlaceBackground.BorderSizePixel = 0
-	mPlaceBackground.Image = gameState:GetPlaceBackground()
-	mPlaceBackground.Parent = mGui
-
-	local mBoard = buildBoard(mTileSize, mBoardScale)
-	mBoard.Parent = mGui
-	local mClickDetector = mBoard.ClickDetector
+	-- The 3D board (world geometry + camera + tap-to-grid mapping)
+	local mBattleBoard = BattleBoard3D.new(gameState:GetPlaceBackground())
+	mBattleBoard:Install()
+	local mBoard = mBattleBoard:GetBoardContainer()
+	buildBoardLayers(mBoard)
+	function this:getBoardGui()
+		return mBoard
+	end
+	function this:getBoard3D()
+		return mBattleBoard
+	end
 
 	local mInfo = Instance.new("Frame")
 	mInfo.Name = "Info"
@@ -1177,17 +1150,8 @@ function GameView.new(gameState, controller)
 		mUnitsView:AddUnit(unit)
 	end
 
-	-- Clicks
-	mClickDetector.MouseButton1Up:connect(function(x, y)
-		-- To local coords
-		local GuiInset = game:GetService('GuiService'):GetGuiInset()
-		x = x - mClickDetector.AbsolutePosition.x - GuiInset.x
-		y = y - mClickDetector.AbsolutePosition.y - GuiInset.y
-
-		-- Translate to grid square
-		x = math.ceil(x / (mTileSize * mBoardScale))
-		y = math.ceil(y / (mTileSize * mBoardScale))
-
+	-- Taps on the 3D board arrive as grid coordinates
+	mBattleBoard.Tapped:connect(function(x, y)
 		-- Tutorial nonsense... sigh
 		if mOnlyAllowClick then
 			if x ~= mOnlyAllowClick.x or y ~= mOnlyAllowClick.y then
@@ -1259,6 +1223,7 @@ function GameView.new(gameState, controller)
 		mBattleSoundLooper:Destroy()
 		mTutorialArrow:Destroy()
 		mUnitInfoView:Destroy()
+		mBattleBoard:Destroy()
 		root().unmount()
 		mGui:Destroy()
 		mUpdateSkipsCn:disconnect()
