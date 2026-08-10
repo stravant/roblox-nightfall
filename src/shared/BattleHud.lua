@@ -143,7 +143,8 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 	return e(WindowsButton, {
 		Name = entry.Key,
 		Size = UDim2.new(0, 160, 0, 54),
-		LayoutOrder = entry.IsMove and 0 or 1,
+		-- Attacks first, the move action last
+		LayoutOrder = entry.IsMove and 1 or 0,
 		ImageColor3 = if selected
 			then Color3.new(0, 0, 1)
 			elseif entry.Disabled then Color3.new(0.55, 0.55, 0.55)
@@ -318,9 +319,7 @@ local function BattleHudContent(props: HudState)
 		InfoWindow = if pane
 			then windowChrome(pane.name, {
 				Name = "InfoWindow",
-				-- Taller than the old wide layout: the flavor text wraps more
-				-- in the narrow column
-				Size = UDim2.new(0, 160, 0, 170),
+				Size = UDim2.new(0, 160, 0, 130),
 				LayoutOrder = 1,
 			}, {
 				UnitImage = e("ImageLabel", {
@@ -575,7 +574,9 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	function this:TutorialHighlightCommand(commandId: string)
 		local button = findCommandButton(commandId)
 		if button then
-			mTutorialArrow:Show(button, 180, UDim2.new(0.5, 0, 0, -20))
+			-- Centered ON the button: floating above it looks like it points
+			-- at the button stacked above this one
+			mTutorialArrow:Show(button, 180, UDim2.new(0.5, 0, 0.5, 0))
 		end
 	end
 
