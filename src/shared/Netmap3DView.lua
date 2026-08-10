@@ -168,17 +168,6 @@ function Netmap3DView.new()
 			local unknownModel = NETMAP_NODE_MODELS['unknown']:Clone()
 			unknownModel:PivotTo(cf)
 			disabledModel:PivotTo(cf)
-			local light do
-				local lightPart = Instance.new("Part")
-				lightPart.Transparency = 1
-				lightPart.Anchored = true
-				lightPart:PivotTo(cf)
-				light = Instance.new("PointLight")
-				light.Parent = lightPart
-				light.Range = 10
-				light.Brightness = 6
-				lightPart.Parent = disabledModel
-			end
 			mNodeModelToNodeIdMap[visibleModel] = id
 			mNodeModelToNodeIdMap[disabledModel] = id
 			mNodeView[id] = {
@@ -188,7 +177,6 @@ function Netmap3DView.new()
 				VisibleModel = visibleModel;
 				DisabledModel = disabledModel;
 				UnknownModel = unknownModel;
-				Light = light;
 			}
 			ch:Destroy()
 		end
@@ -240,45 +228,12 @@ function Netmap3DView.new()
 		end
 	end
 	
-	local function setupNotBeatenGlow(nodeView)
-		if nodeView.NotBeatenGlow then
-			return
-		end
-		local expandyParts = {}
-		for _, desc in pairs(nodeView.VisibleModel:GetDescendants()) do
-			if desc:IsA('BasePart') then
-				table.insert(expandyParts, {
-					Part = desc:Clone(),
-				})
-			end
-		end
-		for _, entry in pairs(expandyParts) do
-			entry.Part.Transparency = 0.7
-			entry.Part.CollisionGroupId = NOT_BEATEN_COLLISION_GROUP
-			entry.BaseSize = entry.Part.Size
-			entry.BaseOffset = entry.Part.Position - nodeView.CFrame.Position
-			entry.Part.Parent = mNotBeatenGlowContainer
-			entry.Part.CastShadow = false
-		end
-		nodeView.NotBeatenGlow = expandyParts
-	end
-	local function clearNotBeatenGlow(nodeView)
-		if nodeView.NotBeatenGlow then
-			for _, entry in pairs(nodeView.NotBeatenGlow) do
-				entry.Part:Destroy()
-			end
-			nodeView.NotBeatenGlow = nil
-		end
-	end
 	local function setVisible(nodeView, visibility)
 		nodeView.Model.Parent = visibility and mNetmapModel or nil
 		if visibility then
 			nodeView.UnknownModel.Parent = nil
 		else
 			nodeView.UnknownModel.Parent = mNetmapModel
-		end
-		if visibility and not LocalPlayerData:HasBeatenNode(nodeView.Id) then
-			setupNotBeatenGlow(nodeView)
 		end
 	end
 	local function setBeaten(nodeView, beaten)
@@ -287,10 +242,7 @@ function Netmap3DView.new()
 		if LocalPlayerData:HasSeenNode(nodeView.Id) then
 			nodeView.Model.Parent = mNetmapModel
 			if beaten then
-				clearNotBeatenGlow(nodeView)
 				showLinks(nodeView)
-			else
-				setupNotBeatenGlow(nodeView)
 			end
 		end
 	end
@@ -303,35 +255,6 @@ function Netmap3DView.new()
 			end
 			setBeaten(nodeView, LocalPlayerData:HasBeatenNode(id))
 			setVisible(nodeView, LocalPlayerData:HasSeenNode(id) or node.Warez)
-		end
-	end
-	
-	local mNotBeatenGlowTime = 0
-	local function animateGlow(dt)
-		mNotBeatenGlowTime += 0.6 * dt
-		local frac = math.max(0, math.fmod(mNotBeatenGlowTime, 0.8) - 0.5) / 0.3
-		local scaleFrac = (frac > 0.8) and 0.8 * 2 - frac or frac
-		local scale = 1.0 + scaleFrac^0.6 * 0.2
-		for id, nodeView in pairs(mNodeView) do
-			if nodeView.NotBeatenGlow then
-				for _, entry in pairs(nodeView.NotBeatenGlow) do
-					entry.Part.Transparency = 1
-					--entry.Part.Size = entry.BaseSize * scale
-					--entry.Part.Position = nodeView.CFrame.Position + (entry.BaseOffset + workspace.CurrentCamera.CFrame.LookVector * 2) * scale
-					--if frac == 0 then
-					--	entry.Part.Transparency = 1
-					--else
-					--	entry.Part.Transparency = 0.1 + 0.9 * frac
-					--end
-				end
-				local x = mNotBeatenGlowTime * 4
-				local frac = math.sin(x + 0.6*math.sin(x)^2)^2
-				if LocalPlayerData:CanAccessNode(id) then
-					nodeView.Light.Brightness = 2 + 4 * frac
-				else
-					nodeView.Light.Brightness = 0
-				end
-			end
 		end
 	end
 	
@@ -399,6 +322,61 @@ function Netmap3DView.new()
 		end
 	end
 
+	-- Tutorial pointer: the bobbing arrow floating over a node (billboarded at
+	-- constant screen size) plus a Highlight on the node model
+	local mTutorialArrow = TutorialArrow.new()
+	local mTutorialPointerParts = nil
+	function this:ClearTutorialPointer()
+		mTutorialArrow:Hide()
+		if mTutorialPointerParts then
+			mTutorialPointerParts.Billboard:Destroy()
+			mTutorialPointerParts.Adornee:Destroy()
+			mTutorialPointerParts.Highlight:Destroy()
+			mTutorialPointerParts = nil
+		end
+	end
+	function this:TutorialPointAtNode(id)
+		this:ClearTutorialPointer()
+		local nodeView = mNodeView[id]
+		if not nodeView then
+			warn("Missing node to point at:", id)
+			return
+		end
+
+		local adornee = Instance.new("Part")
+		adornee.Name = "TutorialPointerAdornee"
+		adornee.Transparency = 1
+		adornee.Anchored = true
+		adornee.CanCollide = false
+		adornee.CanQuery = false
+		adornee.Size = Vector3.new(1, 1, 1)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(0, 6, 0)
+		adornee.Parent = workspace
+
+		-- Pixel-sized billboard: the arrow stays readable at any zoom level
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "TutorialNodePointer"
+		billboard.Adornee = adornee
+		billboard.Size = UDim2.new(0, 200, 0, 200)
+		billboard.AlwaysOnTop = true
+		billboard.Parent = mPlayerGui
+		mTutorialArrow:Show(billboard, 180, UDim2.new(0.5, 0, 0.3, 0))
+
+		local highlight = Instance.new("Highlight")
+		highlight.FillColor = Color3.fromRGB(0, 255, 120)
+		highlight.FillTransparency = 0.65
+		highlight.OutlineColor = Color3.new(1, 1, 1)
+		highlight.OutlineTransparency = 0
+		highlight.Adornee = nodeView.Model
+		highlight.Parent = nodeView.Model
+
+		mTutorialPointerParts = {
+			Billboard = billboard,
+			Adornee = adornee,
+			Highlight = highlight,
+		}
+	end
+
 	function this:SetNodeVisible(id)
 		local nodeView = mNodeView[id]
 		if nodeView then
@@ -435,7 +413,6 @@ function Netmap3DView.new()
 	end
 	
 	local function update(dt)
-		animateGlow(dt)
 		updateHoveredNode()
 	end
 	

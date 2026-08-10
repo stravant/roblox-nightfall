@@ -60,8 +60,10 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, onBattleWon)
 
 	tutorialDialogue:SetText("Jack into the smart HQ node.")
 	netmapView:HighlightNode('hq')
+	netmapView:TutorialPointAtNode('hq')
 	while netmapView.NodeSelected:wait() ~= 'hq' do
 	end
+	netmapView:ClearTutorialPointer()
 
 	----------------------------------------------------------------------
 	-- The guided databattle
