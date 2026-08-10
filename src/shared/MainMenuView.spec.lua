@@ -47,7 +47,7 @@ return function(t)
 			t.expect(gui.Menu.ClassName).toBe("ImageLabel")
 			t.expect(gui.Menu.Size).toBe(UDim2.new(0, 400, 0, 250))
 			t.expect(gui.Menu.WindowTitle.Text).toBe("Game Menu")
-			t.expect(gui.Menu.DoneButton.Text.Text).toBe("Return to Netmap")
+			t.expect(gui.Menu.CloseButton.Text.Text).toBe("Close")
 			-- Scale is a float32 property, so compare with a tolerance
 			local expectedScale = if DeviceInfo.ScreenHeight > 400 then 1.2 else 1
 			t.expect(math.abs(gui.Menu.UIScale.Scale - expectedScale) < 1e-6).toBeTruthy()
