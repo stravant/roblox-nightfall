@@ -325,6 +325,10 @@ function Netmap3DView.new()
 		billboard.Name = "NodePopup"
 		billboard.Adornee = adornee
 		billboard.Size = UDim2.new(0, 132, 0, 46 + extraHeight)
+		-- Anchor the TOP edge at the adornee point (billboards are centered by
+		-- default): the pixel-sized popup then grows downward on screen when
+		-- zooming out instead of creeping up over the node geometry
+		billboard.SizeOffset = Vector2.new(0, -0.5)
 		-- AlwaysOnTop: reliable rendering over highlights/geometry; overlap
 		-- between nearby nodes' popups is handled by spacing the nodes out in
 		-- the place instead
