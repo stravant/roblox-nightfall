@@ -233,7 +233,7 @@ function Netmap3DView.new()
 		beam.Attachment1 = attach1
 		beam.Parent = mConnectionsContainer
 		beam.Transparency = NumberSequence.new(0)
-		beam.Color = ColorSequence.new(Color3.new(0, 0, 0))
+		beam.Color = ColorSequence.new(Color3.new(1, 0, 0))
 		beam.Width0 = 0.5
 		beam.Width1 = 0.5
 		
