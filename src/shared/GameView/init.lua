@@ -378,7 +378,9 @@ function GameView.new(gameState, controller)
 	this.CloseGame = Signal.new()
 	this.SquareSelected = Signal.new()
 
+	local RunService = game:GetService("RunService")
 	local mDestroyed = false
+	local mDraggingProgram = false
 
 	-- Coordinates that are the only square allowed to be clicked...
 	-- For the stupid tutorial of course
@@ -754,6 +756,57 @@ function GameView.new(gameState, controller)
 		end
 	end
 
+	-- Tutorial drag demonstration: a finger icon repeatedly glides from the
+	-- program row to the target upload zone. Hidden while the player is
+	-- performing a real drag themselves.
+	local mDragDemo = nil
+	function this:ClearDragDemo()
+		if mDragDemo then
+			mDragDemo.Cn:Disconnect()
+			mDragDemo.Finger:Destroy()
+			mDragDemo = nil
+		end
+	end
+	function this:ShowDragDemo(programId, x, y)
+		this:ClearDragDemo()
+		local finger = Instance.new("TextLabel")
+		finger.Name = "DragDemoFinger"
+		finger.AnchorPoint = Vector2.new(0.5, 0)
+		finger.Size = UDim2.new(0, 60, 0, 60)
+		finger.BackgroundTransparency = 1
+		finger.Text = "\u{1F446}" -- pointing finger
+		finger.TextSize = 44
+		finger.TextStrokeTransparency = 0.6
+		finger.ZIndex = 11
+		finger.Visible = false
+		finger.Parent = mGui
+		local startTime = os.clock()
+		local kPeriod = 1.8
+		local cn = RunService.RenderStepped:Connect(function()
+			local hud = mGui:FindFirstChild("BattleHud")
+			local window = hud and hud:FindFirstChild("ProgramsWindow")
+			local inset = window and window:FindFirstChild("Inset")
+			local row = inset and inset:FindFirstChild(programId)
+			if not row or mDraggingProgram then
+				finger.Visible = false
+				return
+			end
+			local from = row.AbsolutePosition + row.AbsoluteSize / 2
+			local to = mBattleBoard:ScreenFromGrid(x, y)
+			local alpha = ((os.clock() - startTime) % kPeriod) / kPeriod
+			-- Dwell briefly at the start, glide with easing, fade at the end
+			local travel = math.clamp((alpha - 0.15) / 0.6, 0, 1)
+			local eased = travel * travel * (3 - 2 * travel)
+			local pos = from:Lerp(to, eased)
+			finger.Position = UDim2.new(0, pos.X, 0, pos.Y)
+			finger.TextTransparency = if alpha > 0.9 then (alpha - 0.9) / 0.1
+				elseif alpha < 0.08 then 1 - alpha / 0.08
+				else 0
+			finger.Visible = true
+		end)
+		mDragDemo = { Finger = finger, Cn = cn }
+	end
+
 	function this:ShowTutorialArrowSquare(x, y)
 		mUnitInfoView:TutorialHide()
 		mTutorialArrow:Show(mBoard.Effects, 0, UDim2.new(0, (x-0.5)*mTileSize, 0, (y-0.5)*mTileSize))
@@ -866,6 +919,7 @@ function GameView.new(gameState, controller)
 		if gameState:IsGameStarted() or mDestroyed then
 			return
 		end
+		mDraggingProgram = true
 		local def = Scripts[id]
 
 		local ghost = Instance.new("ImageLabel")
@@ -896,6 +950,7 @@ function GameView.new(gameState, controller)
 			moveCn:Disconnect()
 			endCn:Disconnect()
 			ghost:Destroy()
+			mDraggingProgram = false
 			local x, y = mBattleBoard:GridAtScreen(Vector2.new(input.Position.X, input.Position.Y))
 			if x and y and tryUploadProgram(id, x, y) then
 				SoundManager:Play('SelectUnit')
@@ -985,6 +1040,7 @@ function GameView.new(gameState, controller)
 
 	-- When the game actually starts
 	gameState.GameStarted:connect(function()
+		mPulseCn:Disconnect()
 		mUploadView:ClearAll()
 		root().setState({ startGameVisible = false, doneTurnVisible = true })
 		mUnitInfoView:SetProgramListVisible(false)
@@ -1094,10 +1150,25 @@ function GameView.new(gameState, controller)
 		end
 	end)
 
-	-- Set up upload zones
+	-- Set up upload zones. Empty zones pulse until a unit is placed on them.
+	local mUploadZoneTiles = {}
 	for _, coord in pairs(mUploadZones) do
-		mUploadView:Set(coord.x, coord.y, TileTemplates.UploadOverlay())
+		local tile = TileTemplates.UploadOverlay()
+		mUploadView:Set(coord.x, coord.y, tile)
+		table.insert(mUploadZoneTiles, { x = coord.x, y = coord.y, Gui = tile })
 	end
+	local mPulseCn = RunService.RenderStepped:Connect(function()
+		local pulse = 0.15 + 0.5 * (0.5 + 0.5 * math.sin(os.clock() * 4))
+		for _, entry in mUploadZoneTiles do
+			if entry.Gui.Parent then
+				if gameState:GetUnit(entry.x, entry.y) then
+					entry.Gui.ImageTransparency = 0
+				else
+					entry.Gui.ImageTransparency = pulse
+				end
+			end
+		end
+	end)
 
 	-- Set up units
 	gameState.UnitAdded:connect(function(unit) mUnitsView:AddUnit(unit) end)
@@ -1186,6 +1257,8 @@ function GameView.new(gameState, controller)
 		SoundManager:RemoveSlider(mSoundSlider)
 		SoundManager:RemoveSlider(mMusicSlider)
 		mDestroyed = true
+		mPulseCn:Disconnect()
+		this:ClearDragDemo()
 		mFlashySquare:Destroy()
 		mUnitsView:Destroy()
 		mBattleSoundLooper:Destroy()

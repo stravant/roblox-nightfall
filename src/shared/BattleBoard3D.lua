@@ -124,6 +124,16 @@ function BattleBoard3D.new(backgroundImage: string)
 		return worldToGrid(mCamera:HitAtScreen(screenPos))
 	end
 
+	-- Where a grid square's center lands on screen (GUI space)
+	function this:ScreenFromGrid(gridX: number, gridY: number): Vector2
+		local worldPos = Vector3.new(
+			kCenter.X - boardStudsX / 2 + (gridX - 0.5) * kTileStuds,
+			kSurfaceY,
+			kCenter.Z - boardStudsZ / 2 + (gridY - 0.5) * kTileStuds)
+		local screenPos = workspace.CurrentCamera:WorldToScreenPoint(worldPos)
+		return Vector2.new(screenPos.X, screenPos.Y)
+	end
+
 	function this:GetBoardContainer(): Frame
 		return mBoardContainer
 	end

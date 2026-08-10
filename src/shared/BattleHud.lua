@@ -209,6 +209,15 @@ local function BattleHudContent(props: HudState)
 			PaddingLeft = UDim.new(0, 6),
 			PaddingRight = UDim.new(0, 6),
 		}),
+		Header = e("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 30),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 22,
+			TextColor3 = Color3.new(0, 0, 0.5),
+			Text = "Drag to Place",
+			LayoutOrder = 0,
+		}),
 	}
 	for i, row in props.programs do
 		local def = Scripts[row.Id]
@@ -328,7 +337,7 @@ local function BattleHudContent(props: HudState)
 				Name = "ProgramsWindow",
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 12, 0.5, 0),
-				Size = UDim2.new(0, 220, 0, 40 * math.max(1, #props.programs) + 44),
+				Size = UDim2.new(0, 220, 0, 40 * math.max(1, #props.programs) + 78),
 				ZIndex = 3,
 			}, programItems)
 			else nil,
