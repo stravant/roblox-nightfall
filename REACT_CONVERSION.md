@@ -84,10 +84,13 @@ imperative WindowsButton/WindowsSlider/WindowsTabView modules are deleted.
 Components: StatefulRoot, WindowsButton, WindowsSlider, WindowsTabView.
 
 Deliberately NOT converted:
-- `NetmapView.lua` — dead legacy code (MainView uses Netmap3DView); still
-  template-based, its templates remain in the place under the module.
 - `ReplicatedFirst.TitleScreen` — the loading screen must exist before
   ReplicatedStorage content replicates, so it stays a place-owned instance
   (BOOTSTRAP clones it).
-- `StarterGui.ScreenGui` / `StarterGui.Folder` — dead design-time content;
-  nothing references them (Setup builds its ScreenGui in code).
+
+Deleted during final cleanup (recoverable from the ORIGINAL place, which this
+place is a copy of, and from the ui-reference/ dumps):
+- `NetmapView.lua` — dead legacy 2D netmap (MainView uses Netmap3DView);
+  module and templates removed from repo and place.
+- `StarterGui.ScreenGui` / `StarterGui.Folder` — dead design-time UI;
+  nothing referenced them (Setup builds its ScreenGui in code).

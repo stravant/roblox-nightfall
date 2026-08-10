@@ -1,7 +1,6 @@
 local GameState = require(game.ReplicatedStorage.GameState)
 local GameController = require(game.ReplicatedStorage.GameController)
 local GameView = require(game.ReplicatedStorage.GameView)
-local NetmapView = require(game.ReplicatedStorage.NetmapView)
 local Netmap3DView = require(game.ReplicatedStorage.Netmap3DView)
 local UnitInfoView = require(game.ReplicatedStorage.UnitInfoView)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
