@@ -126,7 +126,10 @@ local function WarezContent(props: WarezState)
 		MouseCatcher = e("ImageButton", {
 			Active = true,
 			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundTransparency = 1,
+			-- Same shadowed backdrop as the menus and conversations
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.5,
+			BorderSizePixel = 0,
 			Image = "",
 		}),
 		MainBox = e("ImageLabel", {
