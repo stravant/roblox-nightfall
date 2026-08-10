@@ -73,7 +73,11 @@ local function DialogueContent(props: DialogueState)
 	return e(React.Fragment, nil, {
 		MouseCatcher = e("ImageButton", {
 			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundTransparency = 1,
+			-- Shadowed backdrop: separates the conversation from the world
+			-- behind it (hidden in tutorial mode along with the catcher)
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.5,
+			BorderSizePixel = 0,
 			Image = "",
 			Selectable = false,
 			Visible = props.mouseCatcherVisible,
@@ -152,7 +156,7 @@ local function DialogueContent(props: DialogueState)
 					Size = UDim2.new(1, -5, 1, -1),
 					BackgroundTransparency = 1,
 					Font = Enum.Font.SourceSans,
-					TextSize = 18,
+					TextSize = 20,
 					TextColor3 = Color3.new(0, 0, 0),
 					TextStrokeColor3 = Color3.new(1, 1, 1),
 					TextStrokeTransparency = 0.9,
@@ -168,6 +172,7 @@ local function DialogueContent(props: DialogueState)
 				Size = UDim2.new(1, -32, 0, 28),
 				Visible = button1Text ~= nil,
 				Text = button1Text or "",
+				TextSize = 20,
 				OnClick = props.onButton1,
 			}),
 			Button2 = e(WindowsButton, {
@@ -176,6 +181,7 @@ local function DialogueContent(props: DialogueState)
 				Size = UDim2.new(1, -32, 0, 28),
 				Visible = button2Text ~= nil,
 				Text = button2Text or "",
+				TextSize = 20,
 				OnClick = props.onButton2,
 			}),
 		}),
