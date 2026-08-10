@@ -365,9 +365,9 @@ function Netmap3DView.new()
 		title.BackgroundTransparency = 1
 		title.Font = Enum.Font.SourceSansBold
 		title.TextSize = 13
-		title.TextColor3 = statusColor
+		title.TextColor3 = Color3.new(1, 1, 1)
 		title.TextXAlignment = Enum.TextXAlignment.Left
-		title.Text = statusText
+		title.Text = nodeDisplayName(nodeView.Id)
 		title.Parent = window
 		local inset = Instance.new("ImageLabel")
 		inset.Position = UDim2.new(0, 5, 0, 20)
@@ -381,15 +381,15 @@ function Netmap3DView.new()
 		label.Size = UDim2.new(1, 0, 1, 0)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.SourceSansBold
-		label.TextSize = 15
-		label.TextColor3 = Color3.new(0, 0, 0)
-		label.Text = nodeDisplayName(nodeView.Id)
+		label.TextSize = 16
+		label.TextColor3 = statusColor
+		label.Text = statusText
 		label.Parent = inset
 
 		nodeView.Popup = {
 			Adornee = adornee,
 			Billboard = billboard,
-			FlashLabel = title,
+			FlashLabel = label,
 		}
 	end
 	local function removeNodePopup(nodeView)
@@ -418,10 +418,15 @@ function Netmap3DView.new()
 		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
 		if nodeView.Seen and not nodeView.Beaten then
 			if isWarez then
-				-- Warez nodes are shops: advertise, don't alarm
-				ensureNodePopup(nodeView, "New!", Color3.fromRGB(120, 255, 140))
+				-- Warez nodes are shops: advertise, don't alarm - and only
+				-- once the player can actually reach them
+				if LocalPlayerData:CanAccessNode(nodeView.Id) then
+					ensureNodePopup(nodeView, "New!", Color3.fromRGB(0, 140, 30))
+				else
+					removeNodePopup(nodeView)
+				end
 			else
-				ensureNodePopup(nodeView, "\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(255, 95, 95))
+				ensureNodePopup(nodeView, "\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0))
 			end
 		else
 			removeNodePopup(nodeView)
@@ -506,6 +511,11 @@ function Netmap3DView.new()
 			else
 				warn("Missing adjacent node to make visible:", id)
 			end
+		end
+		-- Accessibility may have rippled (adjacency, security upgrades):
+		-- re-evaluate every node's popup state
+		for _, nodeView in pairs(mNodeView) do
+			applyNodeState(nodeView)
 		end
 	end	
 
