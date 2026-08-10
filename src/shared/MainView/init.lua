@@ -255,7 +255,7 @@ function MainView.new()
 	
 	-- Play the tutorial dialogue and tutorial
 	function this:PlayTutorial()
-		Tutorial:PlayTutorial(mGui, mNetmapView, mDialogue, mMainMenu, function()
+		Tutorial:PlayTutorial(mGui, mNetmapView, mDialogue, mMainMenu, mTopbarBattleInterface, function()
 			-- Mark hq beaten (reveals the adjacent nodes) before the wrap-up
 			-- box tells the player to go click one
 			this:ProcessWonBattle('hq', 1000)

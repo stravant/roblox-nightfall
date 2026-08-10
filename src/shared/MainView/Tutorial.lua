@@ -33,8 +33,9 @@ end
 -- onBattleWon is called after the battle is won and the netmap is visible
 -- again, right before the wrap-up box (MainView uses it to mark the hq node
 -- beaten, which reveals the adjacent nodes the wrap-up box tells the player
--- to click).
-function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, onBattleWon)
+-- to click). `topbar` is MainView's topbar interface: the tutorial's battle
+-- needs the Start Databattle button (and its arrow target) like any other.
+function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, topbar, onBattleWon)
 	if not DebugFlags:PlayTutorial() then
 		return
 	end
@@ -72,7 +73,10 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, on
 	local placeData = Places.tutorial
 	local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 	local gameController = GameController.new(gameState)
-	local gameView = GameView.new(gameState, gameController, mainMenu)
+	local gameView = GameView.new(gameState, gameController, mainMenu, topbar)
+	topbar:SetOnStart(function()
+		gameController:StartGame()
+	end)
 
 	tutorialDialogue:GetGui().Parent = gameView:getGui()
 
@@ -162,6 +166,8 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, on
 
 	tutorialDialogue:Destroy()
 	gameView:Destroy()
+	topbar:SetStartVisible(false)
+	topbar:SetOnStart(nil)
 	netmapView:GetGui().Visible = true
 	-- Land the camera on the node that was just beaten
 	netmapView:HighlightNode('hq')
