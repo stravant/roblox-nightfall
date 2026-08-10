@@ -134,6 +134,21 @@ local function functionEndNightfall()
 	}
 end
 
+-- Display names, derived from the node id prefix ("Pharmhaus - ph14" style)
+local kNodeFamilyNames = {
+	ph = "Pharmhaus",
+	lm = "Lucky Monkey",
+	ca = "Celular Automa",
+	dr = "Dr. Donut",
+	pd = "PED",
+	wz = "Warez",
+	hq = "smart HQ",
+	en = "Nightfall",
+}
+function Netmap.GetNodeDisplayName(id)
+	return (kNodeFamilyNames[id:sub(1, 2)] or "Node") .. " - " .. id
+end
+
 Netmap.TutorialCallout = conversation{
 	User = 'superphreak';
 	Parts = {

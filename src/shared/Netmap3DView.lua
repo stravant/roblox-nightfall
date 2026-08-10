@@ -334,19 +334,7 @@ function Netmap3DView.new()
 	-- unvisited warez shops) with the node's name in the body so players have
 	-- a way to refer to a particular node. Anchored below the node's base so
 	-- the node geometry itself stays visible.
-	local kNodeFamilyNames = {
-		ph = "Pharmhaus",
-		lm = "Lucky Monkey",
-		ca = "Celular Automa",
-		dr = "Dr. Donut",
-		pd = "PED",
-		wz = "Warez",
-		hq = "smart HQ",
-		en = "Nightfall",
-	}
-	local function nodeDisplayName(id)
-		return (kNodeFamilyNames[id:sub(1, 2)] or "Node") .. " - " .. id
-	end
+	local nodeDisplayName = Netmap.GetNodeDisplayName
 
 	local function ensureNodePopup(nodeView, statusText, statusColor)
 		if nodeView.Popup then
@@ -359,7 +347,11 @@ function Netmap3DView.new()
 		adornee.CanCollide = false
 		adornee.CanQuery = false
 		adornee.Size = Vector3.new(1, 1, 1)
-		adornee.CFrame = nodeView.CFrame
+		-- Nudged toward the camera (fixed 45-degree yaw) so the popup sits
+		-- just in front of its own node's geometry, while still depth-sorting
+		-- behind nearer nodes (NOT AlwaysOnTop, so vertically-aligned nodes'
+		-- popups stack correctly)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(2.2, 0, 2.2)
 		adornee.Parent = workspace
 
 		local billboard = Instance.new("BillboardGui")
@@ -368,9 +360,7 @@ function Netmap3DView.new()
 		billboard.Size = UDim2.new(0, 132, 0, 46)
 		-- Hang below the node's base so the model geometry stays visible
 		billboard.StudsOffset = Vector3.new(0, -2.2, 0)
-		billboard.AlwaysOnTop = true
-		-- AlwaysOnTop renders through the battle board, so only enable while
-		-- the netmap is actually being shown (kept in sync below)
+		billboard.LightInfluence = 0
 		billboard.Enabled = mGui.Visible
 		billboard.Parent = mPlayerGui
 
@@ -447,7 +437,7 @@ function Netmap3DView.new()
 				-- Warez nodes are shops: advertise, don't alarm - and only
 				-- once the player can actually reach them
 				if LocalPlayerData:CanAccessNode(nodeView.Id) then
-					ensureNodePopup(nodeView, "New!", Color3.fromRGB(0, 140, 30))
+					ensureNodePopup(nodeView, "New!", Color3.fromRGB(0, 90, 20))
 				else
 					removeNodePopup(nodeView)
 				end

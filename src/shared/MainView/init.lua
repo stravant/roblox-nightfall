@@ -48,32 +48,67 @@ function MainView.new()
 	
 	-- Make menu
 	local mMainMenu = MainMenuView.new(mGui)
-	-- The menu button renders via a portaled React root (mGui also holds the
-	-- imperatively-parented netmap/dialogue/menu GUIs, and a plain root would
-	-- clear them at mount)
-	StatefulRoot.createPortaled(mGui, function(props)
-		return e(WindowsButton, {
-			Name = "MenuButton",
-			Size = UDim2.new(0, 150, 0, 36),
-			ZIndex = 4,
-			OnClick = props.onMenuClick,
-		}, {
-			TextLabel = e("TextLabel", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0.5, 25, 0.5, 0),
-				Size = UDim2.new(1, -50, 1, 0),
-				BackgroundTransparency = 1,
-				Font = Enum.Font.Code,
-				TextSize = 20,
-				TextColor3 = Color3.new(0, 0, 0),
-				Text = "Menu",
+
+	-- Topbar-inset gui: the Menu button lives in the top bar (top right), and
+	-- during a databattle the current node's name shows in a bar beside it
+	local mTopbarGui = Instance.new("ScreenGui")
+	mTopbarGui.Name = "NightfallTopbar"
+	mTopbarGui.ScreenInsets = Enum.ScreenInsets.TopbarSafeInsets
+	mTopbarGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	mTopbarGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+	local mTopbarRoot = StatefulRoot.create(mTopbarGui, function(props)
+		return e(React.Fragment, nil, {
+			MenuButton = e(WindowsButton, {
+				Name = "MenuButton",
+				AnchorPoint = Vector2.new(1, 0.5),
+				Position = UDim2.new(1, -4, 0.5, 0),
+				Size = UDim2.new(0, 110, 0, 36),
+				OnClick = props.onMenuClick,
+			}, {
+				TextLabel = e("TextLabel", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(0.5, 0, 0.5, 0),
+					Size = UDim2.new(1, 0, 1, 0),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.Code,
+					TextSize = 20,
+					TextColor3 = Color3.new(0, 0, 0),
+					Text = "Menu",
+				}),
 			}),
+			BattleTitle = if props.battleTitle
+				then e("ImageLabel", {
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.new(0.5, 0, 0.5, 0),
+					Size = UDim2.new(0, 260, 0, 38),
+					BackgroundTransparency = 1,
+					Image = 'rbxassetid://1378189463',
+					ImageRectSize = Vector2.new(32, 48),
+					ScaleType = Enum.ScaleType.Slice,
+					SliceCenter = Rect.new(16, 24, 16, 24),
+				}, {
+					Text = e("TextLabel", {
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0.5, 0, 0.5, 0),
+						Size = UDim2.new(1, -12, 1, -8),
+						BackgroundTransparency = 1,
+						Font = Enum.Font.SourceSansBold,
+						TextSize = 17,
+						TextColor3 = Color3.new(1, 1, 1),
+						Text = props.battleTitle,
+					}),
+				})
+				else nil,
 		})
 	end, {
+		battleTitle = nil,
 		onMenuClick = function()
 			mMainMenu:Show()
 		end,
 	})
+	local function setBattleTitle(title)
+		mTopbarRoot.setState({ battleTitle = title or StatefulRoot.None })
+	end
 	
 	-- Make netmap
 	local mNetmapView = Netmap3DView.new()
@@ -154,10 +189,12 @@ function MainView.new()
 		local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 		local gameController = GameController.new(gameState)
 		local gameView = GameView.new(gameState, gameController, mMainMenu)
+		setBattleTitle(Netmap.GetNodeDisplayName(nodeId))
 		
 		-- Restore the main state when the game is over
 		local gameCompletedConnection;
 		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart)
+			setBattleTitle(nil)
 			mNetmapView:SetVisible(true)
 			SoundManager:Play('MainBackgroundLoop')
 			gameView:Destroy()

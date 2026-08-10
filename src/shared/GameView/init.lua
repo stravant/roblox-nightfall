@@ -73,17 +73,6 @@ local function GameViewChrome(props)
 		BackgroundTransparency = 1,
 		ZIndex = 5,
 	}, {
-		MenuButton = e(WindowsButton, {
-			Name = "MenuButton",
-			AnchorPoint = Vector2.new(1, 0),
-			Position = UDim2.new(1, -12, 0, 12),
-			Size = UDim2.new(0, 100, 0, 36),
-			ZIndex = 4,
-			Visible = not hidden,
-			OnClick = props.onMenuOpen,
-		}, {
-			TextLabel = codeLabel("Menu"),
-		}),
 		DoneTurnButton = e(WindowsButton, {
 			Name = "DoneTurnButton",
 			AnchorPoint = Vector2.new(1, 1),
@@ -343,12 +332,6 @@ function GameView.new(gameState, controller, menu)
 			local unit = controller:Undo()
 			if unit then
 				setSelectionUnit(unit)
-			end
-		end,
-		onMenuOpen = function()
-			if menu then
-				updateMenuContext()
-				menu:Show()
 			end
 		end,
 		onSkip = function()
