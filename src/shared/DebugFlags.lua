@@ -16,7 +16,7 @@ end
 
 -- Pretend every node is beaten (unlocks the whole netmap)
 function DebugFlags:HasBeatenAllNodes(): boolean
-	return false
+	return true
 end
 
 -- Starting credits for fresh player data

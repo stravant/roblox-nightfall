@@ -36,5 +36,3 @@ mv:GetGui().Parent = ScreenGui
 TitleScreen:Destroy()
 
 game:GetService('UserInputService').ModalEnabled = true
-
-workspace.Baseplate:Destroy()
