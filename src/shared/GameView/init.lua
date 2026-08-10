@@ -626,7 +626,8 @@ function GameView.new(gameState, controller, menu)
 		this:ClearDragDemo()
 		local finger = Instance.new("TextLabel")
 		finger.Name = "DragDemoFinger"
-		finger.AnchorPoint = Vector2.new(0.5, 0)
+		-- Centered on the drag path rather than pointing at it from above
+		finger.AnchorPoint = Vector2.new(0.5, 0.5)
 		finger.Size = UDim2.new(0, 60, 0, 60)
 		finger.BackgroundTransparency = 1
 		finger.Text = "\u{1F446}" -- pointing finger
@@ -700,6 +701,12 @@ function GameView.new(gameState, controller, menu)
 	-- Clear the selection, for tutorial
 	function this:ClearSelection()
 		clearSelection()
+	end
+
+	-- Select a command on the current unit programmatically, for tutorial
+	-- steps that shouldn't make the player do the selection themselves
+	function this:TutorialSelectCommand(commandId)
+		setSelectedCommand(commandId)
 	end
 
 	-- Upload a program onto a zone (shared by drag-drop and the click flow).

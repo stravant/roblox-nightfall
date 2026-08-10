@@ -104,18 +104,17 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, on
 	gameView:ClearSelection()
 	gameView:SetOnlyAllowClick(0, 0)
 
-	-- Upload phase (drag-drop)
-	tutorialDialogue:SetText("This is a databattle: your scripts against the node's defenses. Drag the Hack script onto this upload spot.")
+	-- Upload phase (drag-drop; the gliding hand demo is the pointer, an
+	-- arrow on the upload zone on top of it is too much at once)
+	tutorialDialogue:SetText("This is a databattle: your scripts against the node's defenses. Drag the Hack script onto the upload spot.")
 	gameView:SetOnlyAllowUpload(4, 5)
-	gameView:ShowTutorialArrowSquare(4, 5)
 	gameView:ShowTutorialArrowProgramList('hack')
 	gameView:ShowDragDemo('hack', 4, 5)
 	gameState.UnitAdded:wait()
 	gameView:ClearDragDemo()
 	gameView:ClearTutorialArrow()
-	tutorialDialogue:SetText("One more: drag Slingshot onto this spot.")
+	tutorialDialogue:SetText("One more: drag Slingshot onto the next spot.")
 	gameView:SetOnlyAllowUpload(3, 3)
-	gameView:ShowTutorialArrowSquare(3, 3)
 	gameView:ShowTutorialArrowProgramList('slingshot')
 	gameView:ShowDragDemo('slingshot', 3, 3)
 	gameState.UnitAdded:wait()
@@ -137,9 +136,9 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, on
 	waitForClick(5, 5)
 	tutorialDialogue:SetText("Scripts stretch out as they move. Each square is a sector, up to the script's max size. One more move: click here.")
 	waitForClick(6, 5)
-	tutorialDialogue:SetText("In range! Select Slice.")
-	waitForCommand('slice')
-	tutorialDialogue:SetText("Attack! Click the enemy script.")
+	-- Select the attack for the player; making them click Slice here feels bad
+	gameView:TutorialSelectCommand('slice')
+	tutorialDialogue:SetText("In range! Click the enemy script to attack.")
 	waitForClick(7, 5)
 
 	-- Second script: teach command selection explicitly with the ranged attack
