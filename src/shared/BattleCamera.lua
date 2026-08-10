@@ -13,7 +13,7 @@ local Signal = require(game.ReplicatedStorage.Signal)
 
 local kBindName = "BattleCameraBind"
 local kFieldOfView = 20
-local kDragThresholdPx = 10
+local kDragThresholdPx = 14
 
 export type Config = {
 	surfaceY: number, -- world Y of the board surface

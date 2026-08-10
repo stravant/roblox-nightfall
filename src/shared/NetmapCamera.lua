@@ -7,6 +7,8 @@ local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local NetmapCamera = {}
 
 local BIND_NAME = "NetmapCameraBind"
+-- Dead zone: presses that move less than this stay clicks (no pan)
+local DRAG_THRESHOLD_PX = 14
 
 function NetmapCamera.new()
 	local this = {}
@@ -111,6 +113,7 @@ function NetmapCamera.new()
 	end
 	
 	local mPanStartHit = nil
+	local mDownScreenPos = Vector2.new()
 	local mDidPan = false
 	local mIsPanning = false
 	local mPinching = false
@@ -121,6 +124,7 @@ function NetmapCamera.new()
 			return
 		end
 		mPanStartHit = getMouseHit()
+		mDownScreenPos = UserInputService:GetMouseLocation()
 		mDidPan = false
 		mIsPanning = true
 	end
@@ -143,7 +147,17 @@ function NetmapCamera.new()
 			return
 		end
 		if mPanStartHit then
-			mDidPan = true
+			if not mDidPan then
+				local mouseAt = UserInputService:GetMouseLocation()
+				if (mouseAt - mDownScreenPos).Magnitude < DRAG_THRESHOLD_PX then
+					return
+				end
+				mDidPan = true
+				-- Re-anchor at the point the drag actually began so the map
+				-- doesn't jump by the dead-zone distance
+				mPanStartHit = getMouseHit()
+				return
+			end
 			setPosition(mCurrentPosition - (getMouseHit() - mPanStartHit))
 		end
 	end
