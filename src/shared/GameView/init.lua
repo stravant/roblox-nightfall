@@ -624,7 +624,7 @@ function GameView.new(gameState, controller, menu)
 		local kPeriod = 1.8
 		local cn = RunService.RenderStepped:Connect(function()
 			local hud = mGui:FindFirstChild("BattleHud")
-			local window = hud and hud:FindFirstChild("ProgramsWindow")
+			local window = hud and hud:FindFirstChild("ProgramsWindow", true)
 			local inset = window and window:FindFirstChild("Inset")
 			local row = inset and inset:FindFirstChild(programId)
 			if not row or mDraggingProgram then

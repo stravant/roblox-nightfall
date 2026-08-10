@@ -142,7 +142,7 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 		else Color3.new(0, 0, 0)
 	return e(WindowsButton, {
 		Name = entry.Key,
-		Size = UDim2.new(0, 200, 0, 66),
+		Size = UDim2.new(0, 240, 0, 66),
 		LayoutOrder = entry.IsMove and 0 or 1,
 		ImageColor3 = if selected
 			then Color3.new(0, 0, 1)
@@ -196,12 +196,12 @@ local function BattleHudContent(props: HudState)
 		return nil
 	end
 
-	-- Left-edge command column (easy thumb reach in landscape)
+	-- The selected unit's commands, stacked below the info window
 	local commandItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
-			VerticalAlignment = Enum.VerticalAlignment.Bottom,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, 8),
 		}),
@@ -290,20 +290,35 @@ local function BattleHudContent(props: HudState)
 
 	local pane = props.pane
 
+	-- Everything on the left stacks in one column: the unit info window, its
+	-- commands right below it, then the Programs window during setup
+	local commandCount = #props.commands
+	local commandRowHeight = commandCount * 66 + math.max(0, commandCount - 1) * 8
+
 	return e(React.Fragment, nil, {
-		CommandRow = e("Frame", {
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, 12, 1, -12),
-			Size = UDim2.new(0, 200, 0, 460),
+		LeftColumn = e("Frame", {
+			Position = UDim2.new(0, 12, 0, 12),
+			Size = UDim2.new(0, 240, 1, -24),
 			BackgroundTransparency = 1,
 			ZIndex = 3,
+		}, {
+		UIListLayout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Vertical,
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 8),
+		}),
+		CommandRow = e("Frame", {
+			Size = UDim2.new(0, 240, 0, commandRowHeight),
+			BackgroundTransparency = 1,
+			LayoutOrder = 2,
 		}, commandItems),
 		InfoWindow = if pane
 			then windowChrome(pane.name, {
 				Name = "InfoWindow",
-				Position = UDim2.new(0, 12, 0, 12),
 				Size = UDim2.new(0, 240, 0, 150),
-				ZIndex = 3,
+				LayoutOrder = 1,
 			}, {
 				UnitImage = e("ImageLabel", {
 					Position = UDim2.new(0, 6, 0, 6),
@@ -349,12 +364,11 @@ local function BattleHudContent(props: HudState)
 		ProgramsWindow = if props.programsVisible
 			then windowChrome("Programs", {
 				Name = "ProgramsWindow",
-				-- Below the info window, clear of the command column at bottom-left
-				Position = UDim2.new(0, 12, 0, 174),
-				Size = UDim2.new(0, 220, 0, 40 * math.max(1, #props.programs) + 78),
-				ZIndex = 3,
+				Size = UDim2.new(0, 240, 0, 40 * math.max(1, #props.programs) + 78),
+				LayoutOrder = 3,
 			}, programItems)
 			else nil,
+		}),
 	})
 end
 
@@ -535,14 +549,15 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		mRoot.setState({ hidden = true })
 	end
 
-	-- Rendered lookups for the tutorial arrows (post-flush only)
+	-- Rendered lookups for the tutorial arrows (post-flush only; recursive
+	-- since the windows live inside the left column stack)
 	local function findProgramRow(unitId: string): Instance?
-		local window = mGui:FindFirstChild("ProgramsWindow")
+		local window = mGui:FindFirstChild("ProgramsWindow", true)
 		local inset = window and window:FindFirstChild("Inset")
 		return inset and inset:FindFirstChild(unitId)
 	end
 	local function findCommandButton(key: string): Instance?
-		local row = mGui:FindFirstChild("CommandRow")
+		local row = mGui:FindFirstChild("CommandRow", true)
 		return row and row:FindFirstChild(key)
 	end
 

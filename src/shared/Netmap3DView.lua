@@ -316,10 +316,15 @@ function Netmap3DView.new()
 		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 3, 6)
 		adornee.Parent = workspace
 
+		-- Oversized body text (e.g. the locked popup's big lock icon) gets a
+		-- proportionally taller billboard so it isn't clipped by the inset
+		local bodyTextSize = statusTextSize or 16
+		local extraHeight = math.max(0, bodyTextSize - 16) * 1.5
+
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NodePopup"
 		billboard.Adornee = adornee
-		billboard.Size = UDim2.new(0, 132, 0, 46)
+		billboard.Size = UDim2.new(0, 132, 0, 46 + extraHeight)
 		-- AlwaysOnTop: reliable rendering over highlights/geometry; overlap
 		-- between nearby nodes' popups is handled by spacing the nodes out in
 		-- the place instead
@@ -358,8 +363,10 @@ function Netmap3DView.new()
 		label.Size = UDim2.new(1, 0, 1, 0)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.SourceSansBold
-		label.TextSize = statusTextSize or 16
+		label.TextSize = bodyTextSize
 		label.TextColor3 = statusColor
+		label.TextStrokeColor3 = Color3.new(0, 0, 0)
+		label.TextStrokeTransparency = 0
 		label.Text = statusText
 		label.Parent = inset
 
