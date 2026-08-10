@@ -434,6 +434,8 @@ function Netmap3DView.new()
 	mHoverHighlight.FillTransparency = 1
 	mHoverHighlight.OutlineColor = Color3.new(1, 1, 1)
 	mHoverHighlight.OutlineTransparency = 0
+	-- Occluded: don't draw the outline over the node popups
+	mHoverHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	mHoverHighlight.Enabled = false
 	mHoverHighlight.Parent = mPlayerGui
 
@@ -536,6 +538,7 @@ function Netmap3DView.new()
 		highlight.FillTransparency = 1
 		highlight.OutlineColor = Color3.fromRGB(0, 255, 120)
 		highlight.OutlineTransparency = 0
+		highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 		highlight.Adornee = nodeView.VisibleModel
 		highlight.Parent = nodeView.VisibleModel
 
