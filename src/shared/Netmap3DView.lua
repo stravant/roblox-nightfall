@@ -10,66 +10,12 @@ local NetmapCamera = require(game.ReplicatedStorage.NetmapCamera)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local DeviceInfo = require(game.ReplicatedStorage.DeviceInfo)
-local React = require(game.ReplicatedStorage.Packages.React)
-local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
-
-local e = React.createElement
 
 local Netmap3DView = {}
 
--- The GUI overlay (formerly the script.Netmap template; see
--- ui-reference/ModuleTemplates/Netmap3DView.json). Only the credit display is
--- dynamic; the transient credit delta text stays imperative because it's a
--- fire-and-forget TweenPosition animation.
-local function NetmapOverlayContent(props)
-	return e("ImageLabel", {
-		Name = "CreditDisplay",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -24, 0, 10),
-		Size = UDim2.new(0, 120, 0, 50),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 2,
-		Image = "rbxassetid://1378189463",
-		ImageRectOffset = Vector2.new(32, 0),
-		ImageRectSize = Vector2.new(32, 48),
-		ScaleType = Enum.ScaleType.Slice,
-		SliceCenter = Rect.new(16, 24, 16, 24),
-	}, {
-		Title = e("TextLabel", {
-			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 6, 0, 12),
-			Size = UDim2.new(0, 200, 0, 30),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSansBold,
-			TextSize = 14,
-			TextColor3 = Color3.new(1, 1, 1),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "Credits",
-		}),
-		Inset = e("ImageLabel", {
-			Position = UDim2.new(0, 5, 0, 25),
-			Size = UDim2.new(1, -10, 1, -29),
-			BackgroundTransparency = 1,
-			Image = "rbxassetid://1378143823",
-			ScaleType = Enum.ScaleType.Slice,
-			SliceCenter = Rect.new(8, 8, 8, 8),
-		}, {
-			Text = e("TextLabel", {
-				Position = UDim2.new(0, 4, 0, 0),
-				Size = UDim2.new(1, -7, 1, -1),
-				BackgroundTransparency = 1,
-				Font = Enum.Font.Code,
-				TextSize = 20,
-				TextColor3 = Color3.new(0, 0, 0),
-				TextStrokeColor3 = Color3.new(1, 1, 1),
-				TextStrokeTransparency = 0.9,
-				TextWrapped = true,
-				TextXAlignment = Enum.TextXAlignment.Right,
-				Text = props.creditsText,
-			}),
-		}),
-	})
-end
+-- The credits display itself lives in MainView's topbar (driven through the
+-- topbarCredits interface); only the transient credit delta text is created
+-- here because it's a fire-and-forget TweenPosition animation.
 
 -- Replacement for the old script.CreditUpdateText template clone
 local function makeCreditUpdateText()
@@ -96,9 +42,13 @@ end
 
 local NOT_BEATEN_COLLISION_GROUP = PhysicsService:GetCollisionGroupId("NotBeatenGlow")
 
-function Netmap3DView.new()
+-- `topbarCredits` is MainView's topbar credits interface: SetText(text) and
+-- GetInset() (the sunken frame the fly-away delta text animates inside)
+function Netmap3DView.new(topbarCredits)
 	local this = {}
-	
+
+	local mTopbarCredits = topbarCredits
+
 	local mNetmapModel = workspace.Netmap
 
 	this.NodeSelected = Signal.new()
@@ -111,10 +61,7 @@ function Netmap3DView.new()
 	mGui.BackgroundTransparency = 1
 	mGui.Selectable = true
 	mGui.ZIndex = 3
-	local mGuiRoot = StatefulRoot.create(mGui, NetmapOverlayContent, {
-		creditsText = "",
-	})
-	
+
 	local mConnectionsContainer = Instance.new('Folder', workspace)
 	local mPlayerGui = game.Players.LocalPlayer.PlayerGui
 	
@@ -698,21 +645,21 @@ function Netmap3DView.new()
 	local mLastShownCredits = nil
 	function this:UpdateCreditDisplay()
 		local credits = LocalPlayerData:GetCredits()
-		mGuiRoot.setState({ creditsText = ("%d"):format(credits) })
+		mTopbarCredits.SetText(("Credits: %d"):format(credits))
 		if mLastShownCredits ~= credits then
-			if mLastShownCredits ~= nil and mGui:IsDescendantOf(game) then
+			local inset = mTopbarCredits.GetInset()
+			if mLastShownCredits ~= nil and inset then
 				local delta = credits - mLastShownCredits
 				local text = makeCreditUpdateText()
 				if delta > 0 then
 					text.Text = "+"..delta
-					text.TextColor3 = Color3.new(0, 0.8, 0)
 					text.TextColor3 = Color3.new(0, 0.4, 0)
 				else
 					text.Text = ""..delta
 					text.TextColor3 = Color3.new(1, 0, 0)
 					text.TextStrokeColor3 = Color3.new(0.5, 0, 0)
 				end
-				text.Parent = mGui.CreditDisplay.Inset
+				text.Parent = inset
 				text:TweenPosition(UDim2.new(0, 4, 1.1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 1, false, function()
 					text:Destroy()
 				end)

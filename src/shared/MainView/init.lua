@@ -155,9 +155,49 @@ function MainView.new()
 					FlexMode = Enum.UIFlexMode.Fill,
 				}),
 			}),
+			CreditsDisplay = if props.creditsText
+				then e("ImageLabel", {
+					Name = "CreditsDisplay",
+					LayoutOrder = 5,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 0, 36),
+					BackgroundTransparency = 1,
+					Image = "rbxassetid://1378189463",
+					ImageRectOffset = Vector2.new(32, 0),
+					ImageRectSize = Vector2.new(32, 48),
+					ScaleType = Enum.ScaleType.Slice,
+					SliceCenter = Rect.new(16, 24, 16, 24),
+				}, {
+					Inset = e("ImageLabel", {
+						Name = "Inset",
+						Position = UDim2.new(0, 5, 0, 5),
+						Size = UDim2.new(1, -10, 1, -10),
+						BackgroundTransparency = 1,
+						AutomaticSize = Enum.AutomaticSize.X,
+						Image = "rbxassetid://1378143823",
+						ScaleType = Enum.ScaleType.Slice,
+						SliceCenter = Rect.new(8, 8, 8, 8),
+					}, {
+						Text = e("TextLabel", {
+							Position = UDim2.new(0, 8, 0, 0),
+							AutomaticSize = Enum.AutomaticSize.X,
+							Size = UDim2.new(0, 0, 1, -1),
+							BackgroundTransparency = 1,
+							Font = Enum.Font.SourceSansBold,
+							TextSize = 20,
+							TextColor3 = Color3.fromRGB(0, 100, 0),
+							Text = props.creditsText,
+						}, {
+							UIPadding = e("UIPadding", {
+								PaddingRight = UDim.new(0, 8),
+							}),
+						}),
+					}),
+				})
+				else nil,
 			MenuButton = e(WindowsButton, {
 				Name = "MenuButton",
-				LayoutOrder = 5,
+				LayoutOrder = 6,
 				Size = UDim2.new(0, 110, 0, 36),
 				OnClick = props.onMenuClick,
 			}, {
@@ -177,6 +217,7 @@ function MainView.new()
 		battleTitle = nil,
 		startVisible = false,
 		doneTurnVisible = false,
+		creditsText = nil,
 		onStartClick = nil,
 		onDoneTurnClick = nil,
 		onMenuClick = function()
@@ -203,9 +244,19 @@ function MainView.new()
 	function mTopbarBattleInterface:GetStartButton()
 		return mTopbarGui:FindFirstChild("StartGameButton", true)
 	end
+	-- Interface handed to Netmap3DView so it can drive the credits display
+	local mTopbarCredits = {
+		SetText = function(text)
+			mTopbarRoot.setState({ creditsText = text })
+		end,
+		GetInset = function()
+			local display = mTopbarGui:FindFirstChild("CreditsDisplay", true)
+			return display and display:FindFirstChild("Inset")
+		end,
+	}
 	
 	-- Make netmap
-	local mNetmapView = Netmap3DView.new()
+	local mNetmapView = Netmap3DView.new(mTopbarCredits)
 	mNetmapView:GetGui().Position = UDim2.new(0.5, 0, 0.5, 0)
 	mNetmapView:GetGui().Parent = mGui
 	mNetmapView:SetVisible(true)
