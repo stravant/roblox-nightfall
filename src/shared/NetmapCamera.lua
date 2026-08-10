@@ -113,9 +113,11 @@ function NetmapCamera.new()
 	local mPanStartHit = nil
 	local mDidPan = false
 	local mIsPanning = false
+	local mPinching = false
+	local mPinchStartZoom = mZoomLevel
 	local mInertialVelocity = Vector3.new()
 	local function button1Down()
-		if ModalManager:IsModal() then
+		if ModalManager:IsModal() or mPinching then
 			return
 		end
 		mPanStartHit = getMouseHit()
@@ -137,7 +139,7 @@ function NetmapCamera.new()
 		mIsPanning = false
 	end
 	local function mousePan()
-		if ModalManager:IsModal() then
+		if ModalManager:IsModal() or mPinching then
 			return
 		end
 		if mPanStartHit then
@@ -176,6 +178,30 @@ function NetmapCamera.new()
 			mousePan()
 		elseif inputObject.UserInputType == Enum.UserInputType.Touch then
 			mousePan()
+		end
+	end)
+	UserInputService.TouchPinch:Connect(function(_touchPositions, scale, _velocity, state, gameProcessed)
+		if ModalManager:IsModal() then
+			return
+		end
+		if state == Enum.UserInputState.Begin then
+			if gameProcessed then
+				return
+			end
+			mPinching = true
+			mPinchStartZoom = mZoomLevel
+			-- The first finger already started a pan/click gesture: cancel it
+			mPanStartHit = nil
+			mIsPanning = false
+			mDidPan = false
+			mInertialVelocity = Vector3.new()
+		elseif state == Enum.UserInputState.Change then
+			if mPinching then
+				mZoomLevel = math.clamp(mPinchStartZoom / scale, MIN_ZOOM, MAX_ZOOM)
+				setPosition(mCurrentPosition)
+			end
+		else
+			mPinching = false
 		end
 	end)
 	
