@@ -732,6 +732,41 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	function this:GetUnit(x, y)
 		return mBoard[x][y].Unit
 	end
+
+	-- Remove a not-yet-started player unit from an upload zone, returning it
+	-- to the inventory (dragging a unit back out during setup). Returns the
+	-- removed unit's definition id, or nil if there was nothing to remove.
+	-- Safe for the replay: uploads are only serialized at StartGame.
+	function this:RemoveUploadedUnit(x, y)
+		if mGameStarted then
+			return nil
+		end
+		local sq = mBoard[x][y]
+		local unit = sq.Unit
+		if not unit or unit.Enemy then
+			return nil
+		end
+		this.UnitRemoved:fire(unit)
+		local def = unit.Definition
+		for _, info in pairs(mUnitInventory) do
+			if info.Id == def.Id then
+				info.Count = info.Count + 1
+				break
+			end
+		end
+		mUnitSet[unit] = nil
+		for i, r in pairs(mUnitList) do
+			if r == unit then
+				table.remove(mUnitList, i)
+				break
+			end
+		end
+		-- Clear the unit's board squares (a single square before the game starts)
+		for _, coord in pairs(unit.Tail) do
+			mBoard[coord.x][coord.y].Unit = nil
+		end
+		return def.Id
+	end
 	
 	function this:StartGame()
 		-- Record uploads in the log

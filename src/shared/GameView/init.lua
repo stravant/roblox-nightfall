@@ -757,13 +757,12 @@ function GameView.new(gameState, controller, menu)
 		end
 	end)
 
-	-- Drag-drop upload: drag a program row out of the Programs window onto an
-	-- upload zone on the board
+	-- Shared drag session: a ghost icon follows the pointer; releasing over an
+	-- upload zone uploads the program there, anywhere else leaves it in the
+	-- inventory. Used both for dragging out of the Programs window and for
+	-- dragging an already-placed unit back off its upload zone.
 	local UserInputService = game:GetService('UserInputService')
-	mUnitInfoView.ProgramDragBegan:connect(function(id, viewportPos)
-		if gameState:IsGameStarted() or mDestroyed then
-			return
-		end
+	local function startDragSession(id, screenPos)
 		mDraggingProgram = true
 		local def = Scripts[id]
 
@@ -771,7 +770,7 @@ function GameView.new(gameState, controller, menu)
 		ghost.Name = "DragGhost"
 		ghost.AnchorPoint = Vector2.new(0.5, 0.5)
 		ghost.Size = UDim2.new(0, 48, 0, 48)
-		ghost.Position = UDim2.new(0, viewportPos.X, 0, viewportPos.Y)
+		ghost.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
 		ghost.BackgroundColor3 = def.Color
 		ghost.BackgroundTransparency = 0.3
 		ghost.BorderColor3 = Color3.new(0, 0, 0)
@@ -802,6 +801,48 @@ function GameView.new(gameState, controller, menu)
 				mUnitInfoView:SetSelectedUnitDefinition(id)
 			end
 		end)
+	end
+
+	-- Drag out of the Programs window
+	mUnitInfoView.ProgramDragBegan:connect(function(id, viewportPos)
+		if gameState:IsGameStarted() or mDestroyed then
+			return
+		end
+		startDragSession(id, viewportPos)
+	end)
+
+	-- Drag a placed unit back off its upload zone (claims the gesture before
+	-- the camera pans). The unit returns to the inventory immediately;
+	-- dropping it on a zone re-places it, anywhere else it stays in inventory.
+	local function hasPlayerUnits()
+		for unit in pairs(gameState:GetUnits()) do
+			if not unit.Enemy then
+				return true
+			end
+		end
+		return false
+	end
+	mBattleBoard:SetPressCapture(function(x, y, screenPos)
+		if mDestroyed or gameState:IsGameStarted() then
+			return false
+		end
+		if not mAutoSelectionEnabled then
+			return false -- no repositioning during the scripted tutorial
+		end
+		local unit = gameState:GetUnit(x, y)
+		if not unit or unit.Enemy then
+			return false
+		end
+		local id = gameState:RemoveUploadedUnit(x, y)
+		if not id then
+			return false
+		end
+		mUnitInfoView:UpdateCount(id, 1)
+		if not hasPlayerUnits() then
+			root().setState({ startGameVisible = false })
+		end
+		startDragSession(id, screenPos)
+		return true
 	end)
 	mUnitInfoView.CommandSelected:connect(function(commandId)
 		if mSelectionType == 'upload' then

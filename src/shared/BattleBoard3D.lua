@@ -124,6 +124,18 @@ function BattleBoard3D.new(backgroundImage: string)
 		return worldToGrid(mCamera:HitAtScreen(screenPos))
 	end
 
+	-- Claim presses on specific grid squares before the camera pan/tap logic
+	-- sees them. fn(gridX, gridY, screenPos) -> true to claim the gesture.
+	function this:SetPressCapture(fn: (number, number, Vector2) -> boolean)
+		mCamera:SetPressCapture(function(worldHit: Vector3, screenPos: Vector2)
+			local gridX, gridY = worldToGrid(worldHit)
+			if gridX and gridY then
+				return fn(gridX, gridY, screenPos)
+			end
+			return false
+		end)
+	end
+
 	-- Where a grid square's center lands on screen (GUI space)
 	function this:ScreenFromGrid(gridX: number, gridY: number): Vector2
 		local worldPos = Vector3.new(

@@ -83,16 +83,29 @@ function BattleCamera.new(config: Config)
 	local mPinching = false
 	local mPinchStartHeight = mHeight
 
+	-- Optional gesture claim: called with (worldHit, screenPos) on press; if
+	-- it returns true the camera ignores the whole gesture (no pan, no tap) —
+	-- used so dragging a unit off an upload zone doesn't pan the board
+	local mPressCapture = nil
+	function this:SetPressCapture(fn)
+		mPressCapture = fn
+	end
+
 	table.insert(mConnections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		if gameProcessed then
 			return
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
+			local screenPos = Vector2.new(input.Position.X, input.Position.Y)
+			local hit = screenHit(screenPos)
+			if mPressCapture and mPressCapture(hit, screenPos) then
+				return -- gesture claimed; mDown stays false
+			end
 			mDown = true
 			mDragging = false
-			mDownScreenPos = Vector2.new(input.Position.X, input.Position.Y)
-			mDragStartHit = screenHit(mDownScreenPos)
+			mDownScreenPos = screenPos
+			mDragStartHit = hit
 		end
 	end))
 

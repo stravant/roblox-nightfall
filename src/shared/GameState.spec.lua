@@ -44,6 +44,38 @@ return function(t)
 		t.expect(gs:HasLost()).toBeFalsy()
 	end)
 
+	t.test("RemoveUploadedUnit returns the unit to inventory before the game starts", function()
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		local zone = gs:GetUploadZones()[1]
+		gs:UploadUnit(zone.x, zone.y, Scripts.hack)
+		local function hackCount()
+			for _, info in pairs(gs:GetAvailableUnits()) do
+				if info.Id == "hack" then
+					return info.Count
+				end
+			end
+		end
+		local countAfterUpload = hackCount()
+
+		local removedId = gs:RemoveUploadedUnit(zone.x, zone.y)
+		t.expect(removedId).toBe("hack")
+		t.expect(gs:GetUnit(zone.x, zone.y)).toBe(nil)
+		t.expect(hackCount()).toBe(countAfterUpload + 1)
+
+		-- Nothing there anymore: removing again is a no-op
+		t.expect(gs:RemoveUploadedUnit(zone.x, zone.y)).toBe(nil)
+
+		-- The zone accepts a fresh upload afterwards
+		gs:UploadUnit(zone.x, zone.y, Scripts.hack)
+		t.expect(gs:GetUnit(zone.x, zone.y) ~= nil).toBeTruthy()
+		t.expect(gs:HasErrors()).toBeFalsy()
+
+		-- After the game starts, units can't be removed
+		gs:StartGame()
+		t.expect(gs:RemoveUploadedUnit(zone.x, zone.y)).toBe(nil)
+		t.expect(gs:GetUnit(zone.x, zone.y) ~= nil).toBeTruthy()
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]
