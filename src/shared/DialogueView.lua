@@ -72,6 +72,7 @@ local function DialogueContent(props: DialogueState)
 
 	return e(React.Fragment, nil, {
 		MouseCatcher = e("ImageButton", {
+			AutoButtonColor = false,
 			-- Extended past the topbar inset so the dim covers the full
 			-- screen (children may render outside their gui's bounds)
 			Position = UDim2.new(0, 0, 0, -guiInset.Y),

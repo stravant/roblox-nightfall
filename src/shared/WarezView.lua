@@ -125,6 +125,7 @@ local function WarezContent(props: WarezState)
 	return e(React.Fragment, nil, {
 		MouseCatcher = e("ImageButton", {
 			Active = true,
+			AutoButtonColor = false,
 			-- Extended past the topbar inset so the dim covers the full screen
 			Position = UDim2.new(0, 0, 0, -game:GetService("GuiService"):GetGuiInset().Y),
 			Size = UDim2.new(1, 0, 1, game:GetService("GuiService"):GetGuiInset().Y),
