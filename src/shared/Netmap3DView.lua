@@ -519,8 +519,15 @@ function Netmap3DView.new()
 		if not ModalManager:IsModal() and id then
 			mHoverDisplayGui.Enabled = true
 			mHoverDisplayAdornee.CFrame = mNodeView[id].CFrame * CFrame.new(0, 5.5, 0)
-			mHoverHighlight.Adornee = mNodeView[id].VisibleModel
-			mHoverHighlight.Enabled = true
+			-- The highlight doubles as a "something to do here" hint: beaten
+			-- battle nodes don't get it, warez shops always do
+			local isWarez = Netmap.ById[id].Warez ~= nil
+			if isWarez or not mNodeView[id].Beaten then
+				mHoverHighlight.Adornee = mNodeView[id].VisibleModel
+				mHoverHighlight.Enabled = true
+			else
+				mHoverHighlight.Enabled = false
+			end
 		else
 			mHoverDisplayGui.Enabled = false
 			mHoverHighlight.Enabled = false
