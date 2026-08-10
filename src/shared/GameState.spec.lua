@@ -65,6 +65,31 @@ return function(t)
 		-- Nothing there anymore: removing again is a no-op
 		t.expect(gs:RemoveUploadedUnit(zone.x, zone.y)).toBe(nil)
 
+		-- Non-upload-zone squares never yield a unit (protects pre-placed
+		-- friendly units from being dragged off)
+		local nonZone = nil
+		for x = 1, Places.PlaceWidth do
+			for y = 1, Places.PlaceHeight do
+				local isZone = false
+				for _, z in pairs(gs:GetUploadZones()) do
+					if z.x == x and z.y == y then
+						isZone = true
+					end
+				end
+				if not isZone and gs:GetUnit(x, y) then
+					nonZone = { x = x, y = y } -- an enemy or pre-placed unit
+					break
+				end
+			end
+			if nonZone then
+				break
+			end
+		end
+		if nonZone then
+			t.expect(gs:RemoveUploadedUnit(nonZone.x, nonZone.y)).toBe(nil)
+			t.expect(gs:GetUnit(nonZone.x, nonZone.y) ~= nil).toBeTruthy()
+		end
+
 		-- The zone accepts a fresh upload afterwards
 		gs:UploadUnit(zone.x, zone.y, Scripts.hack)
 		t.expect(gs:GetUnit(zone.x, zone.y) ~= nil).toBeTruthy()

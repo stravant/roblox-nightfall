@@ -830,6 +830,9 @@ function GameView.new(gameState, controller, menu)
 		if not mAutoSelectionEnabled then
 			return false -- no repositioning during the scripted tutorial
 		end
+		if not isUploadZone(x, y) then
+			return false -- pre-placed friendly units can't be picked up
+		end
 		local unit = gameState:GetUnit(x, y)
 		if not unit or unit.Enemy then
 			return false

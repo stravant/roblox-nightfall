@@ -741,6 +741,18 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		if mGameStarted then
 			return nil
 		end
+		-- Only actual uploads can be taken back: pre-placed friendly units
+		-- don't sit on upload zones and were never in the inventory
+		local onUploadZone = false
+		for _, c in pairs(mUploadZoneList) do
+			if x == c.x and y == c.y then
+				onUploadZone = true
+				break
+			end
+		end
+		if not onUploadZone then
+			return nil
+		end
 		local sq = mBoard[x][y]
 		local unit = sq.Unit
 		if not unit or unit.Enemy then
