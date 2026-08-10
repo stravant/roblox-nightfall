@@ -131,8 +131,13 @@ function Netmap3DView.new()
 		local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000)
 		if result then
 			-- Hit cylinders map by instance; node models map by parent model
-			return mNodeModelToNodeIdMap[result.Instance]
+			local id = mNodeModelToNodeIdMap[result.Instance]
 				or mNodeModelToNodeIdMap[result.Instance.Parent]
+			-- No hover/click affordance for nodes the player can't reach yet
+			-- (e.g. a seen warez node before its neighbor is beaten)
+			if id and LocalPlayerData:CanAccessNode(id) then
+				return id
+			end
 		end
 	end
 	
@@ -347,19 +352,18 @@ function Netmap3DView.new()
 		adornee.CanCollide = false
 		adornee.CanQuery = false
 		adornee.Size = Vector3.new(1, 1, 1)
-		-- Nudged toward the camera (fixed 45-degree yaw) so the popup sits
-		-- just in front of its own node's geometry, while still depth-sorting
-		-- behind nearer nodes (NOT AlwaysOnTop, so vertically-aligned nodes'
-		-- popups stack correctly)
-		adornee.CFrame = nodeView.CFrame * CFrame.new(2.2, 0, 2.2)
+		-- Pulled several studs toward the camera (fixed 45-degree yaw) so the
+		-- popup sits in front of its node AND above the island surface — the
+		-- angled camera makes the forward pull read as "below the node" on
+		-- screen without sinking the popup into the ground. NOT AlwaysOnTop,
+		-- so vertically-aligned nodes' popups depth-sort correctly.
+		adornee.CFrame = nodeView.CFrame * CFrame.new(4.5, 0.8, 4.5)
 		adornee.Parent = workspace
 
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NodePopup"
 		billboard.Adornee = adornee
 		billboard.Size = UDim2.new(0, 132, 0, 46)
-		-- Hang below the node's base so the model geometry stays visible
-		billboard.StudsOffset = Vector3.new(0, -2.2, 0)
 		billboard.LightInfluence = 0
 		billboard.Enabled = mGui.Visible
 		billboard.Parent = mPlayerGui
@@ -430,7 +434,7 @@ function Netmap3DView.new()
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
 		-- The enlarged hit cylinder only intercepts hovers/clicks once the
 		-- node is actually interactable
-		nodeView.HitArea.CanQuery = nodeView.Seen
+		nodeView.HitArea.CanQuery = nodeView.Seen and LocalPlayerData:CanAccessNode(nodeView.Id)
 		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
 		if nodeView.Seen and not nodeView.Beaten then
 			if isWarez then
