@@ -180,6 +180,8 @@ function GameView.new(gameState, controller, menu, topbar)
 
 	local mTopbar = topbar or {
 		SetStartVisible = function() end,
+		SetLeaveVisible = function() end,
+		SetOnLeave = function() end,
 		SetDoneTurnVisible = function() end,
 		SetUndoVisible = function() end,
 		SetOnUndo = function() end,
@@ -286,6 +288,12 @@ function GameView.new(gameState, controller, menu, topbar)
 			setSelectionUnit(unit)
 		end
 	end)
+
+	-- During setup the topbar offers Leave (back out without playing)
+	mTopbar:SetOnLeave(function()
+		handleGameEnded(false, 0)
+	end)
+	mTopbar:SetLeaveVisible(true)
 
 	-- Battle sound
 	local mBattleSoundLooper = BattleSoundLooper.new()
@@ -621,10 +629,12 @@ function GameView.new(gameState, controller, menu, topbar)
 	function this:DisableAutoSelection()
 		mAutoSelectionEnabled = false
 
-		-- Tutorial disables (greys out forfeit/skip in the shared menu, and
-		-- the Done Turn button stays hidden since the tutorial drives turns)
+		-- Tutorial disables (greys out forfeit/skip in the shared menu; the
+		-- Done Turn and Leave buttons stay hidden since the tutorial drives
+		-- the battle)
 		updateMenuContext()
-		root().setState({ doneTurnVisible = false })
+		mTopbar:SetDoneTurnVisible(false)
+		mTopbar:SetLeaveVisible(false)
 	end
 
 	-- Clear the selection, for tutorial
@@ -886,6 +896,7 @@ function GameView.new(gameState, controller, menu, topbar)
 		mUploadView:ClearAll()
 		-- The tutorial (auto-selection disabled) drives turns itself: no button
 		mTopbar:SetStartVisible(false)
+		mTopbar:SetLeaveVisible(false)
 		mTopbar:SetDoneTurnVisible(mAutoSelectionEnabled)
 		mUnitInfoView:SetProgramListVisible(false)
 		if mAutoSelectionEnabled then

@@ -168,8 +168,10 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	tutorialDialogue:Destroy()
 	gameView:Destroy()
 	topbar:SetStartVisible(false)
+	topbar:SetLeaveVisible(false)
 	topbar:SetUndoVisible(false)
 	topbar:SetOnStart(nil)
+	topbar:SetOnLeave(nil)
 	topbar:SetOnUndo(nil)
 	topbar:SetCreditsVisible(true)
 	netmapView:GetGui().Visible = true

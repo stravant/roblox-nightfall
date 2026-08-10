@@ -127,6 +127,25 @@ function MainView.new()
 					}),
 				})
 				else nil,
+			LeaveButton = if props.leaveVisible
+				then e(WindowsButton, {
+					Name = "LeaveButton",
+					LayoutOrder = 4,
+					Size = UDim2.new(0, 90, 0, 36),
+					OnClick = props.onLeaveClick,
+				}, {
+					TextLabel = e("TextLabel", {
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0.5, 0, 0.5, 0),
+						Size = UDim2.new(1, 0, 1, 0),
+						BackgroundTransparency = 1,
+						Font = Enum.Font.Code,
+						TextSize = 20,
+						TextColor3 = Color3.new(0, 0, 0),
+						Text = "Leave",
+					}),
+				})
+				else nil,
 			UndoButton = if props.undoVisible
 				then e(WindowsButton, {
 					Name = "UndoButton",
@@ -242,11 +261,13 @@ function MainView.new()
 	end, {
 		battleTitle = nil,
 		startVisible = false,
+		leaveVisible = false,
 		doneTurnVisible = false,
 		undoVisible = false,
 		creditsText = nil,
 		creditsHidden = false,
 		onStartClick = nil,
+		onLeaveClick = nil,
 		onDoneTurnClick = nil,
 		onUndoClick = nil,
 		onMenuClick = function()
@@ -269,6 +290,12 @@ function MainView.new()
 	end
 	function mTopbarBattleInterface:SetOnDoneTurn(callback)
 		mTopbarRoot.setState({ onDoneTurnClick = callback or StatefulRoot.None })
+	end
+	function mTopbarBattleInterface:SetLeaveVisible(visible)
+		mTopbarRoot.setState({ leaveVisible = visible })
+	end
+	function mTopbarBattleInterface:SetOnLeave(callback)
+		mTopbarRoot.setState({ onLeaveClick = callback or StatefulRoot.None })
 	end
 	function mTopbarBattleInterface:SetUndoVisible(visible)
 		mTopbarRoot.setState({ undoVisible = visible })
@@ -386,9 +413,11 @@ function MainView.new()
 		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart)
 			setBattleTitle(nil)
 			mTopbarBattleInterface:SetStartVisible(false)
+			mTopbarBattleInterface:SetLeaveVisible(false)
 			mTopbarBattleInterface:SetDoneTurnVisible(false)
 			mTopbarBattleInterface:SetUndoVisible(false)
 			mTopbarBattleInterface:SetOnStart(nil)
+			mTopbarBattleInterface:SetOnLeave(nil)
 			mTopbarBattleInterface:SetOnDoneTurn(nil)
 			mTopbarBattleInterface:SetOnUndo(nil)
 			mTopbarBattleInterface:SetCreditsVisible(true)

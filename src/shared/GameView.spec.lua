@@ -46,6 +46,12 @@ return function(t)
 		function fakeTopbar:SetOnUndo(callback)
 			self.onUndo = callback
 		end
+		function fakeTopbar:SetLeaveVisible(visible)
+			self.leaveVisible = visible
+		end
+		function fakeTopbar:SetOnLeave(callback)
+			self.onLeave = callback
+		end
 		function fakeTopbar:GetStartButton()
 			return nil
 		end
