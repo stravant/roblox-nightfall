@@ -567,7 +567,10 @@ function Netmap3DView.new(topbarCredits)
 			if want and not nodeView.TouchHighlight then
 				local highlight = Instance.new("Highlight")
 				highlight.FillTransparency = 1
-				highlight.OutlineColor = Color3.new(1, 1, 1)
+				-- Red for infected nodes, white for warez shops
+				highlight.OutlineColor = if Netmap.ById[nodeView.Id].Warez ~= nil
+					then Color3.new(1, 1, 1)
+					else Color3.new(1, 0, 0)
 				highlight.OutlineTransparency = 0
 				highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 				highlight.Adornee = nodeView.VisibleModel
@@ -601,9 +604,13 @@ function Netmap3DView.new(topbarCredits)
 			mHoverDisplayGui.Enabled = true
 			mHoverDisplayAdornee.CFrame = mNodeView[id].CFrame * CFrame.new(0, 5.5, 0)
 			-- The highlight doubles as a "something to do here" hint: beaten
-			-- battle nodes don't get it, warez shops always do
+			-- battle nodes don't get it, warez shops always do. Red for
+			-- infected nodes, white for warez shops.
 			local isWarez = Netmap.ById[id].Warez ~= nil
 			if isWarez or not mNodeView[id].Beaten then
+				mHoverHighlight.OutlineColor = if isWarez
+					then Color3.new(1, 1, 1)
+					else Color3.new(1, 0, 0)
 				mHoverHighlight.Adornee = mNodeView[id].VisibleModel
 				mHoverHighlight.Enabled = true
 			else
