@@ -394,6 +394,10 @@ function Netmap3DView.new()
 			Adornee = adornee,
 			Billboard = billboard,
 			FlashLabel = if flash then label else nil,
+			-- Flash alternates between the status color and a lightened
+			-- version of it (transparency flashing reads badly with the stroke)
+			FlashColor = statusColor:Lerp(Color3.new(1, 1, 1), 0.5),
+			BaseColor = statusColor,
 		}
 	end
 	removeNodePopup = function(nodeView)
@@ -409,8 +413,9 @@ function Netmap3DView.new()
 	local function animatePopups(t)
 		local flash = (t % 0.9) < 0.45
 		for _, nodeView in pairs(mNodeView) do
-			if nodeView.Popup and nodeView.Popup.FlashLabel then
-				nodeView.Popup.FlashLabel.TextTransparency = flash and 0 or 0.6
+			local popup = nodeView.Popup
+			if popup and popup.FlashLabel then
+				popup.FlashLabel.TextColor3 = flash and popup.BaseColor or popup.FlashColor
 			end
 		end
 	end
