@@ -172,11 +172,12 @@ local function MainMenuContent(props: MainMenuState)
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Text = "Game Menu",
 		}),
-		DoneButton = e(WindowsButton, {
-			AnchorPoint = Vector2.new(1, 1),
-			Position = UDim2.new(1, -5, 1, -5),
-			Size = UDim2.new(0, 180, 0, 36),
-			Text = "Return to Netmap",
+		CloseButton = e(WindowsButton, {
+			Name = "CloseButton",
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, -8),
+			Size = UDim2.new(0, 160, 0, 36),
+			Text = "Close",
 			OnClick = props.onDone,
 		}),
 		TabPanel = e(WindowsTabView, {

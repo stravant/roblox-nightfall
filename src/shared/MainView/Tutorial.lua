@@ -130,28 +130,24 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, onBattleWon)
 	gameView:ClearTutorialArrow()
 	gameView:ClearSelection()
 
-	-- First script: move in and attack
+	-- First script: select, move in, attack
 	tutorialDialogue:SetText("All your scripts act first, then the enemy's. Click your Hack script to select it.")
 	waitForClick(4, 5)
-	tutorialDialogue:SetText("The highlighted squares show where it can move. First, click its Slice command to preview the attack.")
-	waitForCommand('slice')
-	tutorialDialogue:SetText("Red squares are the attack range. You'll need to get closer, so click Move to keep moving.")
-	waitForCommand('move')
-	tutorialDialogue:SetText("Move here.")
+	tutorialDialogue:SetText("The highlighted squares show where it can move. Move here.")
 	waitForClick(5, 5)
 	tutorialDialogue:SetText("Scripts stretch out as they move. Each square is a sector, up to the script's max size. One more move: click here.")
 	waitForClick(6, 5)
-	tutorialDialogue:SetText("In range now. Select Slice.")
+	tutorialDialogue:SetText("In range! Select Slice.")
 	waitForCommand('slice')
 	tutorialDialogue:SetText("Attack! Click the enemy script.")
 	waitForClick(7, 5)
 
-	-- Second script: ranged attack
+	-- Second script: teach command selection explicitly with the ranged attack
 	tutorialDialogue:SetText("Direct hit! Now your Slingshot: click it.")
 	waitForClick(3, 3)
 	tutorialDialogue:SetText("Move it up.")
 	waitForClick(4, 3)
-	tutorialDialogue:SetText("Slingshot attacks at range. Select its Stone command.")
+	tutorialDialogue:SetText("Slingshot attacks at range. Its commands are listed on the left: pick Stone.")
 	waitForCommand('stone')
 	tutorialDialogue:SetText("Finish it off: click the enemy script.")
 	waitForClick(7, 3)
@@ -168,6 +164,8 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, onBattleWon)
 	tutorialDialogue:Destroy()
 	gameView:Destroy()
 	netmapView:GetGui().Visible = true
+	-- Land the camera on the node that was just beaten
+	netmapView:HighlightNode('hq')
 	SoundManager:Play('MainBackgroundLoop')
 
 	if onBattleWon then

@@ -137,9 +137,12 @@ local function windowChrome(title: string, props: { [string]: any }, children: {
 end
 
 local function commandButton(entry: CommandEntry, selected: boolean, onClick: (entry: CommandEntry) -> ())
+	local textColor = if selected then Color3.new(1, 1, 1)
+		elseif entry.Disabled then Color3.new(0.4, 0.4, 0.4)
+		else Color3.new(0, 0, 0)
 	return e(WindowsButton, {
 		Name = entry.Key,
-		Size = UDim2.new(0, 96, 0, 44),
+		Size = UDim2.new(0, 200, 0, 66),
 		LayoutOrder = entry.IsMove and 0 or 1,
 		ImageColor3 = if selected
 			then Color3.new(0, 0, 1)
@@ -150,17 +153,28 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 		end,
 	}, {
 		Label = e("TextLabel", {
-			AnchorPoint = Vector2.new(0.5, 0.5),
-			Position = UDim2.new(0.5, 0, 0.5, -1),
-			Size = UDim2.new(1, -10, 0, 36),
+			Position = UDim2.new(0, 8, 0, 5),
+			Size = UDim2.new(1, -16, 0, 20),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSansBold,
-			TextSize = 16,
-			TextColor3 = if selected then Color3.new(1, 1, 1)
-				elseif entry.Disabled then Color3.new(0.4, 0.4, 0.4)
-				else Color3.new(0, 0, 0),
-			TextWrapped = true,
+			TextSize = 18,
+			TextColor3 = textColor,
+			TextXAlignment = Enum.TextXAlignment.Left,
 			Text = entry.Label,
+		}),
+		Description = e("TextLabel", {
+			Position = UDim2.new(0, 8, 0, 25),
+			Size = UDim2.new(1, -16, 1, -31),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSans,
+			TextSize = 13,
+			TextColor3 = if selected then Color3.new(0.85, 0.85, 1)
+				elseif entry.Disabled then Color3.new(0.45, 0.45, 0.45)
+				else Color3.new(0.25, 0.25, 0.25),
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			Text = entry.Description,
 		}),
 	})
 end
@@ -182,11 +196,11 @@ local function BattleHudContent(props: HudState)
 		return nil
 	end
 
-	-- Bottom-center command row
+	-- Left-edge command column (easy thumb reach in landscape)
 	local commandItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Horizontal,
-			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			FillDirection = Enum.FillDirection.Vertical,
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			VerticalAlignment = Enum.VerticalAlignment.Bottom,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, 8),
@@ -278,9 +292,9 @@ local function BattleHudContent(props: HudState)
 
 	return e(React.Fragment, nil, {
 		CommandRow = e("Frame", {
-			AnchorPoint = Vector2.new(0.5, 1),
-			Position = UDim2.new(0.5, 0, 1, -12),
-			Size = UDim2.new(0, 640, 0, 52),
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 12, 1, -12),
+			Size = UDim2.new(0, 200, 0, 460),
 			BackgroundTransparency = 1,
 			ZIndex = 3,
 		}, commandItems),
@@ -335,8 +349,8 @@ local function BattleHudContent(props: HudState)
 		ProgramsWindow = if props.programsVisible
 			then windowChrome("Programs", {
 				Name = "ProgramsWindow",
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 12, 0.5, 0),
+				-- Below the info window, clear of the command column at bottom-left
+				Position = UDim2.new(0, 12, 0, 174),
 				Size = UDim2.new(0, 220, 0, 40 * math.max(1, #props.programs) + 78),
 				ZIndex = 3,
 			}, programItems)
