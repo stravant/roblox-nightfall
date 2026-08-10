@@ -39,7 +39,12 @@ function StatefulRoot.create(
 	local mApplyState: ((any) -> ())? = nil
 
 	local function Wrapper()
-		local state, setState = React.useState(initialState)
+		-- Lazy initializer reading mState (not initialState): setState calls
+		-- made before the first render flushes (e.g. during the owning view's
+		-- construction) must not be lost.
+		local state, setState = React.useState(function()
+			return mState
+		end)
 		mApplyState = setState
 		return React.createElement(component, state)
 	end
