@@ -248,42 +248,57 @@ function Netmap3DView.new(topbarCredits)
 			end
 			removeNodePopup(nodeView)
 		end
-		local adornee = Instance.new("Part")
-		adornee.Name = "NodePopupAdornee"
-		adornee.Transparency = 1
-		adornee.Anchored = true
-		adornee.CanCollide = false
-		adornee.CanQuery = false
-		adornee.Size = Vector3.new(1, 1, 1)
+		-- World-space popup: a thin part with a SurfaceGui rather than a
+		-- BillboardGui. It depth-sorts with the scenery (things in front of it
+		-- properly occlude it) and the hover Highlight can't draw over it.
+		-- The netmap camera has a fixed yaw/pitch, so a fixed orientation
+		-- matching the camera reads exactly like a billboard.
+		-- 132x46 logical layout at 11 studs wide; UIScale x4 over 48
+		-- PixelsPerStud keeps the canvas crisp.
+		local kPopupWidthStuds = 11
+		local kPopupHeightStuds = kPopupWidthStuds * 46 / 132
+		-- Matches NetmapCamera's fixed rotation; the extra half-turn about Y
+		-- points the part's Front face at the camera
+		local kPopupRotation = CFrame.Angles(0, math.pi / 4, 0)
+			* CFrame.Angles(-math.pi / 4 + 0.25, 0, 0)
+			* CFrame.Angles(0, math.pi, 0)
+
+		local part = Instance.new("Part")
+		part.Name = "NodePopupPart"
+		part.Transparency = 1
+		part.Anchored = true
+		part.CanCollide = false
+		part.CanQuery = false
+		part.CastShadow = false
+		part.Size = Vector3.new(kPopupWidthStuds, kPopupHeightStuds, 0.1)
 		-- Pulled several studs toward the camera (fixed 45-degree yaw) so the
 		-- popup sits in front of its node AND above the island surface — the
 		-- angled camera makes the forward pull read as "below the node" on
-		-- screen without sinking the popup into the ground. NOT AlwaysOnTop,
-		-- so vertically-aligned nodes' popups depth-sort correctly.
-		-- Raised a bit so nodes don't need extreme spacing, but still reading
-		-- as below the node rather than centered on it (extra height offsets
-		-- the top-edge SizeOffset anchoring, which hangs the popup lower)
-		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 5, 6)
-		adornee.Parent = workspace
+		-- screen without sinking the popup into the ground. The part's TOP
+		-- edge hangs at the anchor point so the popup extends downward.
+		local anchor = nodeView.CFrame * CFrame.new(6, 5, 6)
+		part.CFrame = CFrame.new(anchor.Position)
+			* kPopupRotation
+			* CFrame.new(0, -kPopupHeightStuds / 2, 0)
+		part.Parent = workspace
 
-		local billboard = Instance.new("BillboardGui")
+		local billboard = Instance.new("SurfaceGui")
 		billboard.Name = "NodePopup"
-		billboard.Adornee = adornee
-		billboard.Size = UDim2.new(0, 132, 0, 46)
-		-- Anchor the TOP edge at the adornee point (billboards are centered by
-		-- default): the pixel-sized popup then grows downward on screen when
-		-- zooming out instead of creeping up over the node geometry
-		billboard.SizeOffset = Vector2.new(0, -0.5)
-		-- AlwaysOnTop: reliable rendering over highlights/geometry; overlap
-		-- between nearby nodes' popups is handled by spacing the nodes out in
-		-- the place instead
-		billboard.AlwaysOnTop = true
+		billboard.Adornee = part
+		billboard.Face = Enum.NormalId.Front
+		billboard.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+		billboard.PixelsPerStud = 48
 		billboard.LightInfluence = 0
+		billboard.Brightness = 1
 		billboard.Enabled = mGui.Visible
 		billboard.Parent = mPlayerGui
 
+		local scale = Instance.new("UIScale")
+		scale.Scale = 4
+		scale.Parent = billboard
+
 		local window = Instance.new("ImageLabel")
-		window.Size = UDim2.new(1, 0, 1, 0)
+		window.Size = UDim2.new(0, 132, 0, 46)
 		window.BackgroundTransparency = 1
 		window.Image = "rbxassetid://1378189463"
 		window.ImageRectSize = Vector2.new(32, 48)
@@ -362,7 +377,7 @@ function Netmap3DView.new(topbarCredits)
 
 		nodeView.Popup = {
 			Kind = kind,
-			Adornee = adornee,
+			Adornee = part,
 			Billboard = billboard,
 			FlashLabel = if flash then label else nil,
 			-- Flash alternates between the status color and a lightened
@@ -731,9 +746,9 @@ function Netmap3DView.new(topbarCredits)
 	setupLinks()
 	setupNodes()
 
-	-- Keep the AlwaysOnTop infected popups in sync with whether the netmap is
-	-- actually on screen. Watching the gui's Visible property covers both
-	-- SetVisible and the tutorial's direct Visible toggling.
+	-- Keep the node popups in sync with whether the netmap is actually on
+	-- screen. Watching the gui's Visible property covers both SetVisible and
+	-- the tutorial's direct Visible toggling.
 	mGui:GetPropertyChangedSignal("Visible"):Connect(function()
 		for _, nodeView in pairs(mNodeView) do
 			if nodeView.Popup then
