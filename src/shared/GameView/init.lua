@@ -11,8 +11,7 @@
 
 local Places = require(game.ReplicatedStorage.Places)
 local Scripts = require(game.ReplicatedStorage.Scripts)
-local UnitInfoView = require(game.ReplicatedStorage.UnitInfoView)
-local UnitInfoViewMobile = require(game.ReplicatedStorage.UnitInfoViewMobile)
+local BattleHud = require(game.ReplicatedStorage.BattleHud)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local ReplaySubmission = require(game.ReplicatedStorage.ReplaySubmission)
 
@@ -65,54 +64,7 @@ local function menuLabel(text: string, y: number)
 	})
 end
 
--- The desktop Done Turn / Undo tiles (CommandListEntry style, not Windows buttons)
-local function commandTile(name: string, position: UDim2, text1: string, visible: boolean, onClick)
-	return e("ImageButton", {
-		Active = true,
-		AnchorPoint = Vector2.new(1, 1),
-		Position = position,
-		Size = UDim2.new(0, 100, 0, 100),
-		BorderSizePixel = 2,
-		ZIndex = 3,
-		Visible = visible,
-		[React.Event.MouseButton1Click] = onClick,
-	}, {
-		CommandName = e("TextLabel", {
-			Size = UDim2.new(1, 0, 0, 16),
-			BackgroundColor3 = kHeaderColor,
-			Font = Enum.Font.Code,
-			TextSize = 14,
-			TextColor3 = kInkColor,
-			Text = name,
-		}),
-		CommandText1 = e("TextLabel", {
-			Position = UDim2.new(0, 2, 0, 16),
-			Size = UDim2.new(1, 0, 0, 100),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSans,
-			TextSize = 18,
-			TextColor3 = kInkColor,
-			TextWrapped = true,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-			Text = text1,
-		}),
-		CommandText2 = e("TextLabel", {
-			Position = UDim2.new(0, 2, 0, 32),
-			Size = UDim2.new(1, 0, 0, 100),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSans,
-			TextSize = 18,
-			TextColor3 = kInkColor,
-			TextWrapped = true,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-			Text = "",
-		}),
-	})
-end
-
--- The Windows-styled small command buttons (Code-font label filling the button)
+-- Code-font label filling a Windows-styled button
 local function codeLabel(text: string)
 	return e("TextLabel", {
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -126,109 +78,68 @@ local function codeLabel(text: string)
 	})
 end
 
-local function menuButtonCover()
-	return e("Frame", {
-		Position = UDim2.new(0, -75, 0, 0),
-		Size = UDim2.new(0, 75, 0, 36),
-		BackgroundColor3 = Color3.new(0.752941, 0.752941, 0.752941),
-		BorderSizePixel = 0,
-	})
-end
-
-local function startGameButton(visible: boolean, onClick)
-	return e("TextButton", {
-		Active = true,
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 0, 0, 0),
-		Size = UDim2.new(0, 200, 0, 30),
-		BackgroundColor3 = Color3.new(0.701961, 0, 0),
-		Font = Enum.Font.Code,
-		TextSize = 24,
-		TextColor3 = Color3.new(1, 1, 1),
-		Text = "Start Databattle",
-		ZIndex = 3,
-		Visible = visible,
-		[React.Event.MouseButton1Click] = onClick,
-	})
-end
-
 local function GameViewChrome(props)
 	local hidden = props.commandsHidden
 	local disabledTint = Color3.new(0.5, 0.5, 0.5)
 	local disabledText = Color3.new(0.6, 0.6, 0.6)
 
-	local commands
-	if props.desktopUI then
-		commands = e("Frame", {
-			Name = "LargeCommands",
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundTransparency = 1,
-			ZIndex = 5,
+	-- One responsive floating layout (no more desktop/mobile variants):
+	-- Menu top-right, Done Turn / Undo bottom-right beside the BattleHud's
+	-- command row, Start Databattle floating bottom-center.
+	local commands = e("Frame", {
+		Name = "Commands",
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1,
+		ZIndex = 5,
+	}, {
+		MenuButton = e(WindowsButton, {
+			Name = "MenuButton",
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(1, -12, 0, 12),
+			Size = UDim2.new(0, 100, 0, 36),
+			ZIndex = 4,
+			Visible = not hidden,
+			OnClick = props.onMenuOpen,
 		}, {
-			DoneTurnButton = commandTile(
-				"Done Turn", UDim2.new(1, 0, 1, 0),
-				"I'm done moving my scripts, end my turn.",
-				props.doneTurnVisible and not hidden, props.onDoneTurn),
-			UndoCommand = commandTile(
-				"Undo", UDim2.new(1, -101, 1, 0),
-				"Undo the actions and movement of the last script you used.",
-				props.undoVisible and not hidden, props.onUndo),
-			MenuButton = e(WindowsButton, {
-				Name = "MenuButton",
-				Position = UDim2.new(0, 75, 0, 0),
-				Size = UDim2.new(0, 75, 0, 36),
-				ZIndex = 4,
-				Visible = not hidden,
-				OnClick = props.onMenuOpen,
-			}, {
-				TextLabel = codeLabel("Menu"),
-				Cover = menuButtonCover(),
-			}),
-			StartGameButton = startGameButton(props.startGameVisible and not hidden, props.onStartGame),
-		})
-	else
-		commands = e("Frame", {
-			Name = "SmallCommands",
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundTransparency = 1,
-			ZIndex = 5,
+			TextLabel = codeLabel("Menu"),
+		}),
+		DoneTurnButton = e(WindowsButton, {
+			Name = "DoneTurnButton",
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -12, 1, -12),
+			Size = UDim2.new(0, 150, 0, 44),
+			ZIndex = 4,
+			Visible = props.doneTurnVisible and not hidden,
+			OnClick = props.onDoneTurn,
 		}, {
-			DoneTurnButton = e(WindowsButton, {
-				Name = "DoneTurnButton",
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0, 74, 1, -30),
-				Size = UDim2.new(0, 130, 0, 36),
-				ZIndex = 4,
-				Visible = props.doneTurnVisible and not hidden,
-				OnClick = props.onDoneTurn,
-			}, {
-				TextLabel = codeLabel("Done Turn"),
-			}),
-			UndoCommand = e(WindowsButton, {
-				Name = "UndoCommand",
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0, 74, 1, -74),
-				Size = UDim2.new(0, 130, 0, 36),
-				ZIndex = 4,
-				Visible = props.undoVisible and not hidden,
-				OnClick = props.onUndo,
-			}, {
-				TextLabel = codeLabel("Undo"),
-			}),
-			MenuButton = e(WindowsButton, {
-				Name = "MenuButton",
-				Position = UDim2.new(0, 75, 0, 0),
-				Size = UDim2.new(0, 75, 0, 36),
-				ZIndex = 4,
-				Visible = not hidden,
-				OnClick = props.onMenuOpen,
-			}, {
-				TextLabel = codeLabel("Menu"),
-				Cover = menuButtonCover(),
-			}),
-			StartGameButton = startGameButton(props.startGameVisible and not hidden, props.onStartGame),
-		})
-	end
+			TextLabel = codeLabel("Done Turn"),
+		}),
+		UndoCommand = e(WindowsButton, {
+			Name = "UndoCommand",
+			AnchorPoint = Vector2.new(1, 1),
+			Position = UDim2.new(1, -170, 1, -12),
+			Size = UDim2.new(0, 110, 0, 44),
+			ZIndex = 4,
+			Visible = props.undoVisible and not hidden,
+			OnClick = props.onUndo,
+		}, {
+			TextLabel = codeLabel("Undo"),
+		}),
+		StartGameButton = e("TextButton", {
+			Active = true,
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, -76),
+			Size = UDim2.new(0, 220, 0, 40),
+			BackgroundColor3 = Color3.new(0.701961, 0, 0),
+			Font = Enum.Font.Code,
+			TextSize = 24,
+			TextColor3 = Color3.new(1, 1, 1),
+			Text = "Start Databattle",
+			ZIndex = 3,
+			Visible = props.startGameVisible and not hidden,
+			[React.Event.MouseButton1Click] = props.onStartGame,
+		}),
+	})
 
 	return e(React.Fragment, nil, {
 		Commands = commands,
@@ -476,8 +387,6 @@ function GameView.new(gameState, controller)
 	local mAutoSelectionEnabled = true
 	this.CommandSelected = Signal.new()
 
-	local mUseDesktopUI = DeviceInfo.ScreenHeight > 700
-
 	-- The chrome GUI (transparent; the board renders in 3D behind it)
 	local mTileSize = 32
 	local mGui = Instance.new("Frame")
@@ -502,12 +411,6 @@ function GameView.new(gameState, controller)
 		return mBattleBoard
 	end
 
-	local mInfo = Instance.new("Frame")
-	mInfo.Name = "Info"
-	mInfo.Size = UDim2.new(1, 0, 1, 0)
-	mInfo.BackgroundTransparency = 1
-	mInfo.ZIndex = 3
-	mInfo.Parent = mGui
 
 	-- Slider adapters bridging the React sliders to SoundManager's imperative
 	-- slider API (SoundManager itself is unchanged)
@@ -546,7 +449,6 @@ function GameView.new(gameState, controller)
 
 	-- Portaled: mGui also holds the imperative Board/Info/PlaceBackground
 	mRoot = StatefulRoot.createPortaled(mGui, GameViewChrome, {
-		desktopUI = mUseDesktopUI,
 		startGameVisible = false,
 		doneTurnVisible = false,
 		undoVisible = false,
@@ -604,20 +506,15 @@ function GameView.new(gameState, controller)
 
 	-- Rendered chrome lookups (post-flush only)
 	local function findCommandsFrame(): Instance
-		return mGui:FindFirstChild(mUseDesktopUI and "LargeCommands" or "SmallCommands") :: Instance
+		return mGui:FindFirstChild("Commands") :: Instance
 	end
 
 	-- Battle sound
 	local mBattleSoundLooper = BattleSoundLooper.new()
 	mBattleSoundLooper:Play()
 
-	-- Program info view
-	local mUnitInfoView;
-	if mUseDesktopUI then
-		mUnitInfoView = UnitInfoView.new(mInfo, gameState:GetAvailableUnits())
-	else
-		mUnitInfoView = UnitInfoViewMobile.new(mInfo, gameState:GetAvailableUnits())
-	end
+	-- The battle HUD (floating unit info window, programs window, command row)
+	local mUnitInfoView = BattleHud.new(mGui, gameState:GetAvailableUnits())
 
 	-- Upload zones for this place
 	local mUploadZones = gameState:GetUploadZones()

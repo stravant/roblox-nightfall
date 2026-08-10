@@ -54,7 +54,7 @@ return function(t)
 	end
 
 	local function commandsFrame(gui)
-		return gui:FindFirstChild("LargeCommands") or gui:FindFirstChild("SmallCommands")
+		return gui:FindFirstChild("Commands")
 	end
 
 	t.test("mounts the 3D board with map tiles, upload zones, and background", function()
