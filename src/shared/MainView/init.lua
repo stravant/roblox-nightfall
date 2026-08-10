@@ -77,23 +77,21 @@ function MainView.new()
 				}),
 			}),
 			BattleTitle = if props.battleTitle
-				then e("ImageLabel", {
+				then e("Frame", {
+					-- Solid Win95 title-bar blue; the whole bar is the title
 					AnchorPoint = Vector2.new(0.5, 0.5),
 					Position = UDim2.new(0.5, 0, 0.5, 0),
 					Size = UDim2.new(0, 260, 0, 38),
-					BackgroundTransparency = 1,
-					Image = 'rbxassetid://1378189463',
-					ImageRectSize = Vector2.new(32, 48),
-					ScaleType = Enum.ScaleType.Slice,
-					SliceCenter = Rect.new(16, 24, 16, 24),
+					BackgroundColor3 = Color3.fromRGB(0, 0, 128),
+					BorderSizePixel = 0,
 				}, {
 					Text = e("TextLabel", {
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						Position = UDim2.new(0.5, 0, 0.5, 0),
-						Size = UDim2.new(1, -12, 1, -8),
+						Size = UDim2.new(1, -12, 1, -6),
 						BackgroundTransparency = 1,
 						Font = Enum.Font.SourceSansBold,
-						TextSize = 17,
+						TextSize = 20,
 						TextColor3 = Color3.new(1, 1, 1),
 						Text = props.battleTitle,
 					}),
