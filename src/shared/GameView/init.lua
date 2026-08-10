@@ -381,6 +381,7 @@ function GameView.new(gameState, controller)
 	local RunService = game:GetService("RunService")
 	local mDestroyed = false
 	local mDraggingProgram = false
+	local mPulseCn = nil
 
 	-- Coordinates that are the only square allowed to be clicked...
 	-- For the stupid tutorial of course
@@ -1040,7 +1041,9 @@ function GameView.new(gameState, controller)
 
 	-- When the game actually starts
 	gameState.GameStarted:connect(function()
-		mPulseCn:Disconnect()
+		if mPulseCn then
+			mPulseCn:Disconnect()
+		end
 		mUploadView:ClearAll()
 		root().setState({ startGameVisible = false, doneTurnVisible = true })
 		mUnitInfoView:SetProgramListVisible(false)
@@ -1157,7 +1160,7 @@ function GameView.new(gameState, controller)
 		mUploadView:Set(coord.x, coord.y, tile)
 		table.insert(mUploadZoneTiles, { x = coord.x, y = coord.y, Gui = tile })
 	end
-	local mPulseCn = RunService.RenderStepped:Connect(function()
+	mPulseCn = RunService.RenderStepped:Connect(function()
 		local pulse = 0.15 + 0.5 * (0.5 + 0.5 * math.sin(os.clock() * 4))
 		for _, entry in mUploadZoneTiles do
 			if entry.Gui.Parent then
@@ -1257,7 +1260,9 @@ function GameView.new(gameState, controller)
 		SoundManager:RemoveSlider(mSoundSlider)
 		SoundManager:RemoveSlider(mMusicSlider)
 		mDestroyed = true
-		mPulseCn:Disconnect()
+		if mPulseCn then
+			mPulseCn:Disconnect()
+		end
 		this:ClearDragDemo()
 		mFlashySquare:Destroy()
 		mUnitsView:Destroy()
