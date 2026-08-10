@@ -7,7 +7,6 @@ local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
 local GameState = require(game.ReplicatedStorage.GameState)
 local DeveloperProduct = require(game.ReplicatedStorage.DeveloperProduct)
 local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
-local GA = require(game.ServerScriptService.GA)
 
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local Netmap = require(game.ReplicatedStorage.Netmap)
@@ -20,7 +19,7 @@ Remotes.BeatTutorial.OnServerEvent:connect(function(player)
 	-- Get the player data if it exist
 	local playerData = PlayerDataCache[player]
 	if not playerData then
-		warn("NetworkInterface | Missing PlayerData for "..player.Id.." to beat tutorial.")
+		warn("NetworkInterface | Missing PlayerData for "..player.UserId.." to beat tutorial.")
 		return
 	end
 	
@@ -42,7 +41,7 @@ Remotes.ProcessReplay.OnServerEvent:connect(function(player, replayStr)
 	local playerData = PlayerDataCache[player]
 	if not playerData then
 		-- Notify of fail
-		warn("NetworkInterface | Missing PlayerData for "..player.Id.." to submit a replay.")
+		warn("NetworkInterface | Missing PlayerData for "..player.UserId.." to submit a replay.")
 		Remotes.ProcessReplay:FireClient(player, false)
 		return
 	end
@@ -81,10 +80,10 @@ Remotes.SkipLevel.OnServerEvent:connect(function(player, nodeId)
 	-- Get the player data if it exists
 	local playerData = PlayerDataCache[player]
 	if not playerData then
-		warn("NetworkInterface | Missing PlayerData for "..player.Id.." to purchase "..programId.." from "..warezId)
+		warn("NetworkInterface | Missing PlayerData for "..player.UserId.." to skip node "..nodeId)
 		return
 	end
-	
+
 	-- Process
 	local result = playerData:SkipLevel(nodeId)
 	
@@ -111,7 +110,7 @@ Remotes.PurchaseUnit.OnServerEvent:connect(function(player, warezId, programId)
 	-- Get the player data if it exist
 	local playerData = PlayerDataCache[player]
 	if not playerData then
-		warn("NetworkInterface | Missing PlayerData for "..player.Id.." to purchase "..programId.." from "..warezId)
+		warn("NetworkInterface | Missing PlayerData for "..player.UserId.." to purchase "..programId.." from "..warezId)
 		return
 	end
 	
@@ -218,20 +217,3 @@ function MarketplaceService.ProcessReceipt(info)
 	-- Let Roblox know we processed the purchase
 	return Enum.ProductPurchaseDecision.PurchaseGranted
 end
-
-
--- Anylitics, set up root GA module
-local config = {
-	DoNotReportScriptErrors = false;
-	DoNotTrackServerStart = false;
-	DoNotTrackVisits = false;
-}
-GA.Init(script.UA.Value, config) -- s*@gmail, GA: The Nightfall Incident
-
--- Set up the server module
-
-
-
-
-
-

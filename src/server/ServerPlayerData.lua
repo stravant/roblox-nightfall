@@ -4,7 +4,7 @@ local Netmap = require(game.ReplicatedStorage.Netmap)
 local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
 local GameState = require(game.ReplicatedStorage.GameState)
 local Places = require(game.ReplicatedStorage.Places)
-local __TEST = require(game.ReplicatedStorage.__TEST)
+local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local ServerPlayerData = {}
 
@@ -31,7 +31,7 @@ function ServerPlayerData.new(playerId, serialized)
 		mSkipPurchaseIds = Copy.Deep(serialized.SkipPurchaseIds or {})
 		mIsFirstTimeUser = false
 	else
-		mCredits = __TEST:GetInitialCredits()
+		mCredits = DebugFlags:GetInitialCredits()
 		mSecurityLevel = 1
 		mUnitInventory = {
 			{Id = 'slingshot'; Count = 1};

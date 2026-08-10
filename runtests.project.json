@@ -1,8 +1,5 @@
 {
 	"name": "Nightfall",
-	"globIgnorePaths": [
-		"src/server/GA/GoogleAnalyticsHelper.client.lua"
-	],
 	"tree": {
 		"$className": "Folder",
 		"Src": {

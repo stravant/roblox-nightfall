@@ -4,13 +4,13 @@ local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
 local ServerPlayerData = require(game.ServerScriptService.ServerPlayerData)
 local NodeStats = require(game.ReplicatedStorage.NodeStats)
 local MockDataStore = require(game.ServerScriptService.MockDataStore)
-local __TEST = require(game.ReplicatedStorage.__TEST)
+local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local DataStoreService = {}
 
 local PRODUCTION_VERSION = 'test11'
 
-if __TEST:UseMockData() then
+if DebugFlags:UseMockData() then
 	DataStore = MockDataStore
 end
 

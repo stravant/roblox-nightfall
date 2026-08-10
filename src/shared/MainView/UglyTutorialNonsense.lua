@@ -7,12 +7,12 @@ local GameView = require(game.ReplicatedStorage.GameView)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local DialogueView = require(game.ReplicatedStorage.DialogueView)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
-local __TEST = require(game.ReplicatedStorage.__TEST)
+local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local UglyTutorialNonsense = {}
 
 function UglyTutorialNonsense:PlayTutorial(container, netmapView, mainDialogue)
-	if not __TEST:PlayTutorial() then
+	if not DebugFlags:PlayTutorial() then
 		return
 	end
 	

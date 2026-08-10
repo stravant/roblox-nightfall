@@ -46,7 +46,8 @@ Two Rojo projects:
   - `GameView/`, `NetmapView`, `Netmap3DView`, `MainView/`, `DialogueView`, `WarezView`, `UnitInfoView(+Mobile)`, `NodeInfoView`, `MainMenuView`, `BuyLevelSkipView` — UI views (being converted from template-Instance cloning to React).
   - `LocalPlayerData.lua` — Client-side save data/progression state.
   - `Remotes/` — RemoteEvent/RemoteFunction definitions (model.json files).
-- `src/server/` — Server code (ServerScriptService): `NetworkInterface/` (entry Script), `ServerPlayerData`, `ReplayChecker` (server-side replay validation), datastore wrappers, analytics.
+- `src/server/` — Server code (ServerScriptService): `ServerPlayerData`, `ReplayChecker` (server-side replay validation), datastore wrappers, and `ServerStatistics` (a no-op analytics seam — the old Google Universal Analytics integration was removed after Google shut UA down; wire a new backend up there).
+- `src/shared/DebugFlags.lua` — developer debug switches (mock datastores, skip tutorial, unlock netmap, starting credits); all default-off for production.
 - `src/client/Setup/` — StarterPlayerScripts entry point.
 - `src/first/BOOTSTRAP.client.lua` — ReplicatedFirst loading screen.
 - `ui-reference/` — JSON dumps of the original template UI instance trees, kept as the reference for the React conversion. Not synced anywhere.

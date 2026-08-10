@@ -1,7 +1,7 @@
 local Signal = require(game.ReplicatedStorage.Signal)
 local Netmap = require(game.ReplicatedStorage.Netmap)
 local Scripts = require(game.ReplicatedStorage.Scripts)
-local __TEST = require(game.ReplicatedStorage.__TEST)
+local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local LocalPlayerData = {}
 
@@ -96,7 +96,7 @@ end
 
 -- Has the player beaten a given node
 function LocalPlayerData:HasBeatenNode(id)
-	if __TEST:HasBeatenAllNodes() then
+	if DebugFlags:HasBeatenAllNodes() then
 		return true
 	else
 		return mNodeInfo[id].Beaten
@@ -105,7 +105,7 @@ end
 
 -- Has the player seen a given node?
 function LocalPlayerData:HasSeenNode(id)
-	if __TEST:HasBeatenAllNodes() then
+	if DebugFlags:HasBeatenAllNodes() then
 		return true
 	else
 		return mNodeInfo[id].Seen or mNodeInfo[id].Warez
@@ -119,7 +119,7 @@ end
 
 -- Can the player access a given node?
 function LocalPlayerData:CanAccessNode(id)
-	if __TEST:HasBeatenAllNodes() then
+	if DebugFlags:HasBeatenAllNodes() then
 		return true
 	else
 		return mNodeInfo[id].Accessible and Netmap.ById[id].Level <= mSecurityLevel
