@@ -23,6 +23,7 @@ export type TabEntry = {
 }
 
 export type Props = {
+	Name: string?,
 	AnchorPoint: Vector2?,
 	Position: UDim2?,
 	Size: UDim2?,
@@ -39,8 +40,8 @@ local function WindowsTabView(props: Props)
 	for index, tab in props.Tabs do
 		local isSelected = tab.Name == selected
 		tabButtons[tab.Name] = e("ImageButton", {
-			Position = UDim2.new(0, (index - 1) * 100, 0, 0),
-			Size = UDim2.new(0, 104, 0, 36),
+			Position = UDim2.new(0, (index - 1) * 96, 0, 0),
+			Size = UDim2.new(0, 100, 0, 36),
 			BackgroundTransparency = 1,
 			Selectable = false,
 			Image = kTabImage,
@@ -72,6 +73,7 @@ local function WindowsTabView(props: Props)
 	end
 
 	return e("ImageLabel", {
+		Name = props.Name,
 		AnchorPoint = props.AnchorPoint,
 		Position = props.Position,
 		Size = props.Size,

@@ -34,7 +34,7 @@ end
 -- again, right before the wrap-up box (MainView uses it to mark the hq node
 -- beaten, which reveals the adjacent nodes the wrap-up box tells the player
 -- to click).
-function Tutorial:PlayTutorial(container, netmapView, mainDialogue, onBattleWon)
+function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, onBattleWon)
 	if not DebugFlags:PlayTutorial() then
 		return
 	end
@@ -72,7 +72,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, onBattleWon)
 	local placeData = Places.tutorial
 	local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 	local gameController = GameController.new(gameState)
-	local gameView = GameView.new(gameState, gameController)
+	local gameView = GameView.new(gameState, gameController, mainMenu)
 
 	tutorialDialogue:GetGui().Parent = gameView:getGui()
 

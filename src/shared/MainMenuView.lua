@@ -33,12 +33,21 @@ local kButtonImageNormal = "rbxassetid://1372686003"
 local kButtonImageHover = "rbxassetid://1372686004"
 local kButtonImagePressed = "rbxassetid://1372686005"
 
+export type BattleContext = {
+	skipText: string,
+	disabled: boolean,
+	onForfeit: () -> (),
+	onSkip: () -> (),
+}
+
 type MainMenuState = {
 	menuScale: number,
 	soundValue: number,
 	musicValue: number,
 	skipsAvailableText: string,
 	skipsUsedText: string,
+	battleContext: BattleContext?,
+	menuSession: number,
 	onDone: () -> (),
 	onBuy: () -> (),
 	onSoundChanged: (value: number) -> (),
@@ -144,7 +153,45 @@ local function skipsCountText(text: string, position: UDim2)
 	})
 end
 
+local function appendTabs(tabs, more)
+	for _, tab in more do
+		table.insert(tabs, tab)
+	end
+	return tabs
+end
+
 local function MainMenuContent(props: MainMenuState)
+	-- During a databattle a "Databattle" tab (forfeit / skip) leads, and is the
+	-- default-selected tab
+	local tabs = {}
+	if props.battleContext then
+		local ctx = props.battleContext
+		table.insert(tabs, {
+			Name = "Databattle",
+			Label = "Databattle",
+			Content = {
+				ForfeitLabel = sectionLabel("Forfeit Databattle", UDim2.new(0, 10, 0, 5)),
+				ForfeitButton = e(WindowsButton, {
+					Name = "ForfeitButton",
+					Position = UDim2.new(0.4, 0, 0, 5),
+					Size = UDim2.new(0.6, -6, 0, 36),
+					ImageColor3 = if ctx.disabled then Color3.new(0.5, 0.5, 0.5) else nil,
+					Text = "Forfeit",
+					OnClick = ctx.onForfeit,
+				}),
+				SkipLabel = sectionLabel("Skip Databattle", UDim2.new(0, 10, 0, 41)),
+				SkipButton = e(ColoredWindowsButton, {
+					Position = UDim2.new(0.4, 0, 0, 41),
+					Size = UDim2.new(0.6, -6, 0, 36),
+					ImageColor3 = if ctx.disabled then Color3.new(0.5, 0.5, 0.5) else Color3.new(0, 0, 1),
+					Text = ctx.skipText,
+					TextSize = 15,
+					OnClick = ctx.onSkip,
+				}),
+			},
+		})
+	end
+
 	return e("ImageLabel", {
 		-- Menu window
 		Name = "Menu",
@@ -170,7 +217,7 @@ local function MainMenuContent(props: MainMenuState)
 			TextSize = 14,
 			TextColor3 = Color3.new(1, 1, 1),
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "Game Menu",
+			Text = if props.battleContext then "Databattle Menu" else "Game Menu",
 		}),
 		CloseButton = e(WindowsButton, {
 			Name = "CloseButton",
@@ -180,11 +227,14 @@ local function MainMenuContent(props: MainMenuState)
 			Text = "Close",
 			OnClick = props.onDone,
 		}),
-		TabPanel = e(WindowsTabView, {
+		-- Keyed by menuSession: each Show remounts the tab view so DefaultTab
+		-- re-applies (tab selection is internal component state)
+		["TabPanel@" .. props.menuSession] = e(WindowsTabView, {
+			Name = "TabPanel",
 			Position = UDim2.new(0, 5, 0, 61),
 			Size = UDim2.new(1, -10, 1, -105),
-			DefaultTab = "Sound",
-			Tabs = {
+			DefaultTab = if props.battleContext then "Databattle" else "Sound",
+			Tabs = appendTabs(tabs, {
 				{
 					Name = "Sound",
 					Label = "Sound",
@@ -247,7 +297,7 @@ local function MainMenuContent(props: MainMenuState)
 						),
 					},
 				},
-			},
+			}),
 		}),
 	})
 end
@@ -268,9 +318,19 @@ function MainMenuView.new(container: Instance)
 	mGui.AutoButtonColor = false
 	mGui.Visible = false
 
+	-- Forward-declared so the slider adapters (whose callbacks are wired up
+	-- during create) can setState; assigned right after StatefulRoot.create.
+	local mRoot: StatefulRoot.StatefulRoot? = nil
+
 	-- Show / hide the menu
+	local mSession = 0
 	function this:Show()
 		ModalManager:SetModal(true)
+		-- Remount the tab view so the default tab re-applies on each open
+		mSession += 1
+		if mRoot then
+			mRoot.setState({ menuSession = mSession })
+		end
 		mGui.Visible = true
 	end
 	function this:Hide()
@@ -278,9 +338,13 @@ function MainMenuView.new(container: Instance)
 		ModalManager:SetModal(false)
 	end
 
-	-- Forward-declared so the slider adapters (whose callbacks are wired up
-	-- during create) can setState; assigned right after StatefulRoot.create.
-	local mRoot: StatefulRoot.StatefulRoot? = nil
+	-- Attach/detach the in-databattle context (adds the default-selected
+	-- Databattle tab with forfeit/skip). Pass nil when the battle ends.
+	function this:SetBattleContext(context: BattleContext?)
+		if mRoot then
+			mRoot.setState({ battleContext = context or StatefulRoot.None })
+		end
+	end
 
 	local function makeSliderAdapter(stateKey: string)
 		local adapter = {}
@@ -323,6 +387,8 @@ function MainMenuView.new(container: Instance)
 		-- Template placeholder text, replaced once player data is available
 		skipsAvailableText = "5 skips",
 		skipsUsedText = "5 skips",
+		battleContext = nil,
+		menuSession = 0,
 		onDone = function()
 			this:Hide()
 		end,

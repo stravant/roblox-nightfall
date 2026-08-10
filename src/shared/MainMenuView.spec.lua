@@ -134,6 +134,64 @@ return function(t)
 		end)
 	end)
 
+	t.test("a battle context adds a default-selected Databattle tab", function()
+		local screen = Instance.new("ScreenGui")
+		screen.Parent = CoreGui
+		local view
+		local ok, err = pcall(function()
+			ReactRoblox.act(function()
+				view = MainMenuView.new(screen)
+			end)
+			local gui = screen:FindFirstChild("MenuMouseCatcher")
+			-- No context: no Databattle tab
+			t.expect(gui.Menu.TabPanel.Tabs:FindFirstChild("Databattle")).toBe(nil)
+
+			local forfeited = false
+			ReactRoblox.act(function()
+				view:SetBattleContext({
+					skipText = "Skip Node (3 skips available)",
+					disabled = false,
+					onForfeit = function()
+						forfeited = true
+					end,
+					onSkip = function() end,
+				})
+			end)
+			ReactRoblox.act(function()
+				view:Show()
+			end)
+			t.expect(gui.Menu.WindowTitle.Text).toBe("Databattle Menu")
+			local tabs = gui.Menu.TabPanel.Tabs
+			t.expect(tabs:FindFirstChild("Databattle") ~= nil).toBeTruthy()
+			-- Default selected on open
+			t.expect(tabs.Databattle.Visible).toBeTruthy()
+			t.expect(tabs.Sound.Visible).toBeFalsy()
+			t.expect(tabs.Databattle.SkipButton.Text.Text).toBe("Skip Node (3 skips available)")
+			t.expect(tabs.Databattle.ForfeitButton.Text.Text).toBe("Forfeit")
+
+			-- Clearing the context removes the tab and reverts the title
+			ReactRoblox.act(function()
+				view:SetBattleContext(nil)
+				view:Hide()
+			end)
+			ReactRoblox.act(function()
+				view:Show()
+			end)
+			t.expect(gui.Menu.WindowTitle.Text).toBe("Game Menu")
+			t.expect(gui.Menu.TabPanel.Tabs:FindFirstChild("Databattle")).toBe(nil)
+			t.expect(gui.Menu.TabPanel.Tabs.Sound.Visible).toBeTruthy()
+		end)
+		if view then
+			ReactRoblox.act(function()
+				view:Destroy()
+			end)
+		end
+		screen:Destroy()
+		if not ok then
+			error(err, 0)
+		end
+	end)
+
 	t.test("Show and Hide toggle the host and the modal state", function()
 		withView(function(view, gui)
 			view:Show()

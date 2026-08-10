@@ -79,16 +79,13 @@ return function(t)
 			t.expect(commands ~= nil).toBeTruthy()
 			t.expect(commands.StartGameButton.Visible).toBeFalsy()
 			t.expect(commands.MenuButton.Visible).toBeTruthy()
-			t.expect(gui.MenuMouseCatcher.Visible).toBeFalsy()
 			t.expect(gui.EndGameOverlay.Visible).toBeFalsy()
 		end)
 	end)
 
-	t.test("menu shows the stubbed skip count", function()
+	t.test("end game overlay's skip button shows the stubbed skip count", function()
 		withView(function(view, gui)
-			local skipButton = gui.MenuMouseCatcher.Menu.Inset.SkipButton
-			t.expect(skipButton.Text.Text).toBe("Skip Node (2 skips available)")
-			t.expect(gui.MenuMouseCatcher.Menu.DoneButton.Text.Text).toBe("Return to Databattle")
+			t.expect(gui.EndGameOverlay.Box.SkipButton.Text.Text).toBe("Skip Node (2 skips available)")
 		end)
 	end)
 

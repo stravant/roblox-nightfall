@@ -29,7 +29,6 @@ local BattleBoard3D = require(game.ReplicatedStorage.BattleBoard3D)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
-local WindowsSlider = require(game.ReplicatedStorage.Components.WindowsSlider)
 
 local e = React.createElement
 
@@ -48,22 +47,6 @@ local GameView = {}
 -- Chrome render helpers
 --------------------------------------------------------------------------------
 
-local function menuLabel(text: string, y: number)
-	return e("TextLabel", {
-		Position = UDim2.new(0, 10, 0, y),
-		Size = UDim2.new(1, -5, 0, 36),
-		BackgroundTransparency = 1,
-		Font = Enum.Font.SourceSans,
-		TextSize = 18,
-		TextColor3 = Color3.new(0, 0, 0),
-		TextStrokeColor3 = Color3.new(1, 1, 1),
-		TextStrokeTransparency = 0.9,
-		TextWrapped = true,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		Text = text,
-	})
-end
-
 -- Code-font label filling a Windows-styled button
 local function codeLabel(text: string)
 	return e("TextLabel", {
@@ -80,8 +63,6 @@ end
 
 local function GameViewChrome(props)
 	local hidden = props.commandsHidden
-	local disabledTint = Color3.new(0.5, 0.5, 0.5)
-	local disabledText = Color3.new(0.6, 0.6, 0.6)
 
 	-- One responsive floating layout (no more desktop/mobile variants):
 	-- Menu top-right, Done Turn / Undo bottom-right beside the BattleHud's
@@ -143,116 +124,6 @@ local function GameViewChrome(props)
 
 	return e(React.Fragment, nil, {
 		Commands = commands,
-		MenuMouseCatcher = e("ImageButton", {
-			Active = true,
-			AutoButtonColor = false,
-			Size = UDim2.new(1, 0, 1, 0),
-			BackgroundColor3 = Color3.new(0, 0, 0),
-			BackgroundTransparency = 0.5,
-			BorderSizePixel = 0,
-			Image = "",
-			ZIndex = 6,
-			Visible = props.menuOpen,
-		}, {
-			Menu = e("ImageLabel", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0.5, 0, 0.5, 0),
-				Size = UDim2.new(0, 400, 0, 242),
-				ZIndex = 2,
-				BackgroundTransparency = 1,
-				BorderSizePixel = 2,
-				Image = kWindowImage,
-				ScaleType = Enum.ScaleType.Slice,
-				SliceCenter = kWindowSliceCenter,
-				ImageRectSize = kWindowImageRectSize,
-			}, {
-				WindowTitle = e("TextLabel", {
-					AnchorPoint = Vector2.new(0, 0.5),
-					Position = UDim2.new(0, 6, 0, 12),
-					Size = UDim2.new(0, 200, 0, 30),
-					BackgroundTransparency = 1,
-					Font = Enum.Font.SourceSansBold,
-					TextSize = 14,
-					TextColor3 = Color3.new(1, 1, 1),
-					TextXAlignment = Enum.TextXAlignment.Left,
-					Text = "Databattle Menu",
-				}),
-				Inset = e("ImageLabel", {
-					Position = UDim2.new(0, 5, 0, 25),
-					Size = UDim2.new(1, -10, 1, -29),
-					BackgroundTransparency = 1,
-					Image = kInsetImage,
-					ScaleType = Enum.ScaleType.Slice,
-					SliceCenter = Rect.new(8, 8, 8, 8),
-				}, {
-					ConcedeLabel = menuLabel("Forfeit Databattle", 6),
-					ConcedeButton = e(WindowsButton, {
-						Name = "ConcedeButton",
-						Position = UDim2.new(0.4, 0, 0, 6),
-						Size = UDim2.new(0.6, -6, 0, 36),
-						ImageColor3 = if props.tutorialDisabled then disabledTint else nil,
-						OnClick = props.onConcede,
-					}, {
-						Text = e("TextLabel", {
-							AnchorPoint = Vector2.new(0.5, 0.5),
-							Position = UDim2.new(0.5, 0, 0.5, -1),
-							Size = UDim2.new(1, -20, 0, 24),
-							BackgroundTransparency = 1,
-							Font = Enum.Font.SourceSans,
-							TextSize = 18,
-							TextColor3 = if props.tutorialDisabled then disabledText else Color3.new(0, 0, 0),
-							Text = "Forfeit",
-						}),
-					}),
-					SkipLabel = menuLabel("Skip Databattle", 46),
-					SkipButton = e(WindowsButton, {
-						Name = "SkipButton",
-						Position = UDim2.new(0.4, 0, 0, 46),
-						Size = UDim2.new(0.6, -6, 0, 36),
-						ImageColor3 = if props.tutorialDisabled then disabledTint else Color3.new(0, 0, 1),
-						OnClick = props.onSkip,
-					}, {
-						Text = e("TextLabel", {
-							AnchorPoint = Vector2.new(0.5, 0.5),
-							Position = UDim2.new(0.5, 0, 0.5, -1),
-							Size = UDim2.new(1, -20, 0, 24),
-							BackgroundTransparency = 1,
-							Font = Enum.Font.SourceSansBold,
-							TextSize = 18,
-							TextColor3 = if props.tutorialDisabled then disabledText else Color3.new(1, 1, 1),
-							Text = props.skipText,
-						}),
-					}),
-					-- Note the template's double space in the label text
-					SoundVolumeLabel = menuLabel("Sound Effect  Volume", 86),
-					SoundVolume = e(WindowsSlider, {
-						Position = UDim2.new(0.4, 0, 0, 86),
-						Size = UDim2.new(0.6, -6, 0, 36),
-						Value = props.soundValue,
-						LeftLabel = "Muted",
-						RightLabel = "RIP Eardrums",
-						OnChanged = props.onSoundChanged,
-					}),
-					MusicVolumeLabel = menuLabel("Music Volume", 126),
-					MusicVolume = e(WindowsSlider, {
-						Position = UDim2.new(0.4, 0, 0, 126),
-						Size = UDim2.new(0.6, -6, 0, 36),
-						Value = props.musicValue,
-						LeftLabel = "Muted",
-						RightLabel = "DAT BASS",
-						OnChanged = props.onMusicChanged,
-					}),
-				}),
-				DoneButton = e(WindowsButton, {
-					Name = "DoneButton",
-					AnchorPoint = Vector2.new(0, 1),
-					Position = UDim2.new(0.25, 0, 1, -10),
-					Size = UDim2.new(0.5, 0, 0, 36),
-					Text = "Return to Databattle",
-					OnClick = props.onMenuClose,
-				}),
-			}),
-		}),
 		EndGameOverlay = e("ImageButton", {
 			Active = true,
 			AutoButtonColor = false,
@@ -372,7 +243,9 @@ end
 -- View object
 --------------------------------------------------------------------------------
 
-function GameView.new(gameState, controller)
+-- `menu` is the shared MainMenuView; while this battle is up it gains a
+-- default-selected "Databattle" tab (forfeit / skip). May be nil in tests.
+function GameView.new(gameState, controller, menu)
 	local this = {}
 
 	this.CloseGame = Signal.new()
@@ -415,34 +288,13 @@ function GameView.new(gameState, controller)
 	end
 
 
-	-- Slider adapters bridging the React sliders to SoundManager's imperative
-	-- slider API (SoundManager itself is unchanged)
 	local mRoot: StatefulRoot.StatefulRoot? = nil
 	local function root(): StatefulRoot.StatefulRoot
 		return mRoot :: StatefulRoot.StatefulRoot
 	end
-	local function makeSliderAdapter(stateKey: string)
-		local adapter = {}
-		adapter.Changed = Signal.new()
-		local mValue = 0
-		function adapter:Get()
-			return mValue
-		end
-		function adapter:Set(value)
-			if value == mValue then
-				return
-			end
-			local old = mValue
-			mValue = value
-			root().setState({ [stateKey] = value })
-			adapter.Changed:fire(value, old)
-		end
-		return adapter
-	end
-	local mSoundSlider = makeSliderAdapter("soundValue")
-	local mMusicSlider = makeSliderAdapter("musicValue")
 
 	local mDidWin = nil
+	local mSkipText = "Skip Node"
 
 	-- Forward declarations used by chrome callbacks
 	local clearSelection
@@ -450,20 +302,37 @@ function GameView.new(gameState, controller)
 	local handleGameEnded
 	local trySkip
 
+	-- The shared main menu gains the default-selected Databattle tab
+	-- (forfeit / skip) while this battle exists
+	local function updateMenuContext()
+		if menu then
+			menu:SetBattleContext({
+				skipText = mSkipText,
+				disabled = not mAutoSelectionEnabled,
+				onForfeit = function()
+					-- TODO: "Are you sure?" dialgue
+					if mAutoSelectionEnabled then
+						menu:Hide()
+						handleGameEnded(false, 0)
+					end
+				end,
+				onSkip = function()
+					trySkip()
+				end,
+			})
+		end
+	end
+
 	-- Portaled: mGui also holds the imperative Board/Info/PlaceBackground
 	mRoot = StatefulRoot.createPortaled(mGui, GameViewChrome, {
 		startGameVisible = false,
 		doneTurnVisible = false,
 		undoVisible = false,
 		commandsHidden = false,
-		menuOpen = false,
-		tutorialDisabled = false,
 		endGameOverlayVisible = false,
 		endGameWon = nil,
 		submittingText = "(Submitting play...)",
 		skipText = "Skip Node",
-		soundValue = 0,
-		musicValue = 0,
 		onStartGame = function()
 			controller:StartGame()
 		end,
@@ -477,16 +346,9 @@ function GameView.new(gameState, controller)
 			end
 		end,
 		onMenuOpen = function()
-			root().setState({ menuOpen = true })
-		end,
-		onMenuClose = function()
-			root().setState({ menuOpen = false })
-		end,
-		onConcede = function()
-			-- TODO: "Are you sure?" dialgue
-			if mAutoSelectionEnabled then
-				root().setState({ menuOpen = false })
-				handleGameEnded(false, 0)
+			if menu then
+				updateMenuContext()
+				menu:Show()
 			end
 		end,
 		onSkip = function()
@@ -495,17 +357,9 @@ function GameView.new(gameState, controller)
 		onOkay = function()
 			this.CloseGame:fire(mDidWin, gameState:GetReplay(), gameState:IsGameStarted())
 		end,
-		onSoundChanged = function(value)
-			mSoundSlider:Set(value)
-		end,
-		onMusicChanged = function(value)
-			mMusicSlider:Set(value)
-		end,
 	})
 
-	-- Sound sliders
-	SoundManager:AddMusicSlider(mMusicSlider)
-	SoundManager:AddSoundSlider(mSoundSlider)
+	updateMenuContext()
 
 	-- Rendered chrome lookups (post-flush only)
 	local function findCommandsFrame(): Instance
@@ -839,8 +693,8 @@ function GameView.new(gameState, controller)
 	function this:DisableAutoSelection()
 		mAutoSelectionEnabled = false
 
-		-- Tutorial disables
-		root().setState({ tutorialDisabled = true })
+		-- Tutorial disables (greys out forfeit/skip in the shared menu)
+		updateMenuContext()
 	end
 
 	-- Clear the selection, for tutorial
@@ -1020,7 +874,9 @@ function GameView.new(gameState, controller)
 		if mAutoSelectionEnabled then
 			if LocalPlayerData:GetSkips() > 0 then
 				handleGameEnded(--[[wonGame=]] true, --[[creditsEarned=]] 0, --[[skipping=]] true)
-				root().setState({ menuOpen = false })
+				if menu then
+					menu:Hide()
+				end
 			else
 				BuyLevelSkipView.new(mGui)
 			end
@@ -1034,7 +890,9 @@ function GameView.new(gameState, controller)
 		else
 			text = "Skip Node"
 		end
+		mSkipText = text
 		root().setState({ skipText = text })
+		updateMenuContext()
 	end
 	updateSkipsButton()
 	local mUpdateSkipsCn = LocalPlayerData.SkipsChanged:connect(updateSkipsButton)
@@ -1257,8 +1115,9 @@ function GameView.new(gameState, controller)
 		if mDestroyed then
 			return
 		end
-		SoundManager:RemoveSlider(mSoundSlider)
-		SoundManager:RemoveSlider(mMusicSlider)
+		if menu then
+			menu:SetBattleContext(nil)
+		end
 		mDestroyed = true
 		if mPulseCn then
 			mPulseCn:Disconnect()
