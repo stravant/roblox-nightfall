@@ -571,8 +571,7 @@ function GameView.new(gameState, controller, menu, topbar)
 		local cn = RunService.RenderStepped:Connect(function()
 			local hud = mGui:FindFirstChild("BattleHud")
 			local window = hud and hud:FindFirstChild("ProgramsWindow", true)
-			local inset = window and window:FindFirstChild("Inset")
-			local row = inset and inset:FindFirstChild(programId)
+			local row = window and window:FindFirstChild(programId, true)
 			if not row or mDraggingProgram then
 				finger.Visible = false
 				return

@@ -8,6 +8,8 @@
 -- Exposes the same API surface GameView used with the old unit info views,
 -- so the game flow is unchanged.
 
+local UserInputService = game:GetService("UserInputService")
+
 local Signal = require(game.ReplicatedStorage.Signal)
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local TutorialArrowView = require(game.ReplicatedStorage.TutorialArrowView)
@@ -21,6 +23,12 @@ local kWindowImage = "rbxassetid://1378189463"
 local kWindowSliceCenter = Rect.new(16, 24, 16, 24)
 local kWindowImageRectSize = Vector2.new(32, 48)
 local kInsetImage = "rbxassetid://1378143823"
+
+-- Programs list scrolls once it holds more than this many rows
+local kMaxVisibleProgramRows = 5
+-- A press that moves this far horizontally becomes a unit drag (vertical
+-- movement of the same size stays a list scroll)
+local kProgramDragThresholdPx = 10
 
 --------------------------------------------------------------------------------
 -- Command text generation (same wording as the old views)
@@ -211,36 +219,22 @@ local function BattleHudContent(props: HudState)
 		commandItems[entry.Key] = commandButton(entry, props.selectedCommandId == entry.Key, props.onCommandClick)
 	end
 
-	-- Programs window rows
-	local programItems: { [string]: any } = {
+	-- Programs window rows, inside a capped-height scrolling list so the unit
+	-- info window below always has room
+	local rowItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, 4),
 		}),
-		UIPadding = e("UIPadding", {
-			PaddingTop = UDim.new(0, 6),
-			PaddingBottom = UDim.new(0, 6),
-			PaddingLeft = UDim.new(0, 6),
-			PaddingRight = UDim.new(0, 6),
-		}),
-		Header = e("TextLabel", {
-			Size = UDim2.new(1, 0, 0, 30),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSansBold,
-			TextSize = 22,
-			TextColor3 = Color3.new(0, 0, 0.5),
-			Text = "Drag to Place",
-			LayoutOrder = 0,
-		}),
 	}
 	for i, row in props.programs do
 		local def = Scripts[row.Id]
 		local hasAny = row.Count > 0
-		programItems[row.Id] = e("ImageButton", {
+		rowItems[row.Id] = e("ImageButton", {
 			Active = true,
 			AutoButtonColor = hasAny,
-			Size = UDim2.new(1, 0, 0, 36),
+			Size = UDim2.new(1, -8, 0, 24),
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			BackgroundTransparency = if hasAny then 0 else 0.5,
 			BorderSizePixel = 0,
@@ -258,8 +252,8 @@ local function BattleHudContent(props: HudState)
 		}, {
 			Icon = e("ImageLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 4, 0.5, 0),
-				Size = UDim2.new(0, 28, 0, 28),
+				Position = UDim2.new(0, 3, 0.5, 0),
+				Size = UDim2.new(0, 20, 0, 20),
 				BackgroundColor3 = def.Color,
 				BorderColor3 = Color3.new(0, 0, 0),
 				Image = def.Image,
@@ -267,21 +261,21 @@ local function BattleHudContent(props: HudState)
 			}),
 			CountLabel = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 34, 0.5, 0),
-				Size = UDim2.new(0, 26, 0, 28),
+				Position = UDim2.new(0, 27, 0.5, 0),
+				Size = UDim2.new(0, 22, 0, 20),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
-				TextSize = 18,
+				TextSize = 14,
 				TextColor3 = if hasAny then Color3.new(0, 0, 0) else Color3.new(0.5, 0.5, 0.5),
 				Text = row.Count .. "x",
 			}),
 			NameLabel = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 62, 0.5, 0),
-				Size = UDim2.new(1, -66, 0, 28),
+				Position = UDim2.new(0, 50, 0.5, 0),
+				Size = UDim2.new(1, -54, 0, 20),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
-				TextSize = 16,
+				TextSize = 13,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextColor3 = if hasAny then Color3.new(0, 0, 0) else Color3.new(0.5, 0.5, 0.5),
 				TextXAlignment = Enum.TextXAlignment.Left,
@@ -289,6 +283,43 @@ local function BattleHudContent(props: HudState)
 			}),
 		})
 	end
+	local visibleRows = math.clamp(#props.programs, 1, kMaxVisibleProgramRows)
+	local listHeight = visibleRows * 24 + (visibleRows - 1) * 4
+	local programItems: { [string]: any } = {
+		UIListLayout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Vertical,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 4),
+		}),
+		UIPadding = e("UIPadding", {
+			PaddingTop = UDim.new(0, 6),
+			PaddingBottom = UDim.new(0, 6),
+			PaddingLeft = UDim.new(0, 6),
+			PaddingRight = UDim.new(0, 6),
+		}),
+		Header = e("TextLabel", {
+			Size = UDim2.new(1, 0, 0, 26),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 20,
+			TextColor3 = Color3.new(0, 0, 0.5),
+			Text = "Drag to Place",
+			LayoutOrder = 0,
+		}),
+		-- ScrollingEnabled is intentionally NOT declared here: it's toggled
+		-- imperatively while a program is dragged out of the list
+		ProgramScroll = e("ScrollingFrame", {
+			LayoutOrder = 1,
+			Size = UDim2.new(1, 0, 0, listHeight),
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			CanvasSize = UDim2.new(0, 0, 0, 0),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = 6,
+			ScrollBarImageColor3 = Color3.new(0, 0, 0),
+		}, rowItems),
+	}
 
 	local pane = props.pane
 
@@ -366,7 +397,7 @@ local function BattleHudContent(props: HudState)
 		ProgramsWindow = if props.programsVisible
 			then windowChrome("Programs", {
 				Name = "ProgramsWindow",
-				Size = UDim2.new(0, 160, 0, 40 * math.max(1, #props.programs) + 78),
+				Size = UDim2.new(0, 160, 0, listHeight + 82),
 				LayoutOrder = 0,
 			}, programItems)
 			else nil,
@@ -409,6 +440,12 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	local mTutorialArrow = TutorialArrowView.new()
 	local mOnlySelectUnit: string? = nil
 
+	-- Program list press being disambiguated (scroll vs drag-out), and the
+	-- scroll frame whose scrolling is suspended during a drag
+	local mProgramPress: { Id: string, Start: Vector2 }? = nil
+	local mScrollDisabled: ScrollingFrame? = nil
+	local mConnections: { RBXScriptConnection } = {}
+
 	local mRoot = StatefulRoot.create(mGui, BattleHudContent, {
 		pane = nil,
 		commands = {},
@@ -430,10 +467,53 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		end,
 		onProgramPress = function(id: string, viewportPos: Vector2)
 			if mProgramsById[id].Count > 0 and (not mOnlySelectUnit or mOnlySelectUnit == id) then
-				this.ProgramDragBegan:fire(id, viewportPos)
+				-- Don't start the drag yet: wait to see whether the gesture
+				-- goes horizontal (drag out) or vertical (scroll the list)
+				mProgramPress = { Id = id, Start = viewportPos }
 			end
 		end,
 	})
+
+	-- Gesture disambiguation for the scrolling programs list: enough
+	-- horizontal movement becomes a unit drag (and temporarily un-scrollables
+	-- the list so it doesn't pan mid-drag); vertical movement is a scroll.
+	local function findProgramScroll(): ScrollingFrame?
+		return mGui:FindFirstChild("ProgramScroll", true) :: ScrollingFrame?
+	end
+	table.insert(mConnections, UserInputService.InputChanged:Connect(function(input: InputObject)
+		if not mProgramPress then
+			return
+		end
+		if input.UserInputType ~= Enum.UserInputType.MouseMovement
+			and input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		local pos = Vector2.new(input.Position.X, input.Position.Y)
+		local delta = pos - mProgramPress.Start
+		if math.abs(delta.Y) >= kProgramDragThresholdPx and math.abs(delta.Y) > math.abs(delta.X) then
+			-- Vertical first: it's a scroll, not a drag
+			mProgramPress = nil
+		elseif math.abs(delta.X) >= kProgramDragThresholdPx then
+			local id = mProgramPress.Id
+			mProgramPress = nil
+			local scroll = findProgramScroll()
+			if scroll then
+				scroll.ScrollingEnabled = false
+				mScrollDisabled = scroll
+			end
+			this.ProgramDragBegan:fire(id, pos)
+		end
+	end))
+	table.insert(mConnections, UserInputService.InputEnded:Connect(function(input: InputObject)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+			mProgramPress = nil
+			if mScrollDisabled then
+				mScrollDisabled.ScrollingEnabled = true
+				mScrollDisabled = nil
+			end
+		end
+	end))
 
 	local function setPane(pane: InfoPane?, commands: { CommandEntry })
 		mRoot.setState({
@@ -555,8 +635,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	-- since the windows live inside the left column stack)
 	local function findProgramRow(unitId: string): Instance?
 		local window = mGui:FindFirstChild("ProgramsWindow", true)
-		local inset = window and window:FindFirstChild("Inset")
-		return inset and inset:FindFirstChild(unitId)
+		return window and window:FindFirstChild(unitId, true)
 	end
 	local function findCommandButton(key: string): Instance?
 		local row = mGui:FindFirstChild("CommandRow", true)
@@ -567,7 +646,9 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		mOnlySelectUnit = unitId
 		local row = findProgramRow(unitId)
 		if row then
-			mTutorialArrow:Show(row, -90, UDim2.new(1, 20, 0.5, 0))
+			-- Centered on the row (not off its edge): the scrolling list
+			-- clips anything outside itself
+			mTutorialArrow:Show(row, -90, UDim2.new(0.5, 0, 0.5, 0))
 		end
 	end
 
@@ -590,6 +671,9 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 			return
 		end
 		mDestroyed = true
+		for _, cn in mConnections do
+			cn:Disconnect()
+		end
 		mTutorialArrow:Destroy()
 		mRoot.unmount()
 		mGui:Destroy()
