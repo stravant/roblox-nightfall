@@ -149,8 +149,12 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, onBattleWon)
 	tutorialDialogue:SetText("Finish it off: click the enemy script.")
 	waitForClick(7, 3)
 
-	-- Let the win land, then back to the netmap
-	gameState.GameEnded:wait()
+	-- Let the win land, then back to the netmap. (Poll rather than wait on
+	-- GameEnded: it fires during the final attack's click processing, before
+	-- this coroutine has woken from the last waitForClick.)
+	while not gameState:HasWon() do
+		wait()
+	end
 	tutorialDialogue:SetText("")
 	wait(1.2)
 
