@@ -316,7 +316,7 @@ function Netmap3DView.new()
 		-- Raised a bit so nodes don't need extreme spacing, but still reading
 		-- as below the node rather than centered on it (extra height offsets
 		-- the top-edge SizeOffset anchoring, which hangs the popup lower)
-		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 6, 6)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 5, 6)
 		adornee.Parent = workspace
 
 		local billboard = Instance.new("BillboardGui")
