@@ -217,14 +217,27 @@ function Netmap3DView.new()
 	-- Beaten links become ethereal green arcs with a stream of 0/1 digits
 	-- flowing from the source node to its neighbors
 	local mActiveLinkAnims = {}
+	local kLinkArcHeight = 4.5
 	local function showLinks(nodeView)
 		for adjId, beamView in pairs(nodeView.AdjacentLinks) do
 			if not beamView.Active then
 				beamView.Active = true
-				beamView.Beam.Color = ColorSequence.new(Color3.new(0, 1, 0.3))
-				beamView.Beam.Transparency = NumberSequence.new(0.55)
-				beamView.Beam.Width0 = 0.9
-				beamView.Beam.Width1 = 0.9
+				local beam = beamView.Beam
+				beam.Color = ColorSequence.new(Color3.new(0, 1, 0.3))
+				beam.Transparency = NumberSequence.new(0.55)
+				beam.Width0 = 0.9
+				beam.Width1 = 0.9
+				-- Arc the link into the air: with the attachments' X axis
+				-- pointing world-up, CurveSize0=h / CurveSize1=-h makes a
+				-- symmetric arch (empirically verified); FaceCamera keeps the
+				-- curved ribbon visible from any angle
+				beam.FaceCamera = true
+				local p0 = nodeView.CFrame.Position
+				local p1 = mNodeView[adjId].CFrame.Position
+				beam.Attachment0.CFrame = CFrame.fromMatrix(p0, Vector3.yAxis, Vector3.zAxis)
+				beam.Attachment1.CFrame = CFrame.fromMatrix(p1, Vector3.yAxis, Vector3.zAxis)
+				beam.CurveSize0 = kLinkArcHeight
+				beam.CurveSize1 = -kLinkArcHeight
 
 				beamView.From = nodeView.CFrame.Position
 				beamView.To = mNodeView[adjId].CFrame.Position
@@ -234,7 +247,7 @@ function Netmap3DView.new()
 					then Vector3.new(-flat.Unit.Z, 0, flat.Unit.X)
 					else Vector3.new(1, 0, 0)
 				beamView.Particles = {}
-				for i = 1, 4 do
+				for i = 1, 7 do
 					-- Terrain-adorned billboard: StudsOffsetWorldSpace is then
 					-- an absolute world position, no adornee part needed
 					local bb = Instance.new("BillboardGui")
@@ -253,7 +266,7 @@ function Netmap3DView.new()
 					table.insert(beamView.Particles, {
 						Gui = bb,
 						Label = label,
-						Phase = (i - 1) / 4,
+						Phase = (i - 1) / 7,
 						Speed = 0.28 + 0.07 * ((i * 7) % 3),
 						Seed = i * 2.61,
 						NextFlip = 0,
@@ -270,8 +283,9 @@ function Netmap3DView.new()
 				local alpha = (t * p.Speed + p.Phase) % 1
 				local arc = math.sin(alpha * math.pi)
 				local wobble = math.sin(t * 2.7 + p.Seed) * 0.6
+				-- Ride just above the beam's arch
 				local pos = link.From:Lerp(link.To, alpha)
-					+ Vector3.new(0, 1 + arc * 2.2, 0)
+					+ Vector3.new(0, 0.8 + arc * 3.6, 0)
 					+ link.Perp * wobble
 				p.Gui.StudsOffsetWorldSpace = pos
 				p.Label.TextTransparency = 0.1 + 0.65 * (1 - arc)
@@ -292,26 +306,45 @@ function Netmap3DView.new()
 		end
 	end
 	
-	-- The flashing Win95-virus-popup style "Infected!" billboard shown over
-	-- nodes that are discovered but not yet beaten
-	local function ensureInfectedBillboard(nodeView)
-		if nodeView.Infected then
+	-- Win95-virus-popup style status billboards under nodes: a flashing status
+	-- in the title bar ("Infected!" for unbeaten battle nodes, "New!" for
+	-- unvisited warez shops) with the node's name in the body so players have
+	-- a way to refer to a particular node. Anchored below the node's base so
+	-- the node geometry itself stays visible.
+	local kNodeFamilyNames = {
+		ph = "Pharmhaus",
+		lm = "Lucky Monkey",
+		ca = "Celular Automa",
+		dr = "Dr. Donut",
+		pd = "PED",
+		wz = "Warez",
+		hq = "smart HQ",
+		en = "Nightfall",
+	}
+	local function nodeDisplayName(id)
+		return (kNodeFamilyNames[id:sub(1, 2)] or "Node") .. " - " .. id
+	end
+
+	local function ensureNodePopup(nodeView, statusText, statusColor)
+		if nodeView.Popup then
 			return
 		end
 		local adornee = Instance.new("Part")
-		adornee.Name = "InfectedAdornee"
+		adornee.Name = "NodePopupAdornee"
 		adornee.Transparency = 1
 		adornee.Anchored = true
 		adornee.CanCollide = false
 		adornee.CanQuery = false
 		adornee.Size = Vector3.new(1, 1, 1)
-		adornee.CFrame = nodeView.CFrame * CFrame.new(0, 5, 0)
+		adornee.CFrame = nodeView.CFrame
 		adornee.Parent = workspace
 
 		local billboard = Instance.new("BillboardGui")
-		billboard.Name = "InfectedPopup"
+		billboard.Name = "NodePopup"
 		billboard.Adornee = adornee
 		billboard.Size = UDim2.new(0, 132, 0, 46)
+		-- Hang below the node's base so the model geometry stays visible
+		billboard.StudsOffset = Vector3.new(0, -2.2, 0)
 		billboard.AlwaysOnTop = true
 		-- AlwaysOnTop renders through the battle board, so only enable while
 		-- the netmap is actually being shown (kept in sync below)
@@ -331,10 +364,10 @@ function Netmap3DView.new()
 		title.Size = UDim2.new(1, -12, 0, 18)
 		title.BackgroundTransparency = 1
 		title.Font = Enum.Font.SourceSansBold
-		title.TextSize = 12
-		title.TextColor3 = Color3.new(1, 1, 1)
+		title.TextSize = 13
+		title.TextColor3 = statusColor
 		title.TextXAlignment = Enum.TextXAlignment.Left
-		title.Text = "System Alert"
+		title.Text = statusText
 		title.Parent = window
 		local inset = Instance.new("ImageLabel")
 		inset.Position = UDim2.new(0, 5, 0, 20)
@@ -348,29 +381,29 @@ function Netmap3DView.new()
 		label.Size = UDim2.new(1, 0, 1, 0)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.SourceSansBold
-		label.TextSize = 16
-		label.TextColor3 = Color3.new(0.8, 0, 0)
-		label.Text = "\u{26A0}\u{FE0F} Infected!"
+		label.TextSize = 15
+		label.TextColor3 = Color3.new(0, 0, 0)
+		label.Text = nodeDisplayName(nodeView.Id)
 		label.Parent = inset
 
-		nodeView.Infected = {
+		nodeView.Popup = {
 			Adornee = adornee,
 			Billboard = billboard,
-			Label = label,
+			FlashLabel = title,
 		}
 	end
-	local function removeInfectedBillboard(nodeView)
-		if nodeView.Infected then
-			nodeView.Infected.Billboard:Destroy()
-			nodeView.Infected.Adornee:Destroy()
-			nodeView.Infected = nil
+	local function removeNodePopup(nodeView)
+		if nodeView.Popup then
+			nodeView.Popup.Billboard:Destroy()
+			nodeView.Popup.Adornee:Destroy()
+			nodeView.Popup = nil
 		end
 	end
-	local function animateInfected(t)
+	local function animatePopups(t)
 		local flash = (t % 0.9) < 0.45
 		for _, nodeView in pairs(mNodeView) do
-			if nodeView.Infected then
-				nodeView.Infected.Label.TextTransparency = flash and 0 or 0.6
+			if nodeView.Popup then
+				nodeView.Popup.FlashLabel.TextTransparency = flash and 0 or 0.6
 			end
 		end
 	end
@@ -382,12 +415,16 @@ function Netmap3DView.new()
 	local function applyNodeState(nodeView)
 		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
-		-- Warez nodes are shops, not infected battle nodes
 		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
-		if nodeView.Seen and not nodeView.Beaten and not isWarez then
-			ensureInfectedBillboard(nodeView)
+		if nodeView.Seen and not nodeView.Beaten then
+			if isWarez then
+				-- Warez nodes are shops: advertise, don't alarm
+				ensureNodePopup(nodeView, "New!", Color3.fromRGB(120, 255, 140))
+			else
+				ensureNodePopup(nodeView, "\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(255, 95, 95))
+			end
 		else
-			removeInfectedBillboard(nodeView)
+			removeNodePopup(nodeView)
 		end
 		if nodeView.Seen and nodeView.Beaten then
 			showLinks(nodeView)
@@ -600,7 +637,7 @@ function Netmap3DView.new()
 	local function update(dt)
 		updateHoveredNode()
 		local t = os.clock()
-		animateInfected(t)
+		animatePopups(t)
 		animateLinks(t)
 		animateBlinkenlights(t)
 	end
@@ -636,8 +673,8 @@ function Netmap3DView.new()
 	-- SetVisible and the tutorial's direct Visible toggling.
 	mGui:GetPropertyChangedSignal("Visible"):Connect(function()
 		for _, nodeView in pairs(mNodeView) do
-			if nodeView.Infected then
-				nodeView.Infected.Billboard.Enabled = mGui.Visible
+			if nodeView.Popup then
+				nodeView.Popup.Billboard.Enabled = mGui.Visible
 			end
 		end
 	end)
