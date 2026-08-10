@@ -292,7 +292,7 @@ function Netmap3DView.new()
 	local removeNodePopup
 	-- kind: identity for the popup style; a state change to a different kind
 	-- rebuilds the popup. flash: whether the body text blinks.
-	local function ensureNodePopup(nodeView, kind, titleText, statusText, statusColor, flash)
+	local function ensureNodePopup(nodeView, kind, titleText, statusText, statusColor, flash, statusTextSize)
 		if nodeView.Popup then
 			if nodeView.Popup.Kind == kind then
 				return
@@ -358,7 +358,7 @@ function Netmap3DView.new()
 		label.Size = UDim2.new(1, 0, 1, 0)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.SourceSansBold
-		label.TextSize = 16
+		label.TextSize = statusTextSize or 16
 		label.TextColor3 = statusColor
 		label.Text = statusText
 		label.Parent = inset
@@ -422,12 +422,17 @@ function Netmap3DView.new()
 		if nodeView.Seen and not nodeView.Beaten then
 			local name = nodeDisplayName(nodeView.Id)
 			if not LocalPlayerData:CanAccessNode(nodeView.Id) then
-				-- Revealed but unreachable: locked, titled with the reason
-				local reason = if not LocalPlayerData:HasLinkToNode(nodeView.Id)
-					then "No Link"
-					else "No Codes"
-				ensureNodePopup(nodeView, "locked:" .. reason, reason,
-					"\u{1F512}", Color3.new(0, 0, 0), false)
+				if isWarez then
+					-- Unreachable shops just stay quiet
+					removeNodePopup(nodeView)
+				else
+					-- Revealed but unreachable: locked, titled with the reason
+					local reason = if not LocalPlayerData:HasLinkToNode(nodeView.Id)
+						then "No Link"
+						else "No Codes"
+					ensureNodePopup(nodeView, "locked:" .. reason, reason,
+						"\u{1F512}", Color3.new(0, 0, 0), false, 24)
+				end
 			elseif isWarez then
 				-- Warez nodes are shops: advertise, don't alarm
 				ensureNodePopup(nodeView, "new", name,
