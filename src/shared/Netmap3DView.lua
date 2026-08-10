@@ -158,7 +158,7 @@ function Netmap3DView.new()
 	
 	local mNodeView = {}
 	
-	local kNodeModelScale = 1.5
+	local kNodeModelScale = 1.3
 
 	local function setupNetmap()
 		for _, ch in pairs(mNetmapModel:GetChildren()) do
