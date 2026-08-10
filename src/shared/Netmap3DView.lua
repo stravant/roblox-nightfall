@@ -10,8 +10,83 @@ local NetmapCamera = require(game.ReplicatedStorage.NetmapCamera)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local DeviceInfo = require(game.ReplicatedStorage.DeviceInfo)
+local React = require(game.ReplicatedStorage.Packages.React)
+local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
+
+local e = React.createElement
 
 local Netmap3DView = {}
+
+-- The GUI overlay (formerly the script.Netmap template; see
+-- ui-reference/ModuleTemplates/Netmap3DView.json). Only the credit display is
+-- dynamic; the transient credit delta text stays imperative because it's a
+-- fire-and-forget TweenPosition animation.
+local function NetmapOverlayContent(props)
+	return e("ImageLabel", {
+		Name = "CreditDisplay",
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, -24, 0, 10),
+		Size = UDim2.new(0, 120, 0, 50),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 2,
+		Image = "rbxassetid://1378189463",
+		ImageRectOffset = Vector2.new(32, 0),
+		ImageRectSize = Vector2.new(32, 48),
+		ScaleType = Enum.ScaleType.Slice,
+		SliceCenter = Rect.new(16, 24, 16, 24),
+	}, {
+		Title = e("TextLabel", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 6, 0, 12),
+			Size = UDim2.new(0, 200, 0, 30),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 14,
+			TextColor3 = Color3.new(1, 1, 1),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Text = "Credits",
+		}),
+		Inset = e("ImageLabel", {
+			Position = UDim2.new(0, 5, 0, 25),
+			Size = UDim2.new(1, -10, 1, -29),
+			BackgroundTransparency = 1,
+			Image = "rbxassetid://1378143823",
+			ScaleType = Enum.ScaleType.Slice,
+			SliceCenter = Rect.new(8, 8, 8, 8),
+		}, {
+			Text = e("TextLabel", {
+				Position = UDim2.new(0, 4, 0, 0),
+				Size = UDim2.new(1, -7, 1, -1),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.Code,
+				TextSize = 20,
+				TextColor3 = Color3.new(0, 0, 0),
+				TextStrokeColor3 = Color3.new(1, 1, 1),
+				TextStrokeTransparency = 0.9,
+				TextWrapped = true,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				Text = props.creditsText,
+			}),
+		}),
+	})
+end
+
+-- Replacement for the old script.CreditUpdateText template clone
+local function makeCreditUpdateText()
+	local text = Instance.new("TextLabel")
+	text.Name = "CreditUpdateText"
+	text.BackgroundTransparency = 1
+	text.Position = UDim2.new(0, 4, 0, 0)
+	text.Size = UDim2.new(1, -7, 1, -1)
+	text.Font = Enum.Font.Code
+	text.TextSize = 20
+	text.TextColor3 = Color3.new(1, 0, 0.0156863)
+	text.TextStrokeColor3 = Color3.new(1, 1, 1)
+	text.TextStrokeTransparency = 0.5
+	text.TextWrapped = true
+	text.TextXAlignment = Enum.TextXAlignment.Right
+	return text
+end
 
 local NETMAP_NODE_MODELS = workspace.Nodes
 NETMAP_NODE_MODELS.Parent = nil
@@ -28,7 +103,17 @@ function Netmap3DView.new()
 
 	this.NodeSelected = Signal.new()
 	
-	local mGui = script.Netmap:Clone()
+	local mGui = Instance.new("Frame")
+	mGui.Name = "Netmap"
+	mGui.AnchorPoint = Vector2.new(0.5, 0.5)
+	mGui.Position = UDim2.new(0, 6, 0, 0)
+	mGui.Size = UDim2.new(1, 0, 1, 0)
+	mGui.BackgroundTransparency = 1
+	mGui.Selectable = true
+	mGui.ZIndex = 3
+	local mGuiRoot = StatefulRoot.create(mGui, NetmapOverlayContent, {
+		creditsText = "",
+	})
 	
 	local mNotBeatenGlowContainer = Instance.new('Folder', workspace)
 	local mConnectionsContainer = Instance.new('Folder', workspace)
@@ -326,11 +411,11 @@ function Netmap3DView.new()
 	local mLastShownCredits = nil
 	function this:UpdateCreditDisplay()
 		local credits = LocalPlayerData:GetCredits()
-		mGui.CreditDisplay.Inset.Text.Text = ("%d"):format(credits)
+		mGuiRoot.setState({ creditsText = ("%d"):format(credits) })
 		if mLastShownCredits ~= credits then
 			if mLastShownCredits ~= nil and mGui:IsDescendantOf(game) then
 				local delta = credits - mLastShownCredits
-				local text = script.CreditUpdateText:Clone()
+				local text = makeCreditUpdateText()
 				if delta > 0 then
 					text.Text = "+"..delta
 					text.TextColor3 = Color3.new(0, 0.8, 0)
