@@ -51,6 +51,6 @@ Two Rojo projects:
 - `src/first/BOOTSTRAP.client.lua` — ReplicatedFirst loading screen.
 - `ui-reference/` — JSON dumps of the original template UI instance trees, kept as the reference for the React conversion. Not synced anywhere.
 
-## UI: React conversion status
+## UI: React
 
-The UI is being converted from cloned template Instances (originally children of the view ModuleScripts / StarterGui.ScreenGui) to React (`jsdotlua/react` + `react-roblox` via wally, `React.createElement` style — no JSX). Until a view is converted, its template children still live in the place under the corresponding ModuleScript instance; per-module `init.meta.json` files with `ignoreUnknownInstances: true` keep Rojo from deleting them. When converting a view: build the React component from the matching `ui-reference/` dump, remove the meta file, and delete the leftover templates from the place.
+The UI is React (`jsdotlua/react` + `react-roblox` via wally, `React.createElement` aliased as `e` — no JSX). The conversion from cloned template Instances is COMPLETE for all live views — see REACT_CONVERSION.md for the pattern, its pitfalls section (required reading before touching view code), and the list of things deliberately left template-based (dead legacy NetmapView, ReplicatedFirst.TitleScreen, dead StarterGui content). Views keep their original imperative public APIs (`new()` objects with signals and `Set*` methods) bridged to React via `Components/StatefulRoot`; shared Win98-style widgets live in `src/shared/Components/`.

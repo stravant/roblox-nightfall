@@ -1,11 +1,12 @@
 local Places = require(game.ReplicatedStorage.Places)
+local TileTemplates = require(game.ReplicatedStorage.GameView.TileTemplates)
 
 local FlashySquareView = {}
 
 function FlashySquareView.new(tileSize, container)
 	local this = {}
 
-	local mGui = script.FlashOverlay:Clone()
+	local mGui = TileTemplates.FlashOverlay()
 	mGui.Visible = false
 	mGui.Parent = container
 
@@ -38,7 +39,7 @@ function FlashySquareView.new(tileSize, container)
 
 	-- I'm lazy so I'm throwing this in here instead of making a separate view just for it
 	function this:ShowCreditPickup(x, y, amount)
-		local show = script.PickupCredits:Clone()
+		local show = TileTemplates.PickupCreditsWithAmount()
 		show.Position = UDim2.new(0, (x-1)*tileSize, 0, (y-1)*tileSize)
 		show.Amount.Text = "+" .. amount
 		show.Parent = container

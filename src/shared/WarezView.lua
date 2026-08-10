@@ -360,7 +360,8 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		end
 	end
 
-	mRoot = StatefulRoot.create(mGui, WarezContent, {
+	-- Portaled: mGui also holds the imperatively-parented side tray
+	mRoot = StatefulRoot.createPortaled(mGui, WarezContent, {
 		selectedId = nil,
 		purchaseVisible = false,
 		insufficientVisible = false,

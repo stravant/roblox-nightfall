@@ -1,4 +1,5 @@
 local Places = require(game.ReplicatedStorage.Places)
+local TileTemplates = require(game.ReplicatedStorage.GameView.TileTemplates)
 
 local UnitsView = {}
 
@@ -66,7 +67,7 @@ function UnitsView.new(tileSize, container)
 	end
 
 	function this:ShowDamage(x, y, color)
-		local gui = script.UnitSector:Clone()
+		local gui = TileTemplates.UnitSector()
 		gui.ImageColor3 = color
 		gui.Position = UDim2.new(0, (x-1)*tileSize, 0, (y-1)*tileSize)
 		gui.Parent = container
@@ -187,7 +188,7 @@ function UnitsView.new(tileSize, container)
 	local function setTailSquare(unit, i, coord)
 		local sq = unit.TailSquares[i]
 		if not sq then
-			sq = script.UnitSector:Clone()
+			sq = TileTemplates.UnitSector()
 			sq.ImageColor3 = unit.Color
 			sq.Parent = unit.TailContainer
 			unit.TailSquares[i] = sq
@@ -201,7 +202,7 @@ function UnitsView.new(tileSize, container)
 	local function setVerticalJoiner(unit, i, x, y)
 		local sq = unit.VerticalTailJoiners[i]
 		if not sq then
-			sq = script.UnitJoinerVertical:Clone()
+			sq = TileTemplates.UnitJoinerVertical()
 			sq.ImageColor3 = unit.Color
 			sq.Parent = unit.TailContainer
 			unit.VerticalTailJoiners[i] = sq
@@ -212,7 +213,7 @@ function UnitsView.new(tileSize, container)
 	local function setHorizontalJoiner(unit, i, x, y)
 		local sq = unit.HorizontalTailJoiners[i]
 		if not sq then
-			sq = script.UnitJoinerHorizontal:Clone()
+			sq = TileTemplates.UnitJoinerHorizontal()
 			sq.ImageColor3 = unit.Color
 			sq.Parent = unit.TailContainer
 			unit.HorizontalTailJoiners[i] = sq
@@ -259,12 +260,12 @@ function UnitsView.new(tileSize, container)
 
 	function this:AddUnit(unit)
 		unit.TailContainer = Instance.new('Folder', container)
-		unit.HeadPart = script.UnitSector:Clone()
+		unit.HeadPart = TileTemplates.UnitSector()
 		unit.HeadPart.Name = 'Head'
 		unit.HeadPart.ZIndex = 2
 		unit.HeadPart.Image = unit.Definition.Image
 		unit.HeadPart.Parent = unit.TailContainer
-		unit.DoneMarker = script.DoneMarker:Clone()
+		unit.DoneMarker = TileTemplates.DoneMarker()
 		unit.DoneMarker.Visible = false
 		unit.DoneMarker.Parent = unit.HeadPart
 		unit.TailSquares = {}

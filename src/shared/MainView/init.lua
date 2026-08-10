@@ -49,9 +49,10 @@ function MainView.new()
 	
 	-- Make menu
 	local mMainMenu = MainMenuView.new(mGui)
-	-- The menu button renders via React onto the root gui (React roots leave
-	-- non-React siblings like the netmap/dialogue GUIs alone)
-	StatefulRoot.create(mGui, function(props)
+	-- The menu button renders via a portaled React root (mGui also holds the
+	-- imperatively-parented netmap/dialogue/menu GUIs, and a plain root would
+	-- clear them at mount)
+	StatefulRoot.createPortaled(mGui, function(props)
 		return e(WindowsButton, {
 			Name = "MenuButton",
 			Size = UDim2.new(0, 150, 0, 36),

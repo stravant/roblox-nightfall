@@ -58,6 +58,14 @@ implementation: `src/shared/DialogueView.lua` + `src/shared/DialogueView.spec.lu
   containers passed in by MainView/GameView): only convert the template
   children the module itself owns. References into externally-owned structure
   stay imperative until the owner is converted.
+- **React clears the root container's children at first mount** (the host
+  config's clearContainer). `StatefulRoot.create`'s host must be exclusively
+  React-owned; if the container also holds imperatively-parented siblings
+  (GameView's board, MainView's subview GUIs, WarezView's side tray), use
+  `StatefulRoot.createPortaled` — portal targets are never cleared, and it's
+  immune to flush-ordering differences between production (sync) and the test
+  mock scheduler. Parenting imperative children INTO React-rendered instances
+  after mount (tutorial arrows, transient tween texts) is always fine.
 
 ## What conversion does NOT include (orchestrator steps)
 
@@ -68,7 +76,18 @@ implementation: `src/shared/DialogueView.lua` + `src/shared/DialogueView.spec.lu
 
 ## State of the conversion
 
-Converted: SoundManager (code-defined sounds, no React needed), DialogueView,
-TutorialArrowView, BuyLevelSkipView, MainMenuView, NodeInfoView.
-Components so far: StatefulRoot, WindowsButton, WindowsSlider, WindowsTabView.
-Everything else still clones templates.
+**COMPLETE.** All live views are converted: SoundManager (code-defined sounds),
+DialogueView, TutorialArrowView, BuyLevelSkipView, MainMenuView, NodeInfoView,
+WarezView, UnitInfoView, UnitInfoViewMobile, Netmap3DView (GUI overlay only),
+MainView, GameView (+TileTemplates factories for its subviews). The old
+imperative WindowsButton/WindowsSlider/WindowsTabView modules are deleted.
+Components: StatefulRoot, WindowsButton, WindowsSlider, WindowsTabView.
+
+Deliberately NOT converted:
+- `NetmapView.lua` — dead legacy code (MainView uses Netmap3DView); still
+  template-based, its templates remain in the place under the module.
+- `ReplicatedFirst.TitleScreen` — the loading screen must exist before
+  ReplicatedStorage content replicates, so it stays a place-owned instance
+  (BOOTSTRAP clones it).
+- `StarterGui.ScreenGui` / `StarterGui.Folder` — dead design-time content;
+  nothing references them (Setup builds its ScreenGui in code).

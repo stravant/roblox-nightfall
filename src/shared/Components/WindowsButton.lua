@@ -21,6 +21,7 @@ export type Props = {
 	Visible: boolean?,
 	ZIndex: number?,
 	LayoutOrder: number?,
+	ImageColor3: Color3?,
 	Text: string?,
 	TextSize: number?,
 	OnClick: (() -> ())?,
@@ -60,6 +61,7 @@ local function WindowsButton(props: Props)
 	return e("ImageButton", {
 		Name = props.Name,
 		Image = image,
+		ImageColor3 = props.ImageColor3,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(8, 8, 8, 8),
 		BackgroundTransparency = 1,
