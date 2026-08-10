@@ -363,9 +363,8 @@ function Netmap3DView.new()
 		mTutorialArrow:Show(billboard, 180, UDim2.new(0.5, 0, 0.3, 0))
 
 		local highlight = Instance.new("Highlight")
-		highlight.FillColor = Color3.fromRGB(0, 255, 120)
-		highlight.FillTransparency = 0.65
-		highlight.OutlineColor = Color3.new(1, 1, 1)
+		highlight.FillTransparency = 1
+		highlight.OutlineColor = Color3.fromRGB(0, 255, 120)
 		highlight.OutlineTransparency = 0
 		highlight.Adornee = nodeView.Model
 		highlight.Parent = nodeView.Model
