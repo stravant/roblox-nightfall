@@ -313,6 +313,9 @@ function Netmap3DView.new()
 		billboard.Adornee = adornee
 		billboard.Size = UDim2.new(0, 132, 0, 46)
 		billboard.AlwaysOnTop = true
+		-- AlwaysOnTop renders through the battle board, so only enable while
+		-- the netmap is actually being shown (kept in sync below)
+		billboard.Enabled = mGui.Visible
 		billboard.Parent = mPlayerGui
 
 		local window = Instance.new("ImageLabel")
@@ -434,6 +437,12 @@ function Netmap3DView.new()
 	updateHoveredNode = function()
 		if DeviceInfo.Touch then
 			-- Don't show the hover thing on touch devices
+			return
+		end
+		if not mGui.Visible then
+			-- During a databattle the netmap sits far below the board and the
+			-- hover raycast can still reach it; don't show the bracket
+			mHoverDisplayGui.Enabled = false
 			return
 		end
 		local id = getHoveredNodeId(getUnitRay())
