@@ -57,11 +57,97 @@ function MainView.new()
 	mTopbarGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	mTopbarGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 	local mTopbarRoot = StatefulRoot.create(mTopbarGui, function(props)
-		return e(React.Fragment, nil, {
+		-- One flex row: node name + Start Databattle size to their content on
+		-- the left, a flex-fill spacer pushes the Menu button to the right
+		return e("Frame", {
+			Name = "TopbarRow",
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundTransparency = 1,
+		}, {
+			UIPadding = e("UIPadding", {
+				PaddingLeft = UDim.new(0, 4),
+				PaddingRight = UDim.new(0, 4),
+			}),
+			UIListLayout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Horizontal,
+				VerticalAlignment = Enum.VerticalAlignment.Center,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 8),
+			}),
+			BattleTitle = if props.battleTitle
+				then e("TextLabel", {
+					-- Solid Win95 title-bar blue; the whole bar is the title
+					LayoutOrder = 1,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 0, 38),
+					BackgroundColor3 = Color3.fromRGB(0, 0, 128),
+					BorderSizePixel = 0,
+					Font = Enum.Font.SourceSansBold,
+					TextSize = 20,
+					TextColor3 = Color3.new(1, 1, 1),
+					Text = props.battleTitle,
+				}, {
+					UIPadding = e("UIPadding", {
+						PaddingLeft = UDim.new(0, 12),
+						PaddingRight = UDim.new(0, 12),
+					}),
+				})
+				else nil,
+			StartGameButton = if props.startVisible
+				then e("TextButton", {
+					Name = "StartGameButton",
+					LayoutOrder = 2,
+					Active = true,
+					AutomaticSize = Enum.AutomaticSize.X,
+					Size = UDim2.new(0, 0, 0, 36),
+					BackgroundColor3 = Color3.new(0.701961, 0, 0),
+					Font = Enum.Font.Code,
+					TextSize = 20,
+					TextColor3 = Color3.new(1, 1, 1),
+					Text = "Start Databattle",
+					[React.Event.MouseButton1Click] = function()
+						if props.onStartClick then
+							props.onStartClick()
+						end
+					end,
+				}, {
+					UIPadding = e("UIPadding", {
+						PaddingLeft = UDim.new(0, 10),
+						PaddingRight = UDim.new(0, 10),
+					}),
+				})
+				else nil,
+			DoneTurnButton = if props.doneTurnVisible
+				then e(WindowsButton, {
+					Name = "DoneTurnButton",
+					LayoutOrder = 2,
+					Size = UDim2.new(0, 130, 0, 36),
+					OnClick = props.onDoneTurnClick,
+				}, {
+					TextLabel = e("TextLabel", {
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0.5, 0, 0.5, 0),
+						Size = UDim2.new(1, 0, 1, 0),
+						BackgroundTransparency = 1,
+						Font = Enum.Font.Code,
+						TextSize = 20,
+						TextColor3 = Color3.new(0, 0, 0),
+						Text = "Done Turn",
+					}),
+				})
+				else nil,
+			Spacer = e("Frame", {
+				LayoutOrder = 3,
+				Size = UDim2.new(0, 0, 0, 1),
+				BackgroundTransparency = 1,
+			}, {
+				UIFlexItem = e("UIFlexItem", {
+					FlexMode = Enum.UIFlexMode.Fill,
+				}),
+			}),
 			MenuButton = e(WindowsButton, {
 				Name = "MenuButton",
-				AnchorPoint = Vector2.new(1, 0.5),
-				Position = UDim2.new(1, -4, 0.5, 0),
+				LayoutOrder = 4,
 				Size = UDim2.new(0, 110, 0, 36),
 				OnClick = props.onMenuClick,
 			}, {
@@ -76,36 +162,36 @@ function MainView.new()
 					Text = "Menu",
 				}),
 			}),
-			BattleTitle = if props.battleTitle
-				then e("Frame", {
-					-- Solid Win95 title-bar blue; the whole bar is the title
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.new(0.5, 0, 0.5, 0),
-					Size = UDim2.new(0, 260, 0, 38),
-					BackgroundColor3 = Color3.fromRGB(0, 0, 128),
-					BorderSizePixel = 0,
-				}, {
-					Text = e("TextLabel", {
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						Position = UDim2.new(0.5, 0, 0.5, 0),
-						Size = UDim2.new(1, -12, 1, -6),
-						BackgroundTransparency = 1,
-						Font = Enum.Font.SourceSansBold,
-						TextSize = 20,
-						TextColor3 = Color3.new(1, 1, 1),
-						Text = props.battleTitle,
-					}),
-				})
-				else nil,
 		})
 	end, {
 		battleTitle = nil,
+		startVisible = false,
+		doneTurnVisible = false,
+		onStartClick = nil,
+		onDoneTurnClick = nil,
 		onMenuClick = function()
 			mMainMenu:Show()
 		end,
 	})
 	local function setBattleTitle(title)
 		mTopbarRoot.setState({ battleTitle = title or StatefulRoot.None })
+	end
+	-- Interface handed to GameView so it can drive the topbar Start button
+	local mTopbarBattleInterface = {}
+	function mTopbarBattleInterface:SetStartVisible(visible)
+		mTopbarRoot.setState({ startVisible = visible })
+	end
+	function mTopbarBattleInterface:SetOnStart(callback)
+		mTopbarRoot.setState({ onStartClick = callback or StatefulRoot.None })
+	end
+	function mTopbarBattleInterface:SetDoneTurnVisible(visible)
+		mTopbarRoot.setState({ doneTurnVisible = visible })
+	end
+	function mTopbarBattleInterface:SetOnDoneTurn(callback)
+		mTopbarRoot.setState({ onDoneTurnClick = callback or StatefulRoot.None })
+	end
+	function mTopbarBattleInterface:GetStartButton()
+		return mTopbarGui:FindFirstChild("StartGameButton", true)
 	end
 	
 	-- Make netmap
@@ -186,13 +272,23 @@ function MainView.new()
 		end
 		local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 		local gameController = GameController.new(gameState)
-		local gameView = GameView.new(gameState, gameController, mMainMenu)
+		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface)
+		mTopbarBattleInterface:SetOnStart(function()
+			gameController:StartGame()
+		end)
+		mTopbarBattleInterface:SetOnDoneTurn(function()
+			gameController:EndTurn()
+		end)
 		setBattleTitle(Netmap.GetNodeDisplayName(nodeId))
 		
 		-- Restore the main state when the game is over
 		local gameCompletedConnection;
 		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart)
 			setBattleTitle(nil)
+			mTopbarBattleInterface:SetStartVisible(false)
+			mTopbarBattleInterface:SetDoneTurnVisible(false)
+			mTopbarBattleInterface:SetOnStart(nil)
+			mTopbarBattleInterface:SetOnDoneTurn(nil)
 			mNetmapView:SetVisible(true)
 			SoundManager:Play('MainBackgroundLoop')
 			gameView:Destroy()

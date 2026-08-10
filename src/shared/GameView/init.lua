@@ -65,25 +65,14 @@ local function GameViewChrome(props)
 	local hidden = props.commandsHidden
 
 	-- One responsive floating layout (no more desktop/mobile variants):
-	-- Menu top-right, Done Turn bottom-left under the BattleHud column,
-	-- Undo bottom-right, Start Databattle floating bottom-center.
+	-- Start Databattle / Done Turn live in the topbar gui (via the topbar
+	-- interface), Undo bottom-right.
 	local commands = e("Frame", {
 		Name = "Commands",
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
 		ZIndex = 5,
 	}, {
-		DoneTurnButton = e(WindowsButton, {
-			Name = "DoneTurnButton",
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, 12, 1, -12),
-			Size = UDim2.new(0, 160, 0, 44),
-			ZIndex = 4,
-			Visible = props.doneTurnVisible and not hidden,
-			OnClick = props.onDoneTurn,
-		}, {
-			TextLabel = codeLabel("Done Turn"),
-		}),
 		UndoCommand = e(WindowsButton, {
 			Name = "UndoCommand",
 			AnchorPoint = Vector2.new(1, 1),
@@ -94,20 +83,6 @@ local function GameViewChrome(props)
 			OnClick = props.onUndo,
 		}, {
 			TextLabel = codeLabel("Undo"),
-		}),
-		StartGameButton = e("TextButton", {
-			Active = true,
-			AnchorPoint = Vector2.new(0.5, 1),
-			Position = UDim2.new(0.5, 0, 1, -76),
-			Size = UDim2.new(0, 220, 0, 40),
-			BackgroundColor3 = Color3.new(0.701961, 0, 0),
-			Font = Enum.Font.Code,
-			TextSize = 24,
-			TextColor3 = Color3.new(1, 1, 1),
-			Text = "Start Databattle",
-			ZIndex = 3,
-			Visible = props.startGameVisible and not hidden,
-			[React.Event.MouseButton1Click] = props.onStartGame,
 		}),
 	})
 
@@ -234,8 +209,18 @@ end
 
 -- `menu` is the shared MainMenuView; while this battle is up it gains a
 -- default-selected "Databattle" tab (forfeit / skip). May be nil in tests.
-function GameView.new(gameState, controller, menu)
+-- `topbar` drives the Start Databattle button in the topbar gui (may be nil
+-- in tests).
+function GameView.new(gameState, controller, menu, topbar)
 	local this = {}
+
+	local mTopbar = topbar or {
+		SetStartVisible = function() end,
+		SetDoneTurnVisible = function() end,
+		GetStartButton = function()
+			return nil
+		end,
+	}
 
 	this.CloseGame = Signal.new()
 	this.SquareSelected = Signal.new()
@@ -314,20 +299,12 @@ function GameView.new(gameState, controller, menu)
 
 	-- Portaled: mGui also holds the imperative Board/Info/PlaceBackground
 	mRoot = StatefulRoot.createPortaled(mGui, GameViewChrome, {
-		startGameVisible = false,
-		doneTurnVisible = false,
 		undoVisible = false,
 		commandsHidden = false,
 		endGameOverlayVisible = false,
 		endGameWon = nil,
 		submittingText = "(Submitting play...)",
 		skipText = "Skip Node",
-		onStartGame = function()
-			controller:StartGame()
-		end,
-		onDoneTurn = function()
-			controller:EndTurn()
-		end,
 		onUndo = function()
 			local unit = controller:Undo()
 			if unit then
@@ -653,7 +630,10 @@ function GameView.new(gameState, controller, menu)
 	end
 	function this:ShowTutorialArrowStartGame()
 		mUnitInfoView:TutorialHide()
-		mTutorialArrow:Show(findCommandsFrame():FindFirstChild("StartGameButton") :: Instance, 90, UDim2.new(0, 0, 0.5, 0))
+		local button = mTopbar:GetStartButton()
+		if button then
+			mTutorialArrow:Show(button, 90, UDim2.new(0, 0, 0.5, 0))
+		end
 	end
 	function this:ShowTutorialArrowProgramList(unitId)
 		mUnitInfoView:TutorialHighlightUnit(unitId)
@@ -744,7 +724,7 @@ function GameView.new(gameState, controller, menu)
 		gameState:UploadUnit(x, y, Scripts[id])
 
 		-- Show the start game button now that we have at least one unit uploaded
-		root().setState({ startGameVisible = true })
+		mTopbar:SetStartVisible(true)
 		return true
 	end
 
@@ -845,7 +825,7 @@ function GameView.new(gameState, controller, menu)
 		end
 		mUnitInfoView:UpdateCount(id, 1)
 		if not hasPlayerUnits() then
-			root().setState({ startGameVisible = false })
+			mTopbar:SetStartVisible(false)
 		end
 		startDragSession(id, screenPos)
 		return true
@@ -887,6 +867,7 @@ function GameView.new(gameState, controller, menu)
 		end
 		clearSelection()
 		root().setState({ commandsHidden = true })
+		mTopbar:SetDoneTurnVisible(false)
 		mUnitInfoView:Hide()
 		mDidWin = wonGame
 		if mAutoSelectionEnabled then
@@ -941,7 +922,8 @@ function GameView.new(gameState, controller, menu)
 		end
 		mUploadView:ClearAll()
 		-- The tutorial (auto-selection disabled) drives turns itself: no button
-		root().setState({ startGameVisible = false, doneTurnVisible = mAutoSelectionEnabled })
+		mTopbar:SetStartVisible(false)
+		mTopbar:SetDoneTurnVisible(mAutoSelectionEnabled)
 		mUnitInfoView:SetProgramListVisible(false)
 		if mAutoSelectionEnabled then
 			-- TODO: Show / hide in menu
@@ -1030,7 +1012,7 @@ function GameView.new(gameState, controller, menu)
 			clearSelection()
 
 			-- Hide end turn button
-			root().setState({ doneTurnVisible = false })
+			mTopbar:SetDoneTurnVisible(false)
 		else
 			-- Start of our turn,
 			if mAutoSelectionEnabled then
@@ -1045,7 +1027,7 @@ function GameView.new(gameState, controller, menu)
 			end
 
 			-- Show end turn button (not during the tutorial)
-			root().setState({ doneTurnVisible = mAutoSelectionEnabled })
+			mTopbar:SetDoneTurnVisible(mAutoSelectionEnabled)
 		end
 	end)
 

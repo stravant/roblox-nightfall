@@ -142,7 +142,7 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 		else Color3.new(0, 0, 0)
 	return e(WindowsButton, {
 		Name = entry.Key,
-		Size = UDim2.new(0, 160, 0, 66),
+		Size = UDim2.new(0, 160, 0, 54),
 		LayoutOrder = entry.IsMove and 0 or 1,
 		ImageColor3 = if selected
 			then Color3.new(0, 0, 1)
@@ -153,21 +153,21 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 		end,
 	}, {
 		Label = e("TextLabel", {
-			Position = UDim2.new(0, 8, 0, 5),
-			Size = UDim2.new(1, -16, 0, 20),
+			Position = UDim2.new(0, 6, 0, 3),
+			Size = UDim2.new(1, -12, 0, 22),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSansBold,
-			TextSize = 18,
+			TextSize = 20,
 			TextColor3 = textColor,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Text = entry.Label,
 		}),
 		Description = e("TextLabel", {
-			Position = UDim2.new(0, 8, 0, 25),
-			Size = UDim2.new(1, -16, 1, -31),
+			Position = UDim2.new(0, 6, 0, 25),
+			Size = UDim2.new(1, -12, 1, -28),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
-			TextSize = 13,
+			TextSize = 14,
 			TextColor3 = if selected then Color3.new(0.85, 0.85, 1)
 				elseif entry.Disabled then Color3.new(0.45, 0.45, 0.45)
 				else Color3.new(0.25, 0.25, 0.25),
@@ -294,7 +294,7 @@ local function BattleHudContent(props: HudState)
 	-- Everything on the left stacks in one column: the Programs window during
 	-- setup, then the unit info window with its commands right below it
 	local commandCount = #props.commands
-	local commandRowHeight = commandCount * 66 + math.max(0, commandCount - 1) * 8
+	local commandRowHeight = commandCount * 54 + math.max(0, commandCount - 1) * 8
 
 	return e(React.Fragment, nil, {
 		LeftColumn = e("Frame", {

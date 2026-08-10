@@ -32,13 +32,24 @@ return function(t)
 		screen.Parent = CoreGui
 		local gameState = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local controller = GameController.new(gameState)
+		-- Records the Start Databattle / Done Turn topbar state the view drives
+		local fakeTopbar = { startVisible = false, doneTurnVisible = false }
+		function fakeTopbar:SetStartVisible(visible)
+			self.startVisible = visible
+		end
+		function fakeTopbar:SetDoneTurnVisible(visible)
+			self.doneTurnVisible = visible
+		end
+		function fakeTopbar:GetStartButton()
+			return nil
+		end
 		local view
 		local ok, err = pcall(function()
 			ReactRoblox.act(function()
-				view = GameView.new(gameState, controller)
+				view = GameView.new(gameState, controller, nil, fakeTopbar)
 			end)
 			view:getGui().Parent = screen
-			fn(view, view:getGui(), gameState)
+			fn(view, view:getGui(), gameState, fakeTopbar)
 		end)
 
 		LocalPlayerData.GetSkips = originalGetSkips
@@ -77,7 +88,6 @@ return function(t)
 
 			local commands = commandsFrame(gui)
 			t.expect(commands ~= nil).toBeTruthy()
-			t.expect(commands.StartGameButton.Visible).toBeFalsy()
 			t.expect(gui.EndGameOverlay.Visible).toBeFalsy()
 		end)
 	end)
@@ -89,7 +99,7 @@ return function(t)
 	end)
 
 	t.test("uploading a unit and starting the game flips the chrome state", function()
-		withView(function(view, gui, gameState)
+		withView(function(view, gui, gameState, topbar)
 			local board = view:getBoardGui()
 			-- The place's own enemy units are already rendered at mount
 			local unitsBefore = #board.Units:GetChildren()
@@ -103,8 +113,8 @@ return function(t)
 			gameState:StartGame()
 			task.wait()
 			ReactRoblox.act(function() end)
-			local commands = commandsFrame(gui)
-			t.expect(commands.DoneTurnButton.Visible).toBeTruthy()
+			t.expect(topbar.startVisible).toBeFalsy()
+			t.expect(topbar.doneTurnVisible).toBeTruthy()
 			t.expect(#board.UploadZones:GetChildren()).toBe(0)
 		end)
 	end)
