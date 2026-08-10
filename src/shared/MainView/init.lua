@@ -127,10 +127,29 @@ function MainView.new()
 					}),
 				})
 				else nil,
+			UndoButton = if props.undoVisible
+				then e(WindowsButton, {
+					Name = "UndoButton",
+					LayoutOrder = 3,
+					Size = UDim2.new(0, 90, 0, 36),
+					OnClick = props.onUndoClick,
+				}, {
+					TextLabel = e("TextLabel", {
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.new(0.5, 0, 0.5, 0),
+						Size = UDim2.new(1, 0, 1, 0),
+						BackgroundTransparency = 1,
+						Font = Enum.Font.Code,
+						TextSize = 20,
+						TextColor3 = Color3.new(0, 0, 0),
+						Text = "Undo",
+					}),
+				})
+				else nil,
 			DoneTurnButton = if props.doneTurnVisible
 				then e(WindowsButton, {
 					Name = "DoneTurnButton",
-					LayoutOrder = 3,
+					LayoutOrder = 4,
 					Size = UDim2.new(0, 130, 0, 36),
 					OnClick = props.onDoneTurnClick,
 				}, {
@@ -147,7 +166,7 @@ function MainView.new()
 				})
 				else nil,
 			SpacerRight = e("Frame", {
-				LayoutOrder = 4,
+				LayoutOrder = 5,
 				Size = UDim2.new(0, 0, 0, 1),
 				BackgroundTransparency = 1,
 			}, {
@@ -155,13 +174,13 @@ function MainView.new()
 					FlexMode = Enum.UIFlexMode.Fill,
 				}),
 			}),
-			CreditsDisplay = if props.creditsText
+			CreditsDisplay = if props.creditsText and not props.creditsHidden
 				then e("ImageLabel", {
 					-- Auto-width chain: every level uses offset/automatic
 					-- widths only (a scale-sized child inside an AutomaticSize
 					-- parent measures circularly and overflows the chrome)
 					Name = "CreditsDisplay",
-					LayoutOrder = 5,
+					LayoutOrder = 6,
 					AutomaticSize = Enum.AutomaticSize.X,
 					Size = UDim2.new(0, 0, 0, 36),
 					BackgroundTransparency = 1,
@@ -204,7 +223,7 @@ function MainView.new()
 				else nil,
 			MenuButton = e(WindowsButton, {
 				Name = "MenuButton",
-				LayoutOrder = 6,
+				LayoutOrder = 7,
 				Size = UDim2.new(0, 110, 0, 36),
 				OnClick = props.onMenuClick,
 			}, {
@@ -224,9 +243,12 @@ function MainView.new()
 		battleTitle = nil,
 		startVisible = false,
 		doneTurnVisible = false,
+		undoVisible = false,
 		creditsText = nil,
+		creditsHidden = false,
 		onStartClick = nil,
 		onDoneTurnClick = nil,
+		onUndoClick = nil,
 		onMenuClick = function()
 			mMainMenu:Show()
 		end,
@@ -247,6 +269,15 @@ function MainView.new()
 	end
 	function mTopbarBattleInterface:SetOnDoneTurn(callback)
 		mTopbarRoot.setState({ onDoneTurnClick = callback or StatefulRoot.None })
+	end
+	function mTopbarBattleInterface:SetUndoVisible(visible)
+		mTopbarRoot.setState({ undoVisible = visible })
+	end
+	function mTopbarBattleInterface:SetOnUndo(callback)
+		mTopbarRoot.setState({ onUndoClick = callback or StatefulRoot.None })
+	end
+	function mTopbarBattleInterface:SetCreditsVisible(visible)
+		mTopbarRoot.setState({ creditsHidden = not visible })
 	end
 	function mTopbarBattleInterface:GetStartButton()
 		return mTopbarGui:FindFirstChild("StartGameButton", true)
@@ -347,6 +378,7 @@ function MainView.new()
 		mTopbarBattleInterface:SetOnDoneTurn(function()
 			gameController:EndTurn()
 		end)
+		mTopbarBattleInterface:SetCreditsVisible(false)
 		setBattleTitle(Netmap.GetNodeDisplayName(nodeId))
 		
 		-- Restore the main state when the game is over
@@ -355,8 +387,11 @@ function MainView.new()
 			setBattleTitle(nil)
 			mTopbarBattleInterface:SetStartVisible(false)
 			mTopbarBattleInterface:SetDoneTurnVisible(false)
+			mTopbarBattleInterface:SetUndoVisible(false)
 			mTopbarBattleInterface:SetOnStart(nil)
 			mTopbarBattleInterface:SetOnDoneTurn(nil)
+			mTopbarBattleInterface:SetOnUndo(nil)
+			mTopbarBattleInterface:SetCreditsVisible(true)
 			mNetmapView:SetVisible(true)
 			SoundManager:Play('MainBackgroundLoop')
 			gameView:Destroy()

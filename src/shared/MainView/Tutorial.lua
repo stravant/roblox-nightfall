@@ -77,6 +77,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	topbar:SetOnStart(function()
 		gameController:StartGame()
 	end)
+	topbar:SetCreditsVisible(false)
 
 	tutorialDialogue:GetGui().Parent = gameView:getGui()
 
@@ -167,7 +168,10 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	tutorialDialogue:Destroy()
 	gameView:Destroy()
 	topbar:SetStartVisible(false)
+	topbar:SetUndoVisible(false)
 	topbar:SetOnStart(nil)
+	topbar:SetOnUndo(nil)
+	topbar:SetCreditsVisible(true)
 	netmapView:GetGui().Visible = true
 	-- Land the camera on the node that was just beaten
 	netmapView:HighlightNode('hq')

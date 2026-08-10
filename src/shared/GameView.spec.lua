@@ -32,13 +32,19 @@ return function(t)
 		screen.Parent = CoreGui
 		local gameState = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local controller = GameController.new(gameState)
-		-- Records the Start Databattle / Done Turn topbar state the view drives
-		local fakeTopbar = { startVisible = false, doneTurnVisible = false }
+		-- Records the topbar state the view drives
+		local fakeTopbar = { startVisible = false, doneTurnVisible = false, undoVisible = false }
 		function fakeTopbar:SetStartVisible(visible)
 			self.startVisible = visible
 		end
 		function fakeTopbar:SetDoneTurnVisible(visible)
 			self.doneTurnVisible = visible
+		end
+		function fakeTopbar:SetUndoVisible(visible)
+			self.undoVisible = visible
+		end
+		function fakeTopbar:SetOnUndo(callback)
+			self.onUndo = callback
 		end
 		function fakeTopbar:GetStartButton()
 			return nil
@@ -64,10 +70,6 @@ return function(t)
 		end
 	end
 
-	local function commandsFrame(gui)
-		return gui:FindFirstChild("Commands")
-	end
-
 	t.test("mounts the 3D board with map tiles, upload zones, and background", function()
 		withView(function(view, gui, gameState)
 			t.expect(view:getBoard3D():GetBackgroundImage()).toBe(gameState:GetPlaceBackground())
@@ -86,8 +88,6 @@ return function(t)
 			t.expect(#board.Tiles:GetChildren()).toBe(filledCount)
 			t.expect(#board.UploadZones:GetChildren()).toBe(#gameState:GetUploadZones())
 
-			local commands = commandsFrame(gui)
-			t.expect(commands ~= nil).toBeTruthy()
 			t.expect(gui.EndGameOverlay.Visible).toBeFalsy()
 		end)
 	end)

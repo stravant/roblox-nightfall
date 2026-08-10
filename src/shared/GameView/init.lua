@@ -47,47 +47,11 @@ local GameView = {}
 -- Chrome render helpers
 --------------------------------------------------------------------------------
 
--- Code-font label filling a Windows-styled button
-local function codeLabel(text: string)
-	return e("TextLabel", {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Font = Enum.Font.Code,
-		TextSize = 20,
-		TextColor3 = Color3.new(0, 0, 0),
-		Text = text,
-	})
-end
-
 local function GameViewChrome(props)
-	local hidden = props.commandsHidden
-
-	-- One responsive floating layout (no more desktop/mobile variants):
-	-- Start Databattle / Done Turn live in the topbar gui (via the topbar
-	-- interface), Undo bottom-right.
-	local commands = e("Frame", {
-		Name = "Commands",
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		ZIndex = 5,
-	}, {
-		UndoCommand = e(WindowsButton, {
-			Name = "UndoCommand",
-			AnchorPoint = Vector2.new(1, 1),
-			Position = UDim2.new(1, -12, 1, -12),
-			Size = UDim2.new(0, 110, 0, 44),
-			ZIndex = 4,
-			Visible = props.undoVisible and not hidden,
-			OnClick = props.onUndo,
-		}, {
-			TextLabel = codeLabel("Undo"),
-		}),
-	})
-
+	-- All the battle action buttons (Start Databattle / Done Turn / Undo)
+	-- live in the topbar gui via the topbar interface; the chrome here is
+	-- just the end-of-game overlay.
 	return e(React.Fragment, nil, {
-		Commands = commands,
 		EndGameOverlay = e("ImageButton", {
 			Active = true,
 			AutoButtonColor = false,
@@ -217,6 +181,8 @@ function GameView.new(gameState, controller, menu, topbar)
 	local mTopbar = topbar or {
 		SetStartVisible = function() end,
 		SetDoneTurnVisible = function() end,
+		SetUndoVisible = function() end,
+		SetOnUndo = function() end,
 		GetStartButton = function()
 			return nil
 		end,
@@ -299,18 +265,10 @@ function GameView.new(gameState, controller, menu, topbar)
 
 	-- Portaled: mGui also holds the imperative Board/Info/PlaceBackground
 	mRoot = StatefulRoot.createPortaled(mGui, GameViewChrome, {
-		undoVisible = false,
-		commandsHidden = false,
 		endGameOverlayVisible = false,
 		endGameWon = nil,
 		submittingText = "(Submitting play...)",
 		skipText = "Skip Node",
-		onUndo = function()
-			local unit = controller:Undo()
-			if unit then
-				setSelectionUnit(unit)
-			end
-		end,
 		onSkip = function()
 			trySkip()
 		end,
@@ -321,10 +279,13 @@ function GameView.new(gameState, controller, menu, topbar)
 
 	updateMenuContext()
 
-	-- Rendered chrome lookups (post-flush only)
-	local function findCommandsFrame(): Instance
-		return mGui:FindFirstChild("Commands") :: Instance
-	end
+	-- Undo lives in the topbar; its handler needs this view's selection state
+	mTopbar:SetOnUndo(function()
+		local unit = controller:Undo()
+		if unit then
+			setSelectionUnit(unit)
+		end
+	end)
 
 	-- Battle sound
 	local mBattleSoundLooper = BattleSoundLooper.new()
@@ -369,7 +330,7 @@ function GameView.new(gameState, controller, menu, topbar)
 		mUnitsView:ClearFlashUnit()
 		mHighlightedTiles:ClearAll()
 		mActionableSquares = nil
-		root().setState({ undoVisible = gameState:CanUndo() })
+		mTopbar:SetUndoVisible(gameState:CanUndo())
 		mUnitInfoView:ClearSelectedUnit()
 	end
 
@@ -440,7 +401,7 @@ function GameView.new(gameState, controller, menu, topbar)
 		mHighlightedTiles:ClearAll()
 		mUnitInfoView:SetSelectedUnit(unit)
 
-		root().setState({ undoVisible = gameState:CanUndo() })
+		mTopbar:SetUndoVisible(gameState:CanUndo())
 
 		if not unit.Done and gameState:IsGameStarted() then
 			if unit.MoveLeft > 0 then
@@ -868,8 +829,8 @@ function GameView.new(gameState, controller, menu, topbar)
 			return
 		end
 		clearSelection()
-		root().setState({ commandsHidden = true })
 		mTopbar:SetDoneTurnVisible(false)
+		mTopbar:SetUndoVisible(false)
 		mUnitInfoView:Hide()
 		mDidWin = wonGame
 		if mAutoSelectionEnabled then
