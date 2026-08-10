@@ -115,8 +115,8 @@ function Netmap3DView.new()
 		creditsText = "",
 	})
 	
-	local mNotBeatenGlowContainer = Instance.new('Folder', workspace)
 	local mConnectionsContainer = Instance.new('Folder', workspace)
+	local mPlayerGui = game.Players.LocalPlayer.PlayerGui
 	
 	local mNodeModelToNodeIdMap = {}
 	
@@ -158,25 +158,28 @@ function Netmap3DView.new()
 	
 	local mNodeView = {}
 	
+	local kNodeModelScale = 1.5
+
 	local function setupNetmap()
 		for _, ch in pairs(mNetmapModel:GetChildren()) do
 			local id = ch.Name
 			local cf = ch:GetPivot()
 			local visibleModel = NETMAP_NODE_MODELS[id:sub(1, 2)]:Clone()
+			visibleModel:ScaleTo(kNodeModelScale)
 			visibleModel:PivotTo(cf)
 			local disabledModel = NETMAP_NODE_MODELS[id:sub(1, 2)..'_disabled']:Clone()
-			local unknownModel = NETMAP_NODE_MODELS['unknown']:Clone()
-			unknownModel:PivotTo(cf)
+			disabledModel:ScaleTo(kNodeModelScale)
 			disabledModel:PivotTo(cf)
+			-- Only the live (seen) model is clickable; undiscovered nodes show
+			-- the disabled model purely as scenery
 			mNodeModelToNodeIdMap[visibleModel] = id
-			mNodeModelToNodeIdMap[disabledModel] = id
 			mNodeView[id] = {
 				Id = id;
 				CFrame = cf;
-				Model = disabledModel;
+				Seen = false;
+				Beaten = false;
 				VisibleModel = visibleModel;
 				DisabledModel = disabledModel;
-				UnknownModel = unknownModel;
 			}
 			ch:Destroy()
 		end
@@ -211,11 +214,72 @@ function Netmap3DView.new()
 		}
 	end
 	
+	-- Beaten links become ethereal green arcs with a stream of 0/1 digits
+	-- flowing from the source node to its neighbors
+	local mActiveLinkAnims = {}
 	local function showLinks(nodeView)
 		for adjId, beamView in pairs(nodeView.AdjacentLinks) do
-			beamView.Beam.Color = ColorSequence.new(Color3.new(0, 1, 0))
-			beamView.Beam.Width0 = 1.5
-			beamView.Beam.Width1 = 1.5
+			if not beamView.Active then
+				beamView.Active = true
+				beamView.Beam.Color = ColorSequence.new(Color3.new(0, 1, 0.3))
+				beamView.Beam.Transparency = NumberSequence.new(0.55)
+				beamView.Beam.Width0 = 0.9
+				beamView.Beam.Width1 = 0.9
+
+				beamView.From = nodeView.CFrame.Position
+				beamView.To = mNodeView[adjId].CFrame.Position
+				local dir = (beamView.To - beamView.From)
+				local flat = Vector3.new(dir.X, 0, dir.Z)
+				beamView.Perp = if flat.Magnitude > 0.01
+					then Vector3.new(-flat.Unit.Z, 0, flat.Unit.X)
+					else Vector3.new(1, 0, 0)
+				beamView.Particles = {}
+				for i = 1, 4 do
+					-- Terrain-adorned billboard: StudsOffsetWorldSpace is then
+					-- an absolute world position, no adornee part needed
+					local bb = Instance.new("BillboardGui")
+					bb.Adornee = workspace.Terrain
+					bb.Size = UDim2.new(0, 24, 0, 24)
+					bb.LightInfluence = 0
+					bb.Parent = mConnectionsContainer
+					local label = Instance.new("TextLabel")
+					label.Size = UDim2.new(1, 0, 1, 0)
+					label.BackgroundTransparency = 1
+					label.Font = Enum.Font.Code
+					label.TextSize = 18
+					label.TextColor3 = Color3.new(0.3, 1, 0.45)
+					label.Text = (i % 2 == 0) and "0" or "1"
+					label.Parent = bb
+					table.insert(beamView.Particles, {
+						Gui = bb,
+						Label = label,
+						Phase = (i - 1) / 4,
+						Speed = 0.28 + 0.07 * ((i * 7) % 3),
+						Seed = i * 2.61,
+						NextFlip = 0,
+					})
+				end
+				table.insert(mActiveLinkAnims, beamView)
+			end
+		end
+	end
+
+	local function animateLinks(t)
+		for _, link in pairs(mActiveLinkAnims) do
+			for _, p in pairs(link.Particles) do
+				local alpha = (t * p.Speed + p.Phase) % 1
+				local arc = math.sin(alpha * math.pi)
+				local wobble = math.sin(t * 2.7 + p.Seed) * 0.6
+				local pos = link.From:Lerp(link.To, alpha)
+					+ Vector3.new(0, 1 + arc * 2.2, 0)
+					+ link.Perp * wobble
+				p.Gui.StudsOffsetWorldSpace = pos
+				p.Label.TextTransparency = 0.1 + 0.65 * (1 - arc)
+				if t > p.NextFlip then
+					p.NextFlip = t + 0.12 + 0.25 * math.random()
+					p.Label.Text = (math.random() < 0.5) and "0" or "1"
+				end
+			end
 		end
 	end
 	
@@ -228,23 +292,109 @@ function Netmap3DView.new()
 		end
 	end
 	
-	local function setVisible(nodeView, visibility)
-		nodeView.Model.Parent = visibility and mNetmapModel or nil
-		if visibility then
-			nodeView.UnknownModel.Parent = nil
-		else
-			nodeView.UnknownModel.Parent = mNetmapModel
+	-- The flashing Win95-virus-popup style "Infected!" billboard shown over
+	-- nodes that are discovered but not yet beaten
+	local function ensureInfectedBillboard(nodeView)
+		if nodeView.Infected then
+			return
+		end
+		local adornee = Instance.new("Part")
+		adornee.Name = "InfectedAdornee"
+		adornee.Transparency = 1
+		adornee.Anchored = true
+		adornee.CanCollide = false
+		adornee.CanQuery = false
+		adornee.Size = Vector3.new(1, 1, 1)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(0, 5, 0)
+		adornee.Parent = workspace
+
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "InfectedPopup"
+		billboard.Adornee = adornee
+		billboard.Size = UDim2.new(0, 132, 0, 46)
+		billboard.AlwaysOnTop = true
+		billboard.Parent = mPlayerGui
+
+		local window = Instance.new("ImageLabel")
+		window.Size = UDim2.new(1, 0, 1, 0)
+		window.BackgroundTransparency = 1
+		window.Image = "rbxassetid://1378189463"
+		window.ImageRectSize = Vector2.new(32, 48)
+		window.ScaleType = Enum.ScaleType.Slice
+		window.SliceCenter = Rect.new(16, 24, 16, 24)
+		window.Parent = billboard
+		local title = Instance.new("TextLabel")
+		title.Position = UDim2.new(0, 6, 0, 2)
+		title.Size = UDim2.new(1, -12, 0, 18)
+		title.BackgroundTransparency = 1
+		title.Font = Enum.Font.SourceSansBold
+		title.TextSize = 12
+		title.TextColor3 = Color3.new(1, 1, 1)
+		title.TextXAlignment = Enum.TextXAlignment.Left
+		title.Text = "System Alert"
+		title.Parent = window
+		local inset = Instance.new("ImageLabel")
+		inset.Position = UDim2.new(0, 5, 0, 20)
+		inset.Size = UDim2.new(1, -10, 1, -24)
+		inset.BackgroundTransparency = 1
+		inset.Image = "rbxassetid://1378143823"
+		inset.ScaleType = Enum.ScaleType.Slice
+		inset.SliceCenter = Rect.new(8, 8, 8, 8)
+		inset.Parent = window
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1, 0, 1, 0)
+		label.BackgroundTransparency = 1
+		label.Font = Enum.Font.SourceSansBold
+		label.TextSize = 16
+		label.TextColor3 = Color3.new(0.8, 0, 0)
+		label.Text = "\u{26A0}\u{FE0F} Infected!"
+		label.Parent = inset
+
+		nodeView.Infected = {
+			Adornee = adornee,
+			Billboard = billboard,
+			Label = label,
+		}
+	end
+	local function removeInfectedBillboard(nodeView)
+		if nodeView.Infected then
+			nodeView.Infected.Billboard:Destroy()
+			nodeView.Infected.Adornee:Destroy()
+			nodeView.Infected = nil
 		end
 	end
-	local function setBeaten(nodeView, beaten)
-		nodeView.Model.Parent = nil
-		nodeView.Model = beaten and nodeView.VisibleModel or nodeView.DisabledModel
-		if LocalPlayerData:HasSeenNode(nodeView.Id) then
-			nodeView.Model.Parent = mNetmapModel
-			if beaten then
-				showLinks(nodeView)
+	local function animateInfected(t)
+		local flash = (t % 0.9) < 0.45
+		for _, nodeView in pairs(mNodeView) do
+			if nodeView.Infected then
+				nodeView.Infected.Label.TextTransparency = flash and 0 or 0.6
 			end
 		end
+	end
+
+	-- Node display states:
+	--   undiscovered      -> disabled model (scenery, not clickable)
+	--   seen, not beaten  -> live model + flashing "Infected!" popup
+	--   seen and beaten   -> live model, links stream green
+	local function applyNodeState(nodeView)
+		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
+		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
+		if nodeView.Seen and not nodeView.Beaten then
+			ensureInfectedBillboard(nodeView)
+		else
+			removeInfectedBillboard(nodeView)
+		end
+		if nodeView.Seen and nodeView.Beaten then
+			showLinks(nodeView)
+		end
+	end
+	local function setVisible(nodeView, visibility)
+		nodeView.Seen = visibility
+		applyNodeState(nodeView)
+	end
+	local function setBeaten(nodeView, beaten)
+		nodeView.Beaten = beaten
+		applyNodeState(nodeView)
 	end
 	
 	local function setupNodes()
@@ -258,7 +408,6 @@ function Netmap3DView.new()
 		end
 	end
 	
-	local mPlayerGui = game.Players.LocalPlayer.PlayerGui
 	local mHoverDisplayGui = Instance.new("BillboardGui", mPlayerGui)
 	local mHoverDisplayAdornee = Instance.new("Part")
 	do
@@ -290,7 +439,7 @@ function Netmap3DView.new()
 		local id = getHoveredNodeId(getUnitRay())
 		if not ModalManager:IsModal() and id then
 			mHoverDisplayGui.Enabled = true
-			mHoverDisplayAdornee.CFrame = mNodeView[id].CFrame * CFrame.new(0, 4, 0)
+			mHoverDisplayAdornee.CFrame = mNodeView[id].CFrame * CFrame.new(0, 5.5, 0)
 		else
 			mHoverDisplayGui.Enabled = false
 		end
@@ -350,7 +499,7 @@ function Netmap3DView.new()
 		adornee.CanCollide = false
 		adornee.CanQuery = false
 		adornee.Size = Vector3.new(1, 1, 1)
-		adornee.CFrame = nodeView.CFrame * CFrame.new(0, 6, 0)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(0, 8, 0)
 		adornee.Parent = workspace
 
 		-- Pixel-sized billboard: the arrow stays readable at any zoom level
@@ -366,8 +515,8 @@ function Netmap3DView.new()
 		highlight.FillTransparency = 1
 		highlight.OutlineColor = Color3.fromRGB(0, 255, 120)
 		highlight.OutlineTransparency = 0
-		highlight.Adornee = nodeView.Model
-		highlight.Parent = nodeView.Model
+		highlight.Adornee = nodeView.VisibleModel
+		highlight.Parent = nodeView.VisibleModel
 
 		mTutorialPointerParts = {
 			Billboard = billboard,
@@ -411,8 +560,38 @@ function Netmap3DView.new()
 		end
 	end
 	
+	-- Blinkenlights: decorative LEDs on the netmap islands (place assets under
+	-- NetmapBackground.Blinkenlights), each blinking on its own rhythm
+	local mBlinkenlights = {}
+	do
+		local folder = workspace.NetmapBackground:FindFirstChild("Blinkenlights")
+		if folder then
+			for i, part in pairs(folder:GetDescendants()) do
+				if part:IsA("BasePart") then
+					table.insert(mBlinkenlights, {
+						Part = part,
+						OnColor = part.Color,
+						OffColor = Color3.new(part.Color.R * 0.12, part.Color.G * 0.12, part.Color.B * 0.12),
+						Phase = i * 1.73,
+						Speed = 0.7 + (i % 5) * 0.45,
+					})
+				end
+			end
+		end
+	end
+	local function animateBlinkenlights(t)
+		for _, light in pairs(mBlinkenlights) do
+			local on = math.sin(t * light.Speed + light.Phase) > 0.2
+			light.Part.Color = on and light.OnColor or light.OffColor
+		end
+	end
+
 	local function update(dt)
 		updateHoveredNode()
+		local t = os.clock()
+		animateInfected(t)
+		animateLinks(t)
+		animateBlinkenlights(t)
 	end
 	
 	local mVisible = false
