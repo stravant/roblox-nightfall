@@ -255,7 +255,7 @@ function Netmap3DView.new(topbarCredits)
 		-- matching the camera reads exactly like a billboard.
 		-- 132x46 logical layout at 11 studs wide; UIScale x4 over 48
 		-- PixelsPerStud keeps the canvas crisp.
-		local kPopupWidthStuds = 11
+		local kPopupWidthStuds = 16.5
 		local kPopupHeightStuds = kPopupWidthStuds * 46 / 132
 		-- Matches NetmapCamera's fixed rotation; the extra half-turn about Y
 		-- points the part's Front face at the camera
@@ -294,7 +294,8 @@ function Netmap3DView.new(topbarCredits)
 		billboard.Parent = mPlayerGui
 
 		local scale = Instance.new("UIScale")
-		scale.Scale = 4
+		-- Stretch the 132px-wide logical layout across the whole canvas
+		scale.Scale = billboard.PixelsPerStud * kPopupWidthStuds / 132
 		scale.Parent = billboard
 
 		local window = Instance.new("ImageLabel")
