@@ -312,8 +312,9 @@ function Netmap3DView.new()
 		-- screen without sinking the popup into the ground. NOT AlwaysOnTop,
 		-- so vertically-aligned nodes' popups depth-sort correctly.
 		-- Raised a bit so nodes don't need extreme spacing, but still reading
-		-- as below the node rather than centered on it
-		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 3, 6)
+		-- as below the node rather than centered on it (extra height offsets
+		-- the top-edge SizeOffset anchoring, which hangs the popup lower)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 6, 6)
 		adornee.Parent = workspace
 
 		-- Oversized body text (e.g. the locked popup's big lock icon) gets a
