@@ -130,10 +130,9 @@ function Netmap3DView.new()
 	local function getHoveredNodeId(unitRay)
 		local result = workspace:Raycast(unitRay.Origin, unitRay.Direction * 1000)
 		if result then
-			local nodeModel = result.Instance.Parent
-			if mNodeModelToNodeIdMap[nodeModel] then
-				return mNodeModelToNodeIdMap[nodeModel]
-			end
+			-- Hit cylinders map by instance; node models map by parent model
+			return mNodeModelToNodeIdMap[result.Instance]
+				or mNodeModelToNodeIdMap[result.Instance.Parent]
 		end
 	end
 	
@@ -157,8 +156,16 @@ function Netmap3DView.new()
 	end)
 	
 	local mNodeView = {}
-	
+
 	local kNodeModelScale = 1.3
+
+	-- Generous invisible hit cylinders so hovers/clicks can't miss a node.
+	-- They live in their own folder rather than inside the node models: the
+	-- hover/tutorial Highlights adorn the models, and a part inside the model
+	-- would be included in the highlight silhouette.
+	local mHitAreasContainer = Instance.new("Folder")
+	mHitAreasContainer.Name = "NetmapNodeHitAreas"
+	mHitAreasContainer.Parent = workspace
 
 	local function setupNetmap()
 		for _, ch in pairs(mNetmapModel:GetChildren()) do
@@ -173,6 +180,21 @@ function Netmap3DView.new()
 			-- Only the live (seen) model is clickable; undiscovered nodes show
 			-- the disabled model purely as scenery
 			mNodeModelToNodeIdMap[visibleModel] = id
+
+			local hitArea = Instance.new("Part")
+			hitArea.Name = id
+			hitArea.Shape = Enum.PartType.Cylinder
+			hitArea.Transparency = 1
+			hitArea.Anchored = true
+			hitArea.CanCollide = false
+			hitArea.CanTouch = false
+			hitArea.CanQuery = false -- enabled once the node is seen
+			-- Cylinder axis is X; stand it upright: 6 tall, 8 across
+			hitArea.Size = Vector3.new(6, 8, 8)
+			hitArea.CFrame = cf * CFrame.new(0, 2.5, 0) * CFrame.Angles(0, 0, math.pi / 2)
+			hitArea.Parent = mHitAreasContainer
+			mNodeModelToNodeIdMap[hitArea] = id
+
 			mNodeView[id] = {
 				Id = id;
 				CFrame = cf;
@@ -180,6 +202,7 @@ function Netmap3DView.new()
 				Beaten = false;
 				VisibleModel = visibleModel;
 				DisabledModel = disabledModel;
+				HitArea = hitArea;
 			}
 			ch:Destroy()
 		end
@@ -415,6 +438,9 @@ function Netmap3DView.new()
 	local function applyNodeState(nodeView)
 		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
+		-- The enlarged hit cylinder only intercepts hovers/clicks once the
+		-- node is actually interactable
+		nodeView.HitArea.CanQuery = nodeView.Seen
 		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
 		if nodeView.Seen and not nodeView.Beaten then
 			if isWarez then
@@ -478,6 +504,14 @@ function Netmap3DView.new()
 		frame.Size = UDim2.new(0, hoverSize , 0, hoverSize)
 		frame.AnchorPoint = Vector2.new(0.5, 0.5)
 	end
+	-- Hover highlight: outline on the hovered node's model (desktop only)
+	local mHoverHighlight = Instance.new("Highlight")
+	mHoverHighlight.FillTransparency = 1
+	mHoverHighlight.OutlineColor = Color3.new(1, 1, 1)
+	mHoverHighlight.OutlineTransparency = 0
+	mHoverHighlight.Enabled = false
+	mHoverHighlight.Parent = mPlayerGui
+
 	updateHoveredNode = function()
 		if DeviceInfo.Touch then
 			-- Don't show the hover thing on touch devices
@@ -487,14 +521,18 @@ function Netmap3DView.new()
 			-- During a databattle the netmap sits far below the board and the
 			-- hover raycast can still reach it; don't show the bracket
 			mHoverDisplayGui.Enabled = false
+			mHoverHighlight.Enabled = false
 			return
 		end
 		local id = getHoveredNodeId(getUnitRay())
 		if not ModalManager:IsModal() and id then
 			mHoverDisplayGui.Enabled = true
 			mHoverDisplayAdornee.CFrame = mNodeView[id].CFrame * CFrame.new(0, 5.5, 0)
+			mHoverHighlight.Adornee = mNodeView[id].VisibleModel
+			mHoverHighlight.Enabled = true
 		else
 			mHoverDisplayGui.Enabled = false
+			mHoverHighlight.Enabled = false
 		end
 	end
 	
