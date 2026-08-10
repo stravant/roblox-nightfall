@@ -265,7 +265,11 @@ function Netmap3DView.new(topbarCredits)
 
 		local part = Instance.new("Part")
 		part.Name = "NodePopupPart"
-		part.Transparency = 1
+		-- Opaque: the part must write depth for the popup to properly occlude
+		-- (and be occluded by) the scenery and the Highlight
+		part.Transparency = 0
+		part.Color = Color3.new(0, 0, 0)
+		part.Material = Enum.Material.SmoothPlastic
 		part.Anchored = true
 		part.CanCollide = false
 		part.CanQuery = false
@@ -496,6 +500,8 @@ function Netmap3DView.new(topbarCredits)
 	mHoverHighlight.FillTransparency = 1
 	mHoverHighlight.OutlineColor = Color3.new(1, 1, 1)
 	mHoverHighlight.OutlineTransparency = 0
+	-- Occluded (not AlwaysOnTop) so the opaque popup parts can cover it
+	mHoverHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	mHoverHighlight.Enabled = false
 	mHoverHighlight.Parent = mPlayerGui
 
@@ -519,6 +525,7 @@ function Netmap3DView.new(topbarCredits)
 				highlight.FillTransparency = 1
 				highlight.OutlineColor = Color3.new(1, 1, 1)
 				highlight.OutlineTransparency = 0
+				highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 				highlight.Adornee = nodeView.VisibleModel
 				highlight.Parent = mPlayerGui
 				nodeView.TouchHighlight = highlight
@@ -639,6 +646,7 @@ function Netmap3DView.new(topbarCredits)
 		highlight.FillTransparency = 1
 		highlight.OutlineColor = Color3.fromRGB(0, 255, 120)
 		highlight.OutlineTransparency = 0
+		highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 		highlight.Adornee = nodeView.VisibleModel
 		highlight.Parent = nodeView.VisibleModel
 
