@@ -42,6 +42,23 @@ implementation: `src/shared/DialogueView.lua` + `src/shared/DialogueView.spec.lu
    `mMutableState`/`kConstant` naming, requires via `game.ReplicatedStorage.*`
    (this includes `game.ReplicatedStorage.Packages.React`).
 
+## Pitfalls (learned the hard way)
+
+- **Unkeyed root elements need a `Name` prop.** A component that returns
+  `e("ImageLabel", ...)` directly mounts an instance named "ImageLabel" — if
+  the template child had a meaningful name (e.g. `Menu`), set `Name = "Menu"`
+  in its props, or key it inside a Fragment.
+- **Never read React-rendered children synchronously during `new()`.** Under
+  the test mock scheduler the mount hasn't flushed until `act`. Look rendered
+  instances up lazily (first use), and design specs to assert after `act`.
+- **StatefulRoot survives pre-flush setState** (it lazily initializes from
+  the live state table), so calling `Set*` methods during construction is
+  safe — but the rendered result still only appears after the flush.
+- **Views operating on external GUI** (frames inside StarterGui.ScreenGui or
+  containers passed in by MainView/GameView): only convert the template
+  children the module itself owns. References into externally-owned structure
+  stay imperative until the owner is converted.
+
 ## What conversion does NOT include (orchestrator steps)
 
 - Running `python runtests.py` (single shared port/place).
@@ -51,5 +68,7 @@ implementation: `src/shared/DialogueView.lua` + `src/shared/DialogueView.spec.lu
 
 ## State of the conversion
 
-Converted: SoundManager (code-defined sounds, no React needed), DialogueView.
+Converted: SoundManager (code-defined sounds, no React needed), DialogueView,
+TutorialArrowView, BuyLevelSkipView, MainMenuView, NodeInfoView.
+Components so far: StatefulRoot, WindowsButton, WindowsSlider, WindowsTabView.
 Everything else still clones templates.

@@ -1,13 +1,18 @@
 {
 	"name": "Nightfall",
 	"globIgnorePaths": [
-		"src/**/*.server.lua",
-		"src/**/*.client.lua"
+		"src/server/GA/GoogleAnalyticsHelper.client.lua"
 	],
 	"tree": {
 		"$className": "Folder",
 		"Src": {
-			"$path": "src"
+			"$className": "Folder",
+			"shared": {
+				"$path": "src/shared"
+			},
+			"server": {
+				"$path": "src/server"
+			}
 		},
 		"Packages": {
 			"$path": "Packages"

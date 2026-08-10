@@ -14,19 +14,24 @@
 		},
 		"ServerScriptService": {
 			"$path": "src/server",
-			"$ignoreUnknownInstances": true
+			"$ignoreUnknownInstances": true,
+			"NetworkInterface": {
+				"$path": "src/entry/NetworkInterface"
+			}
 		},
 		"ReplicatedFirst": {
 			"$ignoreUnknownInstances": true,
 			"BOOTSTRAP": {
-				"$path": "src/first/BOOTSTRAP.client.lua"
+				"$path": "src/entry/BOOTSTRAP.client.lua"
 			}
 		},
 		"StarterPlayer": {
 			"$ignoreUnknownInstances": true,
 			"StarterPlayerScripts": {
-				"$path": "src/client",
-				"$ignoreUnknownInstances": true
+				"$ignoreUnknownInstances": true,
+				"Setup": {
+					"$path": "src/entry/Setup"
+				}
 			}
 		}
 	}
