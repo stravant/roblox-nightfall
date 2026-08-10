@@ -382,7 +382,9 @@ function Netmap3DView.new()
 	local function applyNodeState(nodeView)
 		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
-		if nodeView.Seen and not nodeView.Beaten then
+		-- Warez nodes are shops, not infected battle nodes
+		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
+		if nodeView.Seen and not nodeView.Beaten and not isWarez then
 			ensureInfectedBillboard(nodeView)
 		else
 			removeInfectedBillboard(nodeView)
@@ -628,7 +630,18 @@ function Netmap3DView.new()
 	setupNetmap()
 	setupLinks()
 	setupNodes()
-	
+
+	-- Keep the AlwaysOnTop infected popups in sync with whether the netmap is
+	-- actually on screen. Watching the gui's Visible property covers both
+	-- SetVisible and the tutorial's direct Visible toggling.
+	mGui:GetPropertyChangedSignal("Visible"):Connect(function()
+		for _, nodeView in pairs(mNodeView) do
+			if nodeView.Infected then
+				nodeView.Infected.Billboard.Enabled = mGui.Visible
+			end
+		end
+	end)
+
 	return this
 end
 
