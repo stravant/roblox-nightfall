@@ -295,6 +295,10 @@ function Netmap3DView.new()
 		billboard.Name = "NodePopup"
 		billboard.Adornee = adornee
 		billboard.Size = UDim2.new(0, 132, 0, 46)
+		-- AlwaysOnTop: reliable rendering over highlights/geometry; overlap
+		-- between nearby nodes' popups is handled by spacing the nodes out in
+		-- the place instead
+		billboard.AlwaysOnTop = true
 		billboard.LightInfluence = 0
 		billboard.Enabled = mGui.Visible
 		billboard.Parent = mPlayerGui
@@ -434,8 +438,6 @@ function Netmap3DView.new()
 	mHoverHighlight.FillTransparency = 1
 	mHoverHighlight.OutlineColor = Color3.new(1, 1, 1)
 	mHoverHighlight.OutlineTransparency = 0
-	-- Occluded: don't draw the outline over the node popups
-	mHoverHighlight.DepthMode = Enum.HighlightDepthMode.Occluded
 	mHoverHighlight.Enabled = false
 	mHoverHighlight.Parent = mPlayerGui
 
@@ -538,7 +540,6 @@ function Netmap3DView.new()
 		highlight.FillTransparency = 1
 		highlight.OutlineColor = Color3.fromRGB(0, 255, 120)
 		highlight.OutlineTransparency = 0
-		highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 		highlight.Adornee = nodeView.VisibleModel
 		highlight.Parent = nodeView.VisibleModel
 
