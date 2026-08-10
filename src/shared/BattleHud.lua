@@ -142,7 +142,7 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 		else Color3.new(0, 0, 0)
 	return e(WindowsButton, {
 		Name = entry.Key,
-		Size = UDim2.new(0, 240, 0, 66),
+		Size = UDim2.new(0, 160, 0, 66),
 		LayoutOrder = entry.IsMove and 0 or 1,
 		ImageColor3 = if selected
 			then Color3.new(0, 0, 1)
@@ -266,8 +266,8 @@ local function BattleHudContent(props: HudState)
 			}),
 			CountLabel = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 38, 0.5, 0),
-				Size = UDim2.new(0, 30, 0, 28),
+				Position = UDim2.new(0, 34, 0.5, 0),
+				Size = UDim2.new(0, 26, 0, 28),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 18,
@@ -276,11 +276,12 @@ local function BattleHudContent(props: HudState)
 			}),
 			NameLabel = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 70, 0.5, 0),
-				Size = UDim2.new(1, -74, 0, 28),
+				Position = UDim2.new(0, 62, 0.5, 0),
+				Size = UDim2.new(1, -66, 0, 28),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
-				TextSize = 18,
+				TextSize = 16,
+				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextColor3 = if hasAny then Color3.new(0, 0, 0) else Color3.new(0.5, 0.5, 0.5),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Text = def.Name,
@@ -298,7 +299,7 @@ local function BattleHudContent(props: HudState)
 	return e(React.Fragment, nil, {
 		LeftColumn = e("Frame", {
 			Position = UDim2.new(0, 12, 0, 12),
-			Size = UDim2.new(0, 240, 1, -24),
+			Size = UDim2.new(0, 160, 1, -24),
 			BackgroundTransparency = 1,
 			ZIndex = 3,
 		}, {
@@ -310,14 +311,16 @@ local function BattleHudContent(props: HudState)
 			Padding = UDim.new(0, 8),
 		}),
 		CommandRow = e("Frame", {
-			Size = UDim2.new(0, 240, 0, commandRowHeight),
+			Size = UDim2.new(0, 160, 0, commandRowHeight),
 			BackgroundTransparency = 1,
 			LayoutOrder = 2,
 		}, commandItems),
 		InfoWindow = if pane
 			then windowChrome(pane.name, {
 				Name = "InfoWindow",
-				Size = UDim2.new(0, 240, 0, 150),
+				-- Taller than the old wide layout: the flavor text wraps more
+				-- in the narrow column
+				Size = UDim2.new(0, 160, 0, 170),
 				LayoutOrder = 1,
 			}, {
 				UnitImage = e("ImageLabel", {
@@ -364,7 +367,7 @@ local function BattleHudContent(props: HudState)
 		ProgramsWindow = if props.programsVisible
 			then windowChrome("Programs", {
 				Name = "ProgramsWindow",
-				Size = UDim2.new(0, 240, 0, 40 * math.max(1, #props.programs) + 78),
+				Size = UDim2.new(0, 160, 0, 40 * math.max(1, #props.programs) + 78),
 				LayoutOrder = 0,
 			}, programItems)
 			else nil,

@@ -65,8 +65,8 @@ local function GameViewChrome(props)
 	local hidden = props.commandsHidden
 
 	-- One responsive floating layout (no more desktop/mobile variants):
-	-- Menu top-right, Done Turn / Undo bottom-right beside the BattleHud's
-	-- command row, Start Databattle floating bottom-center.
+	-- Menu top-right, Done Turn bottom-left under the BattleHud column,
+	-- Undo bottom-right, Start Databattle floating bottom-center.
 	local commands = e("Frame", {
 		Name = "Commands",
 		Size = UDim2.new(1, 0, 1, 0),
@@ -75,9 +75,9 @@ local function GameViewChrome(props)
 	}, {
 		DoneTurnButton = e(WindowsButton, {
 			Name = "DoneTurnButton",
-			AnchorPoint = Vector2.new(1, 1),
-			Position = UDim2.new(1, -12, 1, -12),
-			Size = UDim2.new(0, 150, 0, 44),
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 12, 1, -12),
+			Size = UDim2.new(0, 160, 0, 44),
 			ZIndex = 4,
 			Visible = props.doneTurnVisible and not hidden,
 			OnClick = props.onDoneTurn,
@@ -87,7 +87,7 @@ local function GameViewChrome(props)
 		UndoCommand = e(WindowsButton, {
 			Name = "UndoCommand",
 			AnchorPoint = Vector2.new(1, 1),
-			Position = UDim2.new(1, -170, 1, -12),
+			Position = UDim2.new(1, -12, 1, -12),
 			Size = UDim2.new(0, 110, 0, 44),
 			ZIndex = 4,
 			Visible = props.undoVisible and not hidden,
@@ -678,8 +678,10 @@ function GameView.new(gameState, controller, menu)
 	function this:DisableAutoSelection()
 		mAutoSelectionEnabled = false
 
-		-- Tutorial disables (greys out forfeit/skip in the shared menu)
+		-- Tutorial disables (greys out forfeit/skip in the shared menu, and
+		-- the Done Turn button stays hidden since the tutorial drives turns)
 		updateMenuContext()
+		root().setState({ doneTurnVisible = false })
 	end
 
 	-- Clear the selection, for tutorial
@@ -938,7 +940,8 @@ function GameView.new(gameState, controller, menu)
 			mPulseCn:Disconnect()
 		end
 		mUploadView:ClearAll()
-		root().setState({ startGameVisible = false, doneTurnVisible = true })
+		-- The tutorial (auto-selection disabled) drives turns itself: no button
+		root().setState({ startGameVisible = false, doneTurnVisible = mAutoSelectionEnabled })
 		mUnitInfoView:SetProgramListVisible(false)
 		if mAutoSelectionEnabled then
 			-- TODO: Show / hide in menu
@@ -1041,8 +1044,8 @@ function GameView.new(gameState, controller, menu)
 				setSelectionUnit(firstUnit) -- must not be nil since if we had no units the game would be over
 			end
 
-			-- Show end turn button
-			root().setState({ doneTurnVisible = true })
+			-- Show end turn button (not during the tutorial)
+			root().setState({ doneTurnVisible = mAutoSelectionEnabled })
 		end
 	end)
 
