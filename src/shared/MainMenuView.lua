@@ -309,7 +309,10 @@ function MainMenuView.new(container: Instance)
 
 	local mGui = Instance.new("ImageButton")
 	mGui.Name = "MenuMouseCatcher"
-	mGui.Size = UDim2.new(1, 0, 1, 0)
+	-- Extended past the topbar inset so the dim covers the full screen
+	local guiInset = game:GetService("GuiService"):GetGuiInset()
+	mGui.Position = UDim2.new(0, 0, 0, -guiInset.Y)
+	mGui.Size = UDim2.new(1, 0, 1, guiInset.Y)
 	mGui.BackgroundColor3 = Color3.new(0, 0, 0)
 	mGui.BackgroundTransparency = 0.5
 	mGui.BorderSizePixel = 0

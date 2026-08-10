@@ -17,7 +17,6 @@ local kWindowImage = "rbxassetid://1378189463"
 local kWindowSliceCenter = Rect.new(16, 24, 16, 24)
 local kWindowImageRectOffset = Vector2.new(0, 0)
 local kWindowImageRectSize = Vector2.new(32, 48)
-local kAvatarBackdropImageRectOffset = Vector2.new(32, 0)
 local kInsetImage = "rbxassetid://1378143823"
 
 type DialogueState = {
@@ -36,22 +35,17 @@ type DialogueState = {
 local function DialogueContent(props: DialogueState)
 	local touch = DeviceInfo.Touch
 
-	-- ChatBox / Avatar geometry (SetTutorial() in the original mutated these)
+	-- ChatBox geometry (the tutorial uses a compact corner box)
 	local chatBoxAnchor = Vector2.new(0.5, 0)
 	local chatBoxPosition = UDim2.new(0.5, 0, 0.5, -32)
 	local chatBoxSize = UDim2.new(0, 480, 0, 190)
-	local avatarAnchor = Vector2.new(0, 1)
-	local avatarPosition = UDim2.new(0.5, 120, 0.5, -10)
 	if props.tutorial then
 		chatBoxAnchor = Vector2.new(1, 1)
 		chatBoxPosition = UDim2.new(1, -10, 1, -10)
 		if touch then
 			chatBoxSize = UDim2.new(0, 300, 0, 130)
-			avatarAnchor = Vector2.new(1, 0)
-			avatarPosition = UDim2.new(1, -10, 0, 10)
 		else
 			chatBoxSize = UDim2.new(0, 300, 0, 200)
-			avatarPosition = UDim2.new(1, -160, 0.5, 5)
 		end
 	end
 
@@ -70,9 +64,18 @@ local function DialogueContent(props: DialogueState)
 		insetSize = UDim2.new(1, -10, 1, -29)
 	end
 
+	-- Two-column body in netmap mode: profile pic left, text right. The
+	-- tutorial's compact corner box stays text-only.
+	local kPicColumn = if props.tutorial then 0 else 104
+
+	local guiInset = game:GetService("GuiService"):GetGuiInset()
+
 	return e(React.Fragment, nil, {
 		MouseCatcher = e("ImageButton", {
-			Size = UDim2.new(1, 0, 1, 0),
+			-- Extended past the topbar inset so the dim covers the full
+			-- screen (children may render outside their gui's bounds)
+			Position = UDim2.new(0, 0, 0, -guiInset.Y),
+			Size = UDim2.new(1, 0, 1, guiInset.Y),
 			-- Shadowed backdrop: separates the conversation from the world
 			-- behind it (hidden in tutorial mode along with the catcher)
 			BackgroundColor3 = Color3.new(0, 0, 0),
@@ -81,44 +84,6 @@ local function DialogueContent(props: DialogueState)
 			Image = "",
 			Selectable = false,
 			Visible = props.mouseCatcherVisible,
-		}),
-		Avatar = e("ImageLabel", {
-			AnchorPoint = avatarAnchor,
-			Position = avatarPosition,
-			Size = UDim2.new(0, 140, 0, 140),
-			BackgroundTransparency = 1,
-			Image = kWindowImage,
-			ScaleType = Enum.ScaleType.Slice,
-			SliceCenter = kWindowSliceCenter,
-			ImageRectOffset = kAvatarBackdropImageRectOffset,
-			ImageRectSize = kWindowImageRectSize,
-		}, {
-			Frame = e("Frame", {
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.new(0.5, 0, 0.5, 0),
-				Size = UDim2.new(0, 150, 0, 100),
-				BackgroundTransparency = 1,
-				ClipsDescendants = true,
-			}, {
-				AvatarImage = e("ImageLabel", {
-					AnchorPoint = Vector2.new(0.5, 0),
-					Position = UDim2.new(0.5, 0, 0, 0),
-					Size = UDim2.new(0, 150, 0, 150),
-					BackgroundTransparency = 1,
-					Image = props.avatarImage,
-				}),
-			}),
-			Username = e("TextLabel", {
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 6, 0, 12),
-				Size = UDim2.new(0, 200, 0, 30),
-				BackgroundTransparency = 1,
-				Font = Enum.Font.SourceSansBold,
-				TextSize = 14,
-				TextColor3 = Color3.new(1, 1, 1),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Text = props.username,
-			}),
 		}),
 		ChatBox = e("ImageLabel", {
 			AnchorPoint = chatBoxAnchor,
@@ -135,13 +100,15 @@ local function DialogueContent(props: DialogueState)
 			WindowTitle = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 6, 0, 12),
-				Size = UDim2.new(0, 200, 0, 30),
+				Size = UDim2.new(1, -12, 0, 30),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 14,
 				TextColor3 = Color3.new(1, 1, 1),
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Text = props.windowTitle,
+				Text = if props.tutorial then props.windowTitle
+					elseif props.username ~= "" then props.windowTitle .. " - " .. props.username
+					else props.windowTitle,
 			}),
 			Inset = e("ImageLabel", {
 				Position = UDim2.new(0, 5, 0, 25),
@@ -151,15 +118,22 @@ local function DialogueContent(props: DialogueState)
 				ScaleType = Enum.ScaleType.Slice,
 				SliceCenter = Rect.new(8, 8, 8, 8),
 			}, {
+				ProfilePic = if not props.tutorial
+					then e("ImageLabel", {
+						Position = UDim2.new(0, 6, 0, 6),
+						Size = UDim2.new(0, 92, 0, 92),
+						BackgroundColor3 = Color3.new(0.670588, 0.670588, 0.670588),
+						BorderColor3 = Color3.new(0, 0, 0),
+						Image = props.avatarImage,
+					})
+					else nil,
 				Content = e("TextLabel", {
-					Position = UDim2.new(0, 4, 0, 1),
-					Size = UDim2.new(1, -5, 1, -1),
+					Position = UDim2.new(0, 4 + kPicColumn, 0, 4),
+					Size = UDim2.new(1, -8 - kPicColumn, 1, -8),
 					BackgroundTransparency = 1,
 					Font = Enum.Font.SourceSans,
-					TextSize = 20,
+					TextSize = 22,
 					TextColor3 = Color3.new(0, 0, 0),
-					TextStrokeColor3 = Color3.new(1, 1, 1),
-					TextStrokeTransparency = 0.9,
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextYAlignment = Enum.TextYAlignment.Top,
 					TextWrapped = true,
