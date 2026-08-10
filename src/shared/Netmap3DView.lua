@@ -291,8 +291,10 @@ function Netmap3DView.new()
 
 	local removeNodePopup
 	-- kind: identity for the popup style; a state change to a different kind
-	-- rebuilds the popup. flash: whether the body text blinks.
-	local function ensureNodePopup(nodeView, kind, titleText, statusText, statusColor, flash, statusTextSize)
+	-- rebuilds the popup. flash: whether the body text blinks. lockedReason:
+	-- when set, a translucent black overlay with a lock icon + the reason
+	-- covers the (otherwise normal) popup.
+	local function ensureNodePopup(nodeView, kind, titleText, statusText, statusColor, flash, lockedReason)
 		if nodeView.Popup then
 			if nodeView.Popup.Kind == kind then
 				return
@@ -317,15 +319,10 @@ function Netmap3DView.new()
 		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 6, 6)
 		adornee.Parent = workspace
 
-		-- Oversized body text (e.g. the locked popup's big lock icon) gets a
-		-- proportionally taller billboard so it isn't clipped by the inset
-		local bodyTextSize = statusTextSize or 16
-		local extraHeight = math.max(0, bodyTextSize - 16) * 1.5
-
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NodePopup"
 		billboard.Adornee = adornee
-		billboard.Size = UDim2.new(0, 132, 0, 46 + extraHeight)
+		billboard.Size = UDim2.new(0, 132, 0, 46)
 		-- Anchor the TOP edge at the adornee point (billboards are centered by
 		-- default): the pixel-sized popup then grows downward on screen when
 		-- zooming out instead of creeping up over the node geometry
@@ -368,12 +365,34 @@ function Netmap3DView.new()
 		label.Size = UDim2.new(1, 0, 1, 0)
 		label.BackgroundTransparency = 1
 		label.Font = Enum.Font.SourceSansBold
-		label.TextSize = bodyTextSize
+		label.TextSize = 16
 		label.TextColor3 = statusColor
 		label.TextStrokeColor3 = Color3.new(0, 0, 0)
 		label.TextStrokeTransparency = 0
 		label.Text = statusText
 		label.Parent = inset
+
+		-- Locked nodes show the normal popup dimmed under a translucent black
+		-- overlay with the lock and the reason filling it
+		if lockedReason then
+			local overlay = Instance.new("Frame")
+			overlay.Size = UDim2.new(1, 0, 1, 0)
+			overlay.BackgroundColor3 = Color3.new(0, 0, 0)
+			overlay.BackgroundTransparency = 0.35
+			overlay.BorderSizePixel = 0
+			overlay.Parent = window
+			local lockText = Instance.new("TextLabel")
+			lockText.Position = UDim2.new(0, 8, 0, 6)
+			lockText.Size = UDim2.new(1, -16, 1, -12)
+			lockText.BackgroundTransparency = 1
+			lockText.Font = Enum.Font.SourceSansBold
+			lockText.TextScaled = true
+			lockText.TextColor3 = Color3.new(1, 1, 1)
+			lockText.TextStrokeColor3 = Color3.new(0, 0, 0)
+			lockText.TextStrokeTransparency = 0
+			lockText.Text = "\u{1F512} " .. lockedReason
+			lockText.Parent = overlay
+		end
 
 		-- Invisible button spanning the popup: hovering highlights the node,
 		-- clicking enters it (exactly matches the billboard's screen size)
@@ -443,12 +462,13 @@ function Netmap3DView.new()
 					-- Unreachable shops just stay quiet
 					removeNodePopup(nodeView)
 				else
-					-- Revealed but unreachable: locked, titled with the reason
+					-- Revealed but unreachable: the normal infected popup,
+					-- dimmed under a lock overlay stating the reason
 					local reason = if not LocalPlayerData:HasLinkToNode(nodeView.Id)
 						then "No Link"
 						else "No Codes"
-					ensureNodePopup(nodeView, "locked:" .. reason, reason,
-						"\u{1F512}", Color3.new(0, 0, 0), false, 24)
+					ensureNodePopup(nodeView, "locked:" .. reason, name,
+						"\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0), true, reason)
 				end
 			elseif isWarez then
 				-- Warez nodes are shops: advertise, don't alarm
