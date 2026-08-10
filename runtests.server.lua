@@ -25,8 +25,9 @@ local WS_URL = "ws://localhost:38741"
 
 local function installGameCode()
 	local src = script.Parent.Src
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local targets: { [Instance]: Instance } = {
-		[game:GetService("ReplicatedStorage")] = src.shared,
+		[ReplicatedStorage] = src.shared,
 		[game:GetService("ServerScriptService")] = src.server,
 	}
 	for target, sourceFolder in targets do
@@ -39,6 +40,15 @@ local function installGameCode()
 			clone.Parent = target
 		end
 	end
+
+	-- Game code requires React etc. via game.ReplicatedStorage.Packages, so
+	-- install the packages the same way the served place gets them.
+	local existingPackages = ReplicatedStorage:FindFirstChild("Packages")
+	if existingPackages then
+		existingPackages:Destroy()
+	end
+	local packagesClone = script.Parent.Packages:Clone()
+	packagesClone.Parent = ReplicatedStorage
 end
 
 --------------------------------------------------------------------------------
