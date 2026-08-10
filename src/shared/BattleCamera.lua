@@ -55,16 +55,24 @@ function BattleCamera.new(config: Config)
 		mHeight = math.clamp(height, config.minHeight, config.maxHeight)
 	end
 
-	-- Where a viewport ray hits the board plane, in world space
-	local function viewportHit(screenPos: Vector2): Vector3
-		local unitRay = mCamera:ViewportPointToRay(screenPos.X, screenPos.Y)
+	-- GuiInset note: InputObject.Position is in GUI ("screen") space, which
+	-- excludes the top inset -> pair it with ScreenPointToRay. GetMouseLocation
+	-- is in viewport space (inset included) -> pair it with ViewportPointToRay.
+	-- Mixing these up offsets every hit by the inset height.
+
+	local function rayHit(unitRay: Ray): Vector3
 		local scale = (config.surfaceY - unitRay.Origin.Y) / unitRay.Direction.Y
 		return unitRay.Origin + unitRay.Direction * scale
 	end
 
+	-- Where an InputObject.Position lands on the board plane, in world space
+	local function screenHit(screenPos: Vector2): Vector3
+		return rayHit(mCamera:ScreenPointToRay(screenPos.X, screenPos.Y))
+	end
+
 	local function mouseHit(): Vector3
 		local mouseAt = UserInputService:GetMouseLocation()
-		return viewportHit(Vector2.new(mouseAt.X, mouseAt.Y))
+		return rayHit(mCamera:ViewportPointToRay(mouseAt.X, mouseAt.Y))
 	end
 
 	-- Drag state
@@ -84,7 +92,7 @@ function BattleCamera.new(config: Config)
 			mDown = true
 			mDragging = false
 			mDownScreenPos = Vector2.new(input.Position.X, input.Position.Y)
-			mDragStartHit = viewportHit(mDownScreenPos)
+			mDragStartHit = screenHit(mDownScreenPos)
 		end
 	end))
 
@@ -111,7 +119,7 @@ function BattleCamera.new(config: Config)
 			mDragging = true
 		end
 		-- Keep the world point that was grabbed under the cursor
-		local hitNow = viewportHit(screenPos)
+		local hitNow = screenHit(screenPos)
 		local delta = mDragStartHit - hitNow
 		setFocus(mFocus + Vector2.new(delta.X, delta.Z))
 		applyCamera()
@@ -121,7 +129,7 @@ function BattleCamera.new(config: Config)
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
 			if mDown and not mDragging and not mPinching then
-				this.Tapped:fire(viewportHit(Vector2.new(input.Position.X, input.Position.Y)))
+				this.Tapped:fire(screenHit(Vector2.new(input.Position.X, input.Position.Y)))
 			end
 			mDown = false
 			mDragging = false
@@ -154,8 +162,9 @@ function BattleCamera.new(config: Config)
 		return mouseHit()
 	end
 
-	function this:HitAt(viewportPos: Vector2): Vector3
-		return viewportHit(viewportPos)
+	-- For positions sourced from InputObject.Position (GUI/screen space)
+	function this:HitAtScreen(screenPos: Vector2): Vector3
+		return screenHit(screenPos)
 	end
 
 	function this:Install()

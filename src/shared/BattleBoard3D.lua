@@ -118,9 +118,10 @@ function BattleBoard3D.new(backgroundImage: string)
 		end
 	end)
 
-	-- Which grid square a viewport position is over (nil if off the board)
-	function this:GridAtViewport(viewportPos: Vector2): (number?, number?)
-		return worldToGrid(mCamera:HitAt(viewportPos))
+	-- Which grid square an InputObject.Position (GUI/screen space) is over
+	-- (nil if off the board)
+	function this:GridAtScreen(screenPos: Vector2): (number?, number?)
+		return worldToGrid(mCamera:HitAtScreen(screenPos))
 	end
 
 	function this:GetBoardContainer(): Frame

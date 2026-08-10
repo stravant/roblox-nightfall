@@ -896,7 +896,7 @@ function GameView.new(gameState, controller)
 			moveCn:Disconnect()
 			endCn:Disconnect()
 			ghost:Destroy()
-			local x, y = mBattleBoard:GridAtViewport(Vector2.new(input.Position.X, input.Position.Y))
+			local x, y = mBattleBoard:GridAtScreen(Vector2.new(input.Position.X, input.Position.Y))
 			if x and y and tryUploadProgram(id, x, y) then
 				SoundManager:Play('SelectUnit')
 				mUnitInfoView:SetSelectedUnitDefinition(id)

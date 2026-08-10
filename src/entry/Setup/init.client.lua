@@ -9,10 +9,11 @@ s:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
 local Player = game.Players.LocalPlayer
 local PlayerGui = Player:WaitForChild('PlayerGui')
 
--- Create a GUI for our stuff
+-- Create a GUI for our stuff. Deliberately NOT IgnoreGuiInset: gui-space then
+-- matches InputObject.Position coordinates everywhere (drag ghosts, sliders),
+-- and the play area behind the top bar is the 3D view anyway.
 local ScreenGui = Instance.new('ScreenGui', PlayerGui)
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.IgnoreGuiInset = true
 
 -- Create the main game view
 if not LocalPlayerData:Load() then
