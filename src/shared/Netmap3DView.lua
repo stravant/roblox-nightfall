@@ -426,7 +426,11 @@ function Netmap3DView.new(topbarCredits)
 				local anchorPos = popup.Adornee.Position
 				local dist = (anchorPos - camCF.Position).Magnitude
 				local worldPerPixel = dist * worldPerPixelPerStud
-				local w = (kPopupWidthPx - kBackingWidthTrimPx) * worldPerPixel
+				-- Additionally pulled in a stud per side: the depth offset
+				-- makes the backing project slightly larger than the billboard
+				-- (perspective), and the highlight only ever overlaps the
+				-- popup towards the middle anyway
+				local w = (kPopupWidthPx - kBackingWidthTrimPx) * worldPerPixel - 2
 				-- Shrinking h moves only the bottom edge: the top edge is
 				-- center + h/2 = the anchor point regardless of h
 				local h = (kPopupHeightPx - kBackingHeightTrimPx) * worldPerPixel
