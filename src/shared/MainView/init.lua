@@ -20,7 +20,7 @@ local e = React.createElement
 
 local UserInputService = game:GetService('UserInputService')
 
-local UglyTutorialNonsense = require(script.UglyTutorialNonsense)
+local Tutorial = require(script.Tutorial)
 
 local MainView = {}
 
@@ -93,6 +93,10 @@ function MainView.new()
 	
 	-- Setup events
 	mNetmapView.NodeSelected:connect(function(nodeId)
+		-- While the tutorial runs it owns node clicks
+		if Tutorial:IsActive() then
+			return
+		end
 		if LocalPlayerData:CanAccessNode(nodeId) then
 			local node = Netmap.ById[nodeId]
 			if node.Id == 'hq' then
@@ -132,9 +136,12 @@ function MainView.new()
 	
 	-- Play the tutorial dialogue and tutorial
 	function this:PlayTutorial()
-		UglyTutorialNonsense:PlayTutorial(mGui, mNetmapView, mDialogue)
-		this:ProcessWonBattle('hq', 1000)
-		game.ReplicatedStorage.Remotes.BeatTutorial:FireServer()
+		Tutorial:PlayTutorial(mGui, mNetmapView, mDialogue, function()
+			-- Mark hq beaten (reveals the adjacent nodes) before the wrap-up
+			-- box tells the player to go click one
+			this:ProcessWonBattle('hq', 1000)
+			game.ReplicatedStorage.Remotes.BeatTutorial:FireServer()
+		end)
 	end
 	
 	-- Play a game at a place

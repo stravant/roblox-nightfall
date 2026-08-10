@@ -134,15 +134,17 @@ local function functionEndNightfall()
 	}
 end
 
-Netmap.PreTutorialConversation = conversation{
+Netmap.TutorialCallout = conversation{
 	User = 'superphreak';
 	Parts = {
-		main = part("Hey. Welcome to smart. You must be the newbie I'm supposed to train.", "Newbie?", 'a', "Yeah.", 'a');
-		a = part("Great. I hope you're a fast learner, cause I have more important things to do than hold your hand all day.", "Go on.", 'b');
-		b = part("As a smart agent, you're here to fix problems and battle infocrime. You can find out more at the smart HQ node.", "What's a node?", 'c');
-		c = part("What you're looking at now is the netmap, it shows you all the network nodes and the connections between them.", "Go on.", 'd', "So what should I do with them?", 'd');
-		d = part("You can click ona node to set up a link to it. Once you're inside you'll need to databattle with that node's defensive scripts. By the way, right now your security level is one, so you can only access level one nodes.", "Got it.", 'e');
-		e = part("Good. Time to get down to action. I'm going to walk you through your first databattle and give you some tips. Ready to get the party started?", "Wait, can you go over that again?", 'b', "I'm ready!", 'end');
+		main = part("Hey, newbie. Rogue scripts are chewing up the network and I'm swamped. You've got to help me out.", "Okay, I'm on it.", 'end');
+	}
+}
+
+Netmap.PostTutorialConversation = conversation{
+	User = 'superphreak';
+	Parts = {
+		main = part("Way to go, you won your first databattle! This is the netmap: click a node to jack in and battle for control of it. Buy new scripts at warez nodes to grow stronger. You're on your own now, good luck!", "Got it.", 'end');
 	}
 }
 
