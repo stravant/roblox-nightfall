@@ -272,7 +272,7 @@ function Netmap3DView.new(topbarCredits)
 		-- popup sits in front of its node AND above the island surface — the
 		-- angled camera makes the forward pull read as "below the node" on
 		-- screen without sinking the popup into the ground
-		adornee.CFrame = nodeView.CFrame * CFrame.new(9, 5, 9)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(10.5, 7, 10.5)
 		adornee.Parent = workspace
 
 		local backing = Instance.new("Part")
