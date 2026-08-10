@@ -14,6 +14,7 @@ local kImageHover = "rbxassetid://1372686004"
 local kImagePressed = "rbxassetid://1372686005"
 
 export type Props = {
+	Name: string?,
 	AnchorPoint: Vector2?,
 	Position: UDim2?,
 	Size: UDim2?,
@@ -51,10 +52,13 @@ local function WindowsButton(props: Props)
 		})
 	end
 	if props.children ~= nil then
-		children.Children = props.children
+		for key, child in props.children :: { [string]: any } do
+			children[key] = child
+		end
 	end
 
 	return e("ImageButton", {
+		Name = props.Name,
 		Image = image,
 		ScaleType = Enum.ScaleType.Slice,
 		SliceCenter = Rect.new(8, 8, 8, 8),

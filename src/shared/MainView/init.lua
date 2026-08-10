@@ -11,9 +11,13 @@ local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local DialogueView = require(game.ReplicatedStorage.DialogueView)
 local WarezView = require(game.ReplicatedStorage.WarezView)
 local Scripts = require(game.ReplicatedStorage.Scripts)
-local WindowsButton = require(game.ReplicatedStorage.WindowsButton)
 local MainMenuView = require(game.ReplicatedStorage.MainMenuView)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
+local React = require(game.ReplicatedStorage.Packages.React)
+local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
+local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
+
+local e = React.createElement
 
 local UserInputService = game:GetService('UserInputService')
 
@@ -45,12 +49,31 @@ function MainView.new()
 	
 	-- Make menu
 	local mMainMenu = MainMenuView.new(mGui)
-	local mMenuButton = script.MenuButton:Clone()
-	WindowsButton.new(mMenuButton)
-	mMenuButton.Parent = mGui
-	mMenuButton.MouseButton1Click:connect(function()
-		mMainMenu:Show()
-	end)
+	-- The menu button renders via React onto the root gui (React roots leave
+	-- non-React siblings like the netmap/dialogue GUIs alone)
+	StatefulRoot.create(mGui, function(props)
+		return e(WindowsButton, {
+			Name = "MenuButton",
+			Size = UDim2.new(0, 150, 0, 36),
+			ZIndex = 4,
+			OnClick = props.onMenuClick,
+		}, {
+			TextLabel = e("TextLabel", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new(0.5, 25, 0.5, 0),
+				Size = UDim2.new(1, -50, 1, 0),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.Code,
+				TextSize = 20,
+				TextColor3 = Color3.new(0, 0, 0),
+				Text = "Menu",
+			}),
+		})
+	end, {
+		onMenuClick = function()
+			mMainMenu:Show()
+		end,
+	})
 	
 	-- Make netmap
 	local mNetmapView = Netmap3DView.new()
@@ -204,10 +227,60 @@ function MainView.new()
 		end
 	end
 	
+	-- Replacement for the old script.NotificationBox template clone (see
+	-- ui-reference/ModuleTemplates/MainView.json)
+	local function makeNotificationBox(text)
+		local box = Instance.new("ImageLabel")
+		box.Name = "NotificationBox"
+		box.AnchorPoint = Vector2.new(1, 1)
+		box.Position = UDim2.new(1, -24, 1, 120)
+		box.Size = UDim2.new(0, 120, 0, 120)
+		box.BackgroundTransparency = 1
+		box.BorderSizePixel = 2
+		box.Image = "rbxassetid://1378189463"
+		box.ImageRectOffset = Vector2.new(32, 0)
+		box.ImageRectSize = Vector2.new(32, 48)
+		box.ScaleType = Enum.ScaleType.Slice
+		box.SliceCenter = Rect.new(16, 24, 16, 24)
+		local title = Instance.new("TextLabel")
+		title.Name = "Title"
+		title.AnchorPoint = Vector2.new(0, 0.5)
+		title.Position = UDim2.new(0, 6, 0, 12)
+		title.Size = UDim2.new(0, 200, 0, 30)
+		title.BackgroundTransparency = 1
+		title.Font = Enum.Font.SourceSansBold
+		title.TextSize = 14
+		title.TextColor3 = Color3.new(1, 1, 1)
+		title.TextXAlignment = Enum.TextXAlignment.Left
+		title.Text = "Notification"
+		title.Parent = box
+		local inset = Instance.new("ImageLabel")
+		inset.Name = "Inset"
+		inset.Position = UDim2.new(0, 5, 0, 25)
+		inset.Size = UDim2.new(1, -10, 1, -29)
+		inset.BackgroundTransparency = 1
+		inset.Image = "rbxassetid://1378143823"
+		inset.ScaleType = Enum.ScaleType.Slice
+		inset.SliceCenter = Rect.new(8, 8, 8, 8)
+		inset.Parent = box
+		local content = Instance.new("TextLabel")
+		content.Name = "Content"
+		content.Position = UDim2.new(0, 0, 0, 2)
+		content.Size = UDim2.new(1, 0, 1, 0)
+		content.BackgroundTransparency = 1
+		content.Font = Enum.Font.SourceSans
+		content.TextSize = 18
+		content.TextColor3 = Color3.new(0, 0, 0)
+		content.TextWrapped = true
+		content.TextYAlignment = Enum.TextYAlignment.Top
+		content.Text = text
+		content.Parent = inset
+		return box
+	end
+
 	local NotificationBoxTween = TweenInfo.new(1.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, 0, true)
 	function this:ShowNotification(text)
-		local box = script.NotificationBox:Clone()
-		box.Inset.Content.Text = text
+		local box = makeNotificationBox(text)
 		box.Parent = mNetmapView:GetGui()
 		local TweenService = game:GetService('TweenService')
 		local inAnim = TweenService:Create(box, NotificationBoxTween, {
@@ -221,10 +294,47 @@ function MainView.new()
 	
 	SoundManager:Play('MainBackgroundLoop')
 	
+	-- Replacement for the old script.ErrorBox template clone (see
+	-- ui-reference/ModuleTemplates/MainView.json)
 	local function handleError(title, body)
-		local gui = script.ErrorBox:Clone()
-		gui.Content.Text = title.."\n"..body
-		gui.CloseButton.MouseButton1Click:connect(function()
+		local gui = Instance.new("ImageLabel")
+		gui.Name = "ErrorBox"
+		gui.Size = UDim2.new(0, 600, 0, 400)
+		gui.ZIndex = 3
+		gui.BackgroundTransparency = 1
+		gui.BorderSizePixel = 2
+		gui.Image = "rbxassetid://1353265347"
+		gui.ScaleType = Enum.ScaleType.Slice
+		gui.SliceCenter = Rect.new(32, 32, 32, 32)
+		local content = Instance.new("TextLabel")
+		content.Name = "Content"
+		content.AnchorPoint = Vector2.new(0.5, 0.5)
+		content.Position = UDim2.new(0.5, 0, 0.5, 0)
+		content.Size = UDim2.new(1, -38, 1, -36)
+		content.BackgroundTransparency = 1
+		content.Font = Enum.Font.SourceSans
+		content.TextSize = 14
+		content.TextColor3 = Color3.new(0, 1, 0.968628)
+		content.TextStrokeTransparency = 0
+		content.TextWrapped = true
+		content.TextXAlignment = Enum.TextXAlignment.Left
+		content.TextYAlignment = Enum.TextYAlignment.Top
+		content.Text = title.."\n"..body
+		content.Parent = gui
+		local closeButton = Instance.new("TextButton")
+		closeButton.Name = "CloseButton"
+		closeButton.AnchorPoint = Vector2.new(1, 0)
+		closeButton.Position = UDim2.new(1, -10, 0, 10)
+		closeButton.Size = UDim2.new(0, 32, 0, 32)
+		closeButton.BackgroundColor3 = Color3.new(0, 0.8, 0.294118)
+		closeButton.BorderColor3 = Color3.new(0.819608, 0, 0.0117647)
+		closeButton.BorderSizePixel = 2
+		closeButton.Font = Enum.Font.SourceSansBold
+		closeButton.TextSize = 24
+		closeButton.TextColor3 = Color3.new(0.784314, 0, 0.0117647)
+		closeButton.Text = "X"
+		closeButton.Parent = gui
+		closeButton.MouseButton1Click:connect(function()
 			gui:Destroy()
 		end)
 		gui.Parent = mGui
