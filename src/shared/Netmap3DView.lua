@@ -272,6 +272,23 @@ function Netmap3DView.new()
 	-- the node geometry itself stays visible.
 	local nodeDisplayName = Netmap.GetNodeDisplayName
 
+	-- The popups are part of their node's hover/click target
+	local mPopupHoveredId = nil
+	local function popupClicked(id)
+		if not mGui.Visible or not mGui.Parent then
+			return
+		end
+		if ModalManager:IsModal() then
+			return
+		end
+		if not LocalPlayerData:CanAccessNode(id) then
+			return
+		end
+		SoundManager:Play'SelectNode'
+		this.NodeSelected:fire(id)
+		updateHoveredNode()
+	end
+
 	local function ensureNodePopup(nodeView, statusText, statusColor)
 		if nodeView.Popup then
 			return
@@ -340,6 +357,25 @@ function Netmap3DView.new()
 		label.Text = statusText
 		label.Parent = inset
 
+		-- Invisible button spanning the popup: hovering highlights the node,
+		-- clicking enters it (exactly matches the billboard's screen size)
+		local clickButton = Instance.new("ImageButton")
+		clickButton.Size = UDim2.new(1, 0, 1, 0)
+		clickButton.BackgroundTransparency = 1
+		clickButton.Image = ""
+		clickButton.Parent = window
+		clickButton.MouseEnter:Connect(function()
+			mPopupHoveredId = nodeView.Id
+		end)
+		clickButton.MouseLeave:Connect(function()
+			if mPopupHoveredId == nodeView.Id then
+				mPopupHoveredId = nil
+			end
+		end)
+		clickButton.MouseButton1Click:Connect(function()
+			popupClicked(nodeView.Id)
+		end)
+
 		nodeView.Popup = {
 			Adornee = adornee,
 			Billboard = billboard,
@@ -348,6 +384,9 @@ function Netmap3DView.new()
 	end
 	local function removeNodePopup(nodeView)
 		if nodeView.Popup then
+			if mPopupHoveredId == nodeView.Id then
+				mPopupHoveredId = nil
+			end
 			nodeView.Popup.Billboard:Destroy()
 			nodeView.Popup.Adornee:Destroy()
 			nodeView.Popup = nil
@@ -456,6 +495,10 @@ function Netmap3DView.new()
 			return
 		end
 		local id = getHoveredNodeId(getUnitRay())
+		-- Hovering a node's popup counts as hovering the node
+		if not id and mPopupHoveredId and LocalPlayerData:CanAccessNode(mPopupHoveredId) then
+			id = mPopupHoveredId
+		end
 		if not ModalManager:IsModal() and id then
 			mHoverDisplayGui.Enabled = true
 			mHoverDisplayAdornee.CFrame = mNodeView[id].CFrame * CFrame.new(0, 5.5, 0)
