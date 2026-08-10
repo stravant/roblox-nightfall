@@ -609,8 +609,9 @@ function GameView.new(gameState, controller, menu)
 		this:ClearDragDemo()
 		local finger = Instance.new("TextLabel")
 		finger.Name = "DragDemoFinger"
-		-- Centered on the drag path rather than pointing at it from above
-		finger.AnchorPoint = Vector2.new(0.5, 0.5)
+		-- Anchored at the top so the fingertip traces the drag path and the
+		-- hand body hangs below it
+		finger.AnchorPoint = Vector2.new(0.5, 0)
 		finger.Size = UDim2.new(0, 60, 0, 60)
 		finger.BackgroundTransparency = 1
 		finger.Text = "\u{1F446}" -- pointing finger
