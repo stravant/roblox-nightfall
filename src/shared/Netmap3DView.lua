@@ -242,10 +242,7 @@ function Netmap3DView.new()
 		}
 	end
 	
-	-- Beaten links become ethereal green arcs with a stream of 0/1 digits
-	-- flowing from the source node to its neighbors
-	local mActiveLinkAnims = {}
-	local kLinkArcHeight = 4.5
+	-- Beaten links restyle to an ethereal green
 	local function showLinks(nodeView)
 		for adjId, beamView in pairs(nodeView.AdjacentLinks) do
 			if not beamView.Active then
@@ -255,76 +252,10 @@ function Netmap3DView.new()
 				beam.Transparency = NumberSequence.new(0.55)
 				beam.Width0 = 0.9
 				beam.Width1 = 0.9
-				-- Arc the link into the air: with the attachments' X axis
-				-- pointing world-up, CurveSize0=h / CurveSize1=-h makes a
-				-- symmetric arch (empirically verified); FaceCamera keeps the
-				-- curved ribbon visible from any angle
-				beam.FaceCamera = true
-				local p0 = nodeView.CFrame.Position
-				local p1 = mNodeView[adjId].CFrame.Position
-				beam.Attachment0.CFrame = CFrame.fromMatrix(p0, Vector3.yAxis, Vector3.zAxis)
-				beam.Attachment1.CFrame = CFrame.fromMatrix(p1, Vector3.yAxis, Vector3.zAxis)
-				beam.CurveSize0 = kLinkArcHeight
-				beam.CurveSize1 = -kLinkArcHeight
-
-				beamView.From = nodeView.CFrame.Position
-				beamView.To = mNodeView[adjId].CFrame.Position
-				local dir = (beamView.To - beamView.From)
-				local flat = Vector3.new(dir.X, 0, dir.Z)
-				beamView.Perp = if flat.Magnitude > 0.01
-					then Vector3.new(-flat.Unit.Z, 0, flat.Unit.X)
-					else Vector3.new(1, 0, 0)
-				beamView.Particles = {}
-				for i = 1, 7 do
-					-- Terrain-adorned billboard: StudsOffsetWorldSpace is then
-					-- an absolute world position, no adornee part needed
-					local bb = Instance.new("BillboardGui")
-					bb.Adornee = workspace.Terrain
-					bb.Size = UDim2.new(0, 24, 0, 24)
-					bb.LightInfluence = 0
-					bb.Parent = mConnectionsContainer
-					local label = Instance.new("TextLabel")
-					label.Size = UDim2.new(1, 0, 1, 0)
-					label.BackgroundTransparency = 1
-					label.Font = Enum.Font.Code
-					label.TextSize = 18
-					label.TextColor3 = Color3.new(0.3, 1, 0.45)
-					label.Text = (i % 2 == 0) and "0" or "1"
-					label.Parent = bb
-					table.insert(beamView.Particles, {
-						Gui = bb,
-						Label = label,
-						Phase = (i - 1) / 7,
-						Speed = 0.28 + 0.07 * ((i * 7) % 3),
-						Seed = i * 2.61,
-						NextFlip = 0,
-					})
-				end
-				table.insert(mActiveLinkAnims, beamView)
 			end
 		end
 	end
 
-	local function animateLinks(t)
-		for _, link in pairs(mActiveLinkAnims) do
-			for _, p in pairs(link.Particles) do
-				local alpha = (t * p.Speed + p.Phase) % 1
-				local arc = math.sin(alpha * math.pi)
-				local wobble = math.sin(t * 2.7 + p.Seed) * 0.6
-				-- Ride just above the beam's arch
-				local pos = link.From:Lerp(link.To, alpha)
-					+ Vector3.new(0, 0.8 + arc * 3.6, 0)
-					+ link.Perp * wobble
-				p.Gui.StudsOffsetWorldSpace = pos
-				p.Label.TextTransparency = 0.1 + 0.65 * (1 - arc)
-				if t > p.NextFlip then
-					p.NextFlip = t + 0.12 + 0.25 * math.random()
-					p.Label.Text = (math.random() < 0.5) and "0" or "1"
-				end
-			end
-		end
-	end
-	
 	local function setupLinks()
 		for id, nodeView in pairs(mNodeView) do
 			nodeView.AdjacentLinks = {}
@@ -357,7 +288,7 @@ function Netmap3DView.new()
 		-- angled camera makes the forward pull read as "below the node" on
 		-- screen without sinking the popup into the ground. NOT AlwaysOnTop,
 		-- so vertically-aligned nodes' popups depth-sort correctly.
-		adornee.CFrame = nodeView.CFrame * CFrame.new(4.5, 0.8, 4.5)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 1.2, 6)
 		adornee.Parent = workspace
 
 		local billboard = Instance.new("BillboardGui")
@@ -680,7 +611,6 @@ function Netmap3DView.new()
 		updateHoveredNode()
 		local t = os.clock()
 		animatePopups(t)
-		animateLinks(t)
 		animateBlinkenlights(t)
 	end
 	
