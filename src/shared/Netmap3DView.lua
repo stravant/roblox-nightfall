@@ -45,9 +45,11 @@ local NOT_BEATEN_COLLISION_GROUP = PhysicsService:GetCollisionGroupId("NotBeaten
 -- Node popup billboard size in pixels (the layout's authored size)
 local kPopupWidthPx = 132
 local kPopupHeightPx = kPopupWidthPx * 46 / 132
--- The window chrome texture has a little transparent margin on its sides, so
--- the backing part is trimmed slightly narrower than the billboard rect
+-- The window chrome texture has a little transparent margin around it, so the
+-- backing part is trimmed slightly smaller than the billboard rect (the
+-- height trim comes off the bottom; the top edge stays anchor-aligned)
 local kBackingWidthTrimPx = 6
+local kBackingHeightTrimPx = 6
 
 -- `topbarCredits` is MainView's topbar credits interface: SetText(text) and
 -- GetInset() (the sunken frame the fly-away delta text animates inside)
@@ -272,7 +274,7 @@ function Netmap3DView.new(topbarCredits)
 		-- popup sits in front of its node AND above the island surface — the
 		-- angled camera makes the forward pull read as "below the node" on
 		-- screen without sinking the popup into the ground
-		adornee.CFrame = nodeView.CFrame * CFrame.new(10.5, 7, 10.5)
+		adornee.CFrame = nodeView.CFrame * CFrame.new(10.5, 8, 10.5)
 		adornee.Parent = workspace
 
 		local backing = Instance.new("Part")
@@ -425,7 +427,9 @@ function Netmap3DView.new(topbarCredits)
 				local dist = (anchorPos - camCF.Position).Magnitude
 				local worldPerPixel = dist * worldPerPixelPerStud
 				local w = (kPopupWidthPx - kBackingWidthTrimPx) * worldPerPixel
-				local h = kPopupHeightPx * worldPerPixel
+				-- Shrinking h moves only the bottom edge: the top edge is
+				-- center + h/2 = the anchor point regardless of h
+				local h = (kPopupHeightPx - kBackingHeightTrimPx) * worldPerPixel
 				-- Matches the billboard's SizeOffset (0, -0.5) top-edge
 				-- anchoring; pushed slightly away from the camera so the
 				-- billboard depth-tests in front of the backing
