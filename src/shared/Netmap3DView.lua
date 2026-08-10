@@ -42,6 +42,10 @@ end
 
 local NOT_BEATEN_COLLISION_GROUP = PhysicsService:GetCollisionGroupId("NotBeatenGlow")
 
+-- Node popup billboard size in pixels (layout authored at 132x46, scaled up)
+local kPopupWidthPx = 198
+local kPopupHeightPx = kPopupWidthPx * 46 / 132
+
 -- `topbarCredits` is MainView's topbar credits interface: SetText(text) and
 -- GetInset() (the sunken frame the fly-away delta text animates inside)
 function Netmap3DView.new(topbarCredits)
@@ -248,58 +252,55 @@ function Netmap3DView.new(topbarCredits)
 			end
 			removeNodePopup(nodeView)
 		end
-		-- World-space popup: a thin part with a SurfaceGui rather than a
-		-- BillboardGui. It depth-sorts with the scenery (things in front of it
-		-- properly occlude it) and the hover Highlight can't draw over it.
-		-- The netmap camera has a fixed yaw/pitch, so a fixed orientation
-		-- matching the camera reads exactly like a billboard.
-		-- 132x46 logical layout at 11 studs wide; UIScale x4 over 48
-		-- PixelsPerStud keeps the canvas crisp.
-		local kPopupWidthStuds = 16.5
-		local kPopupHeightStuds = kPopupWidthStuds * 46 / 132
-		-- Matches NetmapCamera's fixed rotation; the extra half-turn about Y
-		-- points the part's Front face at the camera
-		local kPopupRotation = CFrame.Angles(0, math.pi / 4, 0)
-			* CFrame.Angles(-math.pi / 4 + 0.25, 0, 0)
-			* CFrame.Angles(0, math.pi, 0)
-
-		local part = Instance.new("Part")
-		part.Name = "NodePopupPart"
-		-- Opaque: the part must write depth for the popup to properly occlude
-		-- (and be occluded by) the scenery and the Highlight
-		part.Transparency = 0
-		part.Color = Color3.new(0, 0, 0)
-		part.Material = Enum.Material.SmoothPlastic
-		part.Anchored = true
-		part.CanCollide = false
-		part.CanQuery = false
-		part.CastShadow = false
-		part.Size = Vector3.new(kPopupWidthStuds, kPopupHeightStuds, 0.1)
+		-- Pixel-crisp BillboardGui, NOT AlwaysOnTop, paired with an opaque
+		-- black backing part that is reverse-projected to sit exactly behind
+		-- the billboard's screen rect every frame (updatePopupBacking). The
+		-- backing writes depth, so it blocks exactly the piece of the
+		-- (Occluded) hover Highlight that the popup covers, and scenery in
+		-- front of the popup occludes both.
+		local adornee = Instance.new("Part")
+		adornee.Name = "NodePopupAdornee"
+		adornee.Transparency = 1
+		adornee.Anchored = true
+		adornee.CanCollide = false
+		adornee.CanQuery = false
+		adornee.Size = Vector3.new(1, 1, 1)
 		-- Pulled several studs toward the camera (fixed 45-degree yaw) so the
 		-- popup sits in front of its node AND above the island surface — the
 		-- angled camera makes the forward pull read as "below the node" on
-		-- screen without sinking the popup into the ground. The part's TOP
-		-- edge hangs at the anchor point so the popup extends downward.
-		local anchor = nodeView.CFrame * CFrame.new(6, 5, 6)
-		part.CFrame = CFrame.new(anchor.Position)
-			* kPopupRotation
-			* CFrame.new(0, -kPopupHeightStuds / 2, 0)
-		part.Parent = workspace
+		-- screen without sinking the popup into the ground
+		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 5, 6)
+		adornee.Parent = workspace
 
-		local billboard = Instance.new("SurfaceGui")
+		local backing = Instance.new("Part")
+		backing.Name = "NodePopupBacking"
+		backing.Transparency = mGui.Visible and 0 or 1
+		backing.Color = Color3.new(0, 0, 0)
+		backing.Material = Enum.Material.SmoothPlastic
+		backing.Anchored = true
+		backing.CanCollide = false
+		backing.CanQuery = false
+		backing.CastShadow = false
+		backing.Size = Vector3.new(1, 1, 0.05)
+		-- Parked far away until the first updatePopupBackings pass places it
+		backing.CFrame = CFrame.new(0, -10000, 0)
+		backing.Parent = workspace
+
+		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NodePopup"
-		billboard.Adornee = part
-		billboard.Face = Enum.NormalId.Front
-		billboard.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
-		billboard.PixelsPerStud = 48
+		billboard.Adornee = adornee
+		billboard.Size = UDim2.new(0, kPopupWidthPx, 0, kPopupHeightPx)
+		-- Top edge anchored at the adornee point: zooming out grows the popup
+		-- downward on screen instead of up over the node geometry
+		billboard.SizeOffset = Vector2.new(0, -0.5)
+		billboard.AlwaysOnTop = false
 		billboard.LightInfluence = 0
-		billboard.Brightness = 1
 		billboard.Enabled = mGui.Visible
 		billboard.Parent = mPlayerGui
 
 		local scale = Instance.new("UIScale")
-		-- Stretch the 132px-wide logical layout across the whole canvas
-		scale.Scale = billboard.PixelsPerStud * kPopupWidthStuds / 132
+		-- The layout is authored at 132x46
+		scale.Scale = kPopupWidthPx / 132
 		scale.Parent = billboard
 
 		local window = Instance.new("ImageLabel")
@@ -382,7 +383,8 @@ function Netmap3DView.new(topbarCredits)
 
 		nodeView.Popup = {
 			Kind = kind,
-			Adornee = part,
+			Adornee = adornee,
+			Backing = backing,
 			Billboard = billboard,
 			FlashLabel = if flash then label else nil,
 			-- Flash alternates between the status color and a lightened
@@ -397,8 +399,39 @@ function Netmap3DView.new(topbarCredits)
 				mPopupHoveredId = nil
 			end
 			nodeView.Popup.Billboard:Destroy()
+			nodeView.Popup.Backing:Destroy()
 			nodeView.Popup.Adornee:Destroy()
 			nodeView.Popup = nil
+		end
+	end
+	-- Reverse-project the opaque backing part to exactly cover the pixel-sized
+	-- billboard's screen rect at the adornee's depth (re-done every frame
+	-- since the world size per pixel changes as the camera pans/zooms)
+	local function updatePopupBackings()
+		local camera = workspace.CurrentCamera
+		local viewportY = camera.ViewportSize.Y
+		if viewportY <= 0 then
+			return
+		end
+		local camCF = camera.CFrame
+		local worldPerPixelPerStud = 2 * math.tan(math.rad(camera.FieldOfView) / 2) / viewportY
+		for _, nodeView in pairs(mNodeView) do
+			local popup = nodeView.Popup
+			if popup then
+				local anchorPos = popup.Adornee.Position
+				local dist = (anchorPos - camCF.Position).Magnitude
+				local worldPerPixel = dist * worldPerPixelPerStud
+				local w = kPopupWidthPx * worldPerPixel
+				local h = kPopupHeightPx * worldPerPixel
+				-- Matches the billboard's SizeOffset (0, -0.5) top-edge
+				-- anchoring; pushed slightly away from the camera so the
+				-- billboard depth-tests in front of the backing
+				local center = anchorPos
+					- camCF.UpVector * (h / 2)
+					+ camCF.LookVector * 0.75
+				popup.Backing.Size = Vector3.new(w, h, 0.05)
+				popup.Backing.CFrame = CFrame.new(center) * camCF.Rotation
+			end
 		end
 	end
 	local function animatePopups(t)
@@ -721,6 +754,7 @@ function Netmap3DView.new(topbarCredits)
 	local function update(dt)
 		updateHoveredNode()
 		updateTouchHighlights()
+		updatePopupBackings()
 		local t = os.clock()
 		animatePopups(t)
 		animateBlinkenlights(t)
@@ -762,7 +796,13 @@ function Netmap3DView.new(topbarCredits)
 		for _, nodeView in pairs(mNodeView) do
 			if nodeView.Popup then
 				nodeView.Popup.Billboard.Enabled = mGui.Visible
+				-- The backing is world geometry: hide it too (the update loop
+				-- that positions it only runs while the netmap is visible)
+				nodeView.Popup.Backing.Transparency = mGui.Visible and 0 or 1
 			end
+		end
+		if mGui.Visible then
+			updatePopupBackings()
 		end
 	end)
 
