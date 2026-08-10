@@ -54,6 +54,11 @@ function NetmapCamera.new()
 		return mTotalVelocity / mTotalVelocityCount
 	end
 	
+	local function applyCamera()
+		mCamera.Focus = CFrame.new(mCurrentPosition)
+		mCamera.CFrame = CFrame.new(mCurrentPosition) * CFrame.Angles(0, math.pi/4, 0) * CFrame.Angles(-math.pi/4 + 0.25, 0, 0) * CFrame.new(0, 0, mZoomLevel)
+	end
+
 	local function setPosition(vec)
 		local BOTTOM_EDGE = 60
 		local TOP_EDGE = -140
@@ -78,9 +83,8 @@ function NetmapCamera.new()
 			vec = Vector3.new(vec.X - 0.5 * extra, vec.Y, vec.Z + 0.5 * extra)
 		end	
 		
-		mCamera.Focus = CFrame.new(vec)
-		mCamera.CFrame = CFrame.new(vec) * CFrame.Angles(0, math.pi/4, 0) * CFrame.Angles(-math.pi/4 + 0.25, 0, 0) * CFrame.new(0, 0, mZoomLevel)
 		mCurrentPosition = vec
+		applyCamera()
 	end
 	
 	setPosition(mCurrentPosition)
@@ -196,6 +200,10 @@ function NetmapCamera.new()
 			if not mIsPanning then
 				intertialPan(dt)
 			end
+			-- Re-apply every frame so the handover back from the battle camera
+			-- takes effect immediately (its last top-down CFrame would
+			-- otherwise stick until the next pan)
+			applyCamera()
 		end)
 	end
 	
