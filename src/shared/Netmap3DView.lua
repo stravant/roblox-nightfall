@@ -288,7 +288,9 @@ function Netmap3DView.new()
 		-- angled camera makes the forward pull read as "below the node" on
 		-- screen without sinking the popup into the ground. NOT AlwaysOnTop,
 		-- so vertically-aligned nodes' popups depth-sort correctly.
-		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 1.2, 6)
+		-- Raised a bit so nodes don't need extreme spacing, but still reading
+		-- as below the node rather than centered on it
+		adornee.CFrame = nodeView.CFrame * CFrame.new(6, 3, 6)
 		adornee.Parent = workspace
 
 		local billboard = Instance.new("BillboardGui")
