@@ -49,6 +49,11 @@ local function DialogueContent(props: DialogueState)
 		end
 	end
 
+	-- Two stacked choice buttons need a bit more room than the base box
+	if props.choice2 then
+		chatBoxSize = chatBoxSize + UDim2.new(0, 0, 0, 10)
+	end
+
 	-- Inset shrinks to make room for the visible buttons
 	local insetSize
 	local button1Text, button2Text
