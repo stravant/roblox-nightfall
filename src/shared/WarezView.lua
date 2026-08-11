@@ -40,7 +40,7 @@ type WarezState = {
 	selectedId: string?,
 	purchaseVisible: boolean,
 	insufficientVisible: boolean,
-	ownedCount: number,
+	ownedCounts: { [string]: number },
 	bigScreen: boolean,
 	programs: { ProgramEntryData },
 	onSelect: (id: string) -> (),
@@ -48,7 +48,9 @@ type WarezState = {
 	onDone: () -> (),
 }
 
-local function programEntry(data: ProgramEntryData, selected: boolean, onSelect: (id: string) -> (), layoutOrder: number)
+local kMutedOpen = '<font color="#606060">'
+
+local function programEntry(data: ProgramEntryData, selected: boolean, owned: number, onSelect: (id: string) -> (), layoutOrder: number)
 	local textColor = if selected then kTextWhite else kTextBlack
 	return e("ImageButton", {
 		Active = true,
@@ -84,7 +86,7 @@ local function programEntry(data: ProgramEntryData, selected: boolean, onSelect:
 		NameLabel = e("TextLabel", {
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.new(0, 76, 0.5, 0),
-			Size = UDim2.new(1, -80, 0, 20),
+			Size = UDim2.new(1, -114, 0, 20),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
 			TextSize = 16,
@@ -93,10 +95,48 @@ local function programEntry(data: ProgramEntryData, selected: boolean, onSelect:
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Text = data.Name,
 		}),
+		OwnedLabel = e("TextLabel", {
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -4, 0.5, 0),
+			Size = UDim2.new(0, 32, 0, 20),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 15,
+			TextColor3 = if selected then kTextWhite else Color3.fromRGB(0, 100, 0),
+			TextXAlignment = Enum.TextXAlignment.Right,
+			Text = owned .. "x",
+		}),
 	})
 end
 
-local function detailPanel(selectedId: string?, ownedCount: number)
+-- One compact rich-text line per attack the program has
+local function commandSummary(command: any): string
+	local effect
+	if command.Type == "damage" then
+		effect = command.Amount .. " dmg"
+	elseif command.Type == "one" then
+		effect = "add a tile"
+	elseif command.Type == "zero" then
+		effect = "remove a tile"
+	elseif command.Type == "speedMod" then
+		effect = (if command.Amount > 0 then "+" else "") .. command.Amount .. " speed"
+	elseif command.Type == "sizeMod" then
+		effect = "+" .. command.Amount .. " max size"
+	elseif command.Type == "grow" then
+		effect = "+" .. command.Amount .. " sectors"
+	else
+		effect = ""
+	end
+	if command.Range and command.Range > 1 then
+		effect = effect .. ", range " .. command.Range
+	end
+	if command.SizeReq and command.SizeReq > 0 then
+		effect = effect .. ", needs size " .. command.SizeReq
+	end
+	return string.format("<b>%s</b> %s— %s</font>", command.Name, kMutedOpen, effect)
+end
+
+local function detailPanel(selectedId: string?)
 	if not selectedId then
 		return {
 			Hint = e("TextLabel", {
@@ -111,6 +151,15 @@ local function detailPanel(selectedId: string?, ownedCount: number)
 		}
 	end
 	local def = Scripts[selectedId]
+
+	local attackLines = {}
+	for _, command in def.CommandList do
+		table.insert(attackLines, commandSummary(command))
+	end
+	local attacksY = 82
+	local attacksHeight = math.max(1, #attackLines) * 18
+	local flavorY = attacksY + attacksHeight + 8
+
 	return {
 		DetailName = e("TextLabel", {
 			Position = UDim2.new(0, 8, 0, 6),
@@ -129,48 +178,42 @@ local function detailPanel(selectedId: string?, ownedCount: number)
 			BorderColor3 = Color3.new(0, 0, 0),
 			Image = def.Image,
 		}),
-		MoveText = e("TextLabel", {
+		StatsText = e("TextLabel", {
 			Position = UDim2.new(0, 56, 0, 32),
-			Size = UDim2.new(1, -60, 0, 18),
+			Size = UDim2.new(1, -64, 0, 40),
 			BackgroundTransparency = 1,
-			Font = Enum.Font.Code,
-			TextSize = 15,
+			Font = Enum.Font.SourceSans,
+			TextSize = 17,
+			RichText = true,
 			TextColor3 = kTextBlack,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "Move: " .. def.Move,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			Text = string.format("%sMove:</font> <b>%d</b>\n%sMax Size:</font> <b>%d</b>",
+				kMutedOpen, def.Move, kMutedOpen, def.MaxSize),
 		}),
-		MaxSizeText = e("TextLabel", {
-			Position = UDim2.new(0, 56, 0, 52),
-			Size = UDim2.new(1, -60, 0, 18),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.Code,
-			TextSize = 15,
-			TextColor3 = kTextBlack,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "Max Size: " .. def.MaxSize,
-		}),
-		FlavorText = e("TextLabel", {
-			Position = UDim2.new(0, 8, 0, 80),
-			Size = UDim2.new(1, -16, 1, -106),
+		Attacks = e("TextLabel", {
+			Position = UDim2.new(0, 8, 0, attacksY),
+			Size = UDim2.new(1, -16, 0, attacksHeight),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
 			TextSize = 15,
+			RichText = true,
 			TextColor3 = kTextBlack,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			Text = table.concat(attackLines, "\n"),
+		}),
+		FlavorText = e("TextLabel", {
+			Position = UDim2.new(0, 8, 0, flavorY),
+			Size = UDim2.new(1, -16, 1, -flavorY - 8),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSans,
+			TextSize = 15,
+			TextColor3 = Color3.new(0.25, 0.25, 0.25),
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			Text = def.Desc,
-		}),
-		OwnedLabel = e("TextLabel", {
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, 8, 1, -6),
-			Size = UDim2.new(1, -16, 0, 18),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSansBold,
-			TextSize = 15,
-			TextColor3 = Color3.fromRGB(0, 100, 0),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "You own: " .. ownedCount .. "x",
 		}),
 	}
 end
@@ -186,7 +229,21 @@ local function WarezContent(props: WarezState)
 		}),
 	}
 	for i, data in props.programs do
-		rows[data.Id] = programEntry(data, props.selectedId == data.Id, props.onSelect, i)
+		rows[data.Id] = programEntry(data, props.selectedId == data.Id,
+			props.ownedCounts[data.Id] or 0, props.onSelect, i)
+	end
+
+	local function columnHeading(name: string, x: number, width: number, alignment: Enum.TextXAlignment)
+		return e("TextLabel", {
+			Position = UDim2.new(0, x, 0, 0),
+			Size = UDim2.new(0, width, 1, 0),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 13,
+			TextColor3 = Color3.new(0.3, 0.3, 0.3),
+			TextXAlignment = alignment,
+			Text = name,
+		})
 	end
 
 	return e(React.Fragment, nil, {
@@ -224,9 +281,20 @@ local function WarezContent(props: WarezState)
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Text = "Warez Node",
 			}),
-			ShopInset = e("ImageLabel", {
+			-- Column headings for the shop list (positions match the row layout
+			-- inside the scroll frame: 4px scroll inset + row offsets)
+			ShopHeadings = e("Frame", {
 				Position = UDim2.new(0, 6, 0, 26),
-				Size = UDim2.new(0, 210, 1, -72),
+				Size = UDim2.new(0, 210, 0, 16),
+				BackgroundTransparency = 1,
+			}, {
+				HeadingCost = columnHeading("Cost", 6, 40, Enum.TextXAlignment.Right),
+				HeadingName = columnHeading("Name", 80, 80, Enum.TextXAlignment.Left),
+				HeadingOwned = columnHeading("Owned", 152, 48, Enum.TextXAlignment.Right),
+			}),
+			ShopInset = e("ImageLabel", {
+				Position = UDim2.new(0, 6, 0, 44),
+				Size = UDim2.new(0, 210, 1, -90),
 				BackgroundTransparency = 1,
 				Image = kInsetImage,
 				ScaleType = Enum.ScaleType.Slice,
@@ -251,11 +319,12 @@ local function WarezContent(props: WarezState)
 				Image = kInsetImage,
 				ScaleType = Enum.ScaleType.Slice,
 				SliceCenter = Rect.new(8, 8, 8, 8),
-			}, detailPanel(props.selectedId, props.ownedCount)),
+			}, detailPanel(props.selectedId)),
+			-- Two equal-width buttons with symmetric margins
 			InsufficientCreditsText = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.new(0, 6, 1, -8),
-				Size = UDim2.new(0, 210, 0, 30),
+				Position = UDim2.new(0, 8, 1, -8),
+				Size = UDim2.new(0.5, -12, 0, 30),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
 				TextSize = 18,
@@ -265,16 +334,16 @@ local function WarezContent(props: WarezState)
 			}),
 			PurchaseButton = e(WindowsButton, {
 				AnchorPoint = Vector2.new(0, 1),
-				Position = UDim2.new(0, 6, 1, -8),
-				Size = UDim2.new(0, 210, 0, 30),
+				Position = UDim2.new(0, 8, 1, -8),
+				Size = UDim2.new(0.5, -12, 0, 30),
 				Text = "Purchase",
 				Visible = props.purchaseVisible,
 				OnClick = props.onPurchase,
 			}),
 			DoneButton = e(WindowsButton, {
 				AnchorPoint = Vector2.new(1, 1),
-				Position = UDim2.new(1, -6, 1, -8),
-				Size = UDim2.new(0, 160, 0, 30),
+				Position = UDim2.new(1, -8, 1, -8),
+				Size = UDim2.new(0.5, -12, 0, 30),
 				Text = "Done Shopping",
 				OnClick = props.onDone,
 			}),
@@ -321,16 +390,12 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		return a.Cost < b.Cost
 	end)
 
-	local function ownedCountOf(id: string?): number
-		if not id then
-			return 0
-		end
+	local function ownedCounts(): { [string]: number }
+		local counts = {}
 		for _, info in pairs(LocalPlayerData:GetProgramList()) do
-			if info.Id == id then
-				return info.Count
-			end
+			counts[info.Id] = info.Count
 		end
-		return 0
+		return counts
 	end
 
 	local mSelectedProgram: string? = nil
@@ -344,14 +409,12 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 				selectedId = id,
 				purchaseVisible = canAfford,
 				insufficientVisible = not canAfford,
-				ownedCount = ownedCountOf(id),
 			})
 		else
 			(mRoot :: StatefulRoot.StatefulRoot).setState({
 				selectedId = StatefulRoot.None,
 				purchaseVisible = false,
 				insufficientVisible = false,
-				ownedCount = 0,
 			})
 		end
 	end
@@ -363,7 +426,8 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 			LocalPlayerData:AddUnit(mSelectedProgram)
 			game.ReplicatedStorage.Remotes.PurchaseUnit:FireServer(warezNodeId, mSelectedProgram)
 			this.MadePurchase:fire(mSelectedProgram)
-			-- Refresh owned count and affordability with the new balance
+			-- Refresh the owned column and affordability with the new balance
+			;(mRoot :: StatefulRoot.StatefulRoot).setState({ ownedCounts = ownedCounts() })
 			this:SelectProgram(mSelectedProgram)
 		end
 	end
@@ -372,7 +436,7 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		selectedId = nil,
 		purchaseVisible = false,
 		insufficientVisible = false,
-		ownedCount = 0,
+		ownedCounts = ownedCounts(),
 		bigScreen = DeviceInfo.ScreenHeight > 500,
 		programs = mPrograms,
 		onSelect = function(id: string)
