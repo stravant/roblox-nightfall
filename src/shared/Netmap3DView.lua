@@ -118,7 +118,7 @@ function Netmap3DView.new(topbarCredits)
 	
 	local mNodeView = {}
 
-	local kNodeModelScale = 1.3
+	local kNodeModelScale = 1
 
 	-- Generous invisible hit cylinders so hovers/clicks can't miss a node.
 	-- They live in their own folder rather than inside the node models: the
