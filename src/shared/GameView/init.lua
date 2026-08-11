@@ -510,33 +510,40 @@ function GameView.new(gameState, controller, menu, topbar)
 		mFlashySquare:Show(coord.x, coord.y)
 	end
 
-	-- Support units (ALL commands beneficial: healers / modifiers like Medic,
-	-- Data Doctor, Turbo) auto-select last, after the attackers have acted —
-	-- you want to know where the fight ended up before spending their buffs
-	local function isSupportUnit(unit)
+	-- Auto-selection order: damage dealers act first, then non-damage
+	-- attackers (debuffs like Clog's slow, Bit-Man's grid edits), and units
+	-- that only buff/heal (Medic, Data Doctors, Turbo, Fiddle) go last — you
+	-- want to see where the fight ends up before spending the support moves
+	local function unitAutoRank(unit)
 		local commandList = unit.Definition.CommandList
 		if #commandList == 0 then
-			return false
+			return 2
 		end
+		local rank = 3
 		for _, command in pairs(commandList) do
+			if command.Type == 'damage' then
+				return 1
+			end
 			if not gameState:IsBeneficialCommand(command) then
-				return false
+				rank = 2
 			end
 		end
-		return true
+		return rank
 	end
 	local function pickNextAutoUnit(exclude)
-		local support = nil
+		local best, bestRank = nil, math.huge
 		for unit in pairs(gameState:GetUnits()) do
 			if not unit.Done and not unit.Enemy and unit ~= exclude then
-				if isSupportUnit(unit) then
-					support = support or unit
-				else
-					return unit
+				local rank = unitAutoRank(unit)
+				if rank < bestRank then
+					best, bestRank = unit, rank
+					if rank == 1 then
+						break
+					end
 				end
 			end
 		end
-		return support
+		return best
 	end
 
 	local function doAutoSelectNextUnit()
