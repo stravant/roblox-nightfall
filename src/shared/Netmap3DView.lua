@@ -643,11 +643,24 @@ function Netmap3DView.new(topbarCredits)
 		end
 	end	
 
+	-- Bumped by every pointer show/replace: pending brief-pointer timers only
+	-- clear the pointer if the session is still theirs (so they never clear a
+	-- newer pointer, e.g. the tutorial's own)
+	local mPointerSession = 0
+
 	function this:HighlightNode(id)
 		print("Highlight node:", id)
 		local node = mNodeView[id]
 		if node then
-			mCamera:FocusOn(node.CFrame.Position)
+			-- Glide the camera over, and point the node out briefly
+			mCamera:FocusOn(node.CFrame.Position, true)
+			this:TutorialPointAtNode(id)
+			local session = mPointerSession
+			task.delay(2.5, function()
+				if mPointerSession == session then
+					this:ClearTutorialPointer()
+				end
+			end)
 		else
 			warn("Missing node to focus on:", id)
 		end
@@ -668,6 +681,7 @@ function Netmap3DView.new(topbarCredits)
 	end
 	function this:TutorialPointAtNode(id)
 		this:ClearTutorialPointer()
+		mPointerSession += 1
 		local nodeView = mNodeView[id]
 		if not nodeView then
 			warn("Missing node to point at:", id)

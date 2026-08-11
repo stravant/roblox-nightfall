@@ -119,10 +119,14 @@ function NetmapCamera.new()
 	local mPinching = false
 	local mPinchStartZoom = mZoomLevel
 	local mInertialVelocity = Vector3.new()
+	-- In-flight FocusOn glide ({Start, Target, T, Duration}); cancelled by any
+	-- user pan/pinch
+	local mFocusTween = nil
 	local function button1Down()
 		if ModalManager:IsModal() or mPinching then
 			return
 		end
+		mFocusTween = nil
 		mPanStartHit = getMouseHit()
 		mDownScreenPos = UserInputService:GetMouseLocation()
 		mDidPan = false
@@ -203,6 +207,7 @@ function NetmapCamera.new()
 				return
 			end
 			mPinching = true
+			mFocusTween = nil
 			mPinchStartZoom = mZoomLevel
 			-- The first finger already started a pan/click gesture: cancel it
 			mPanStartHit = nil
@@ -219,9 +224,20 @@ function NetmapCamera.new()
 		end
 	end)
 	
-	function this:FocusOn(position)
-		-- TODO: Animate movement for this
-		setPosition(position)
+	-- animate: glide there over a moment instead of snapping
+	function this:FocusOn(position, animate)
+		if animate then
+			mInertialVelocity = Vector3.new()
+			mFocusTween = {
+				Start = mCurrentPosition,
+				Target = position,
+				T = 0,
+				Duration = 0.8,
+			}
+		else
+			mFocusTween = nil
+			setPosition(position)
+		end
 	end
 	
 	function this:Install()
@@ -237,7 +253,15 @@ function NetmapCamera.new()
 			lastTime = thisTime
 			table.remove(mLastPositions, 1)
 			table.insert(mLastPositions, {thisTime, mCurrentPosition})
-			if not mIsPanning then
+			if mFocusTween then
+				mFocusTween.T = math.min(mFocusTween.T + dt, mFocusTween.Duration)
+				local alpha = mFocusTween.T / mFocusTween.Duration
+				alpha = alpha * alpha * (3 - 2 * alpha) -- smoothstep
+				setPosition(mFocusTween.Start:Lerp(mFocusTween.Target, alpha))
+				if mFocusTween and mFocusTween.T >= mFocusTween.Duration then
+					mFocusTween = nil
+				end
+			elseif not mIsPanning then
 				intertialPan(dt)
 			end
 			-- Re-apply every frame so the handover back from the battle camera
