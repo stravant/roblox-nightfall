@@ -99,35 +99,34 @@ local mNodeStatsDatastore = DataStore:GetDataStore(NODE_STATS_DATASTORE)
 local mNodeStatsCache = {}
 local mNodeStatsRequests = {} -- In progress fetches of node stats
 function DataStoreService:GetStatsForNode(nodeId)
+	-- (This function used to return nil on a cache hit, return the request
+	-- signal to waiters, and shadow its result local on a successful fetch —
+	-- stats never actually made it back to the caller.)
 	local cached = mNodeStatsCache[nodeId]
-	if not cached then
-		local sig = mNodeStatsRequests[nodeId]
-		if sig then
-			sig.Event:wait()
-			return mNodeStatsRequests[nodeId]
-		else
-			-- Not sure how to handle a hung request here...
-			-- I'm going with one person servers, so there's probably no need
-			-- to have detailed error handling here, worse case stats just fail 
-			-- to load for nodes
-			sig = Instance.new('BindableEvent')
-			mNodeStatsRequests[nodeId] = sig
-			local dataEntry;
-			local st, err = pcall(function()
-				local data = mNodeStatsDatastore:GetAsync(nodeId)
-				local dataEntry = NodeStats.new(data)
-				mNodeStatsCache[nodeId] = dataEntry
-				mNodeStatsRequests[nodeId] = nil
-			end)
-			if not st then 
-				mNodeStatsRequests[nodeId] = nil
-				dataEntry = NodeStats.new(nil)
-				ServerStatistics:NodeStatsLoadFailed(err)
-			end
-			sig:Fire()
-			return dataEntry
-		end
-	end	
+	if cached then
+		return cached
+	end
+	local sig = mNodeStatsRequests[nodeId]
+	if sig then
+		sig.Event:Wait()
+		-- The fetch may have failed; fall back to fresh stats
+		return mNodeStatsCache[nodeId] or NodeStats.new(nil)
+	end
+	sig = Instance.new('BindableEvent')
+	mNodeStatsRequests[nodeId] = sig
+	local dataEntry
+	local st, err = pcall(function()
+		local data = mNodeStatsDatastore:GetAsync(nodeId)
+		dataEntry = NodeStats.new(data)
+		mNodeStatsCache[nodeId] = dataEntry
+	end)
+	mNodeStatsRequests[nodeId] = nil
+	if not st then
+		dataEntry = NodeStats.new(nil)
+		ServerStatistics:NodeStatsLoadFailed(err)
+	end
+	sig:Fire()
+	return dataEntry
 end
 
 -- Update the cached copy of the stats for a node and update the main copy too
@@ -159,7 +158,12 @@ local mReplaysDatastore = DataStore:GetDataStore(REPLAYS_DATASTORE)
 function DataStoreService:SaveReplay(replayString)
 	local id = game:GetService('HttpService'):GenerateGUID(false)
 	spawn(function()
-		mReplaysDatastore:SetAsync(id, replayString)
+		local st, err = pcall(function()
+			mReplaysDatastore:SetAsync(id, replayString)
+		end)
+		if not st then
+			warn("DataStoreService | Failed to save replay "..id.." because `"..tostring(err).."`.")
+		end
 	end)
 	return id
 end
