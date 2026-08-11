@@ -195,6 +195,7 @@ type HudState = {
 	selectedCommandId: string?,
 	programs: { ProgramRow },
 	programsVisible: boolean,
+	dragHintProminent: boolean,
 	hidden: boolean,
 	onCommandClick: (entry: CommandEntry) -> (),
 	onProgramClick: (id: string) -> (),
@@ -298,15 +299,19 @@ local function BattleHudContent(props: HudState)
 			PaddingLeft = UDim.new(0, 6),
 			PaddingRight = UDim.new(0, 6),
 		}),
-		Header = e("TextLabel", {
-			Size = UDim2.new(1, 0, 0, 18),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSansBold,
-			TextSize = 17,
-			TextColor3 = Color3.new(0, 0, 0.5),
-			Text = "Drag to Place",
-			LayoutOrder = 0,
-		}),
+		-- Prominent hint only during the tutorial; otherwise it lives in the
+		-- window title
+		Header = if props.dragHintProminent
+			then e("TextLabel", {
+				Size = UDim2.new(1, 0, 0, 18),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 17,
+				TextColor3 = Color3.new(0, 0, 0.5),
+				Text = "Drag to Place",
+				LayoutOrder = 0,
+			})
+			else nil,
 		-- Win95 listbox look: white scroll area with an always-visible
 		-- scrollbar gutter on the right so it reads as scrollable
 		ListArea = e("Frame", {
@@ -413,11 +418,15 @@ local function BattleHudContent(props: HudState)
 			})
 			else nil,
 		ProgramsWindow = if props.programsVisible
-			then windowChrome("Scripts", {
-				Name = "ProgramsWindow",
-				Size = UDim2.new(0, 160, 0, listHeight + 74),
-				LayoutOrder = 0,
-			}, programItems)
+			then windowChrome(
+				if props.dragHintProminent then "Scripts" else "Scripts - Drag to Place",
+				{
+					Name = "ProgramsWindow",
+					Size = UDim2.new(0, 160, 0, listHeight + (if props.dragHintProminent then 74 else 52)),
+					LayoutOrder = 0,
+				},
+				programItems
+			)
 			else nil,
 		}),
 	})
@@ -470,6 +479,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		selectedCommandId = nil,
 		programs = table.clone(mPrograms),
 		programsVisible = true,
+		dragHintProminent = false,
 		hidden = false,
 		onCommandClick = function(entry: CommandEntry)
 			if entry.Disabled then
@@ -641,6 +651,11 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 
 	function this:SetProgramListVisible(state: boolean)
 		mRoot.setState({ programsVisible = state })
+	end
+
+	-- Tutorial: show the "Drag to Place" hint as its own prominent line
+	function this:SetDragHintProminent(state: boolean)
+		mRoot.setState({ dragHintProminent = state })
 	end
 
 	function this:ClearProgramListSelection()

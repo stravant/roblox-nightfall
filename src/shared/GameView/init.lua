@@ -647,6 +647,8 @@ function GameView.new(gameState, controller, menu, topbar)
 		updateMenuContext()
 		mTopbar:SetDoneTurnVisible(false)
 		mTopbar:SetLeaveVisible(false)
+		-- The tutorial teaches drag-to-place: show the hint prominently
+		mUnitInfoView:SetDragHintProminent(true)
 	end
 
 	-- Clear the selection, for tutorial
