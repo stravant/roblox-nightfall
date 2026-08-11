@@ -52,11 +52,11 @@ local function GameViewChrome(props)
 	-- live in the topbar gui via the topbar interface; the chrome here is
 	-- the setup-phase mission box and the end-of-game overlay.
 	return e(React.Fragment, nil, {
-		-- The node's mission text, shown while placing scripts
+		-- The node's mission text, shown until the player starts uploading
 		MissionBox = if props.missionText and props.missionVisible
 			then e("Frame", {
-				AnchorPoint = Vector2.new(1, 1),
-				Position = UDim2.new(1, -12, 1, -12),
+				AnchorPoint = Vector2.new(0, 1),
+				Position = UDim2.new(0, 12, 1, -12),
 				AutomaticSize = Enum.AutomaticSize.Y,
 				Size = UDim2.new(0, 300, 0, 0),
 				BackgroundColor3 = Color3.new(0, 0, 0),
@@ -557,6 +557,9 @@ function GameView.new(gameState, controller, menu, topbar)
 		mSelectionType = 'upload'
 		mUnitsView:ClearFlashUnit()
 		mFlashySquare:Show(coord.x, coord.y)
+		-- The player is getting on with uploading: the mission text has done
+		-- its job
+		root().setState({ missionVisible = false })
 	end
 
 	-- Auto-selection order: damage dealers act first, then non-damage
@@ -914,6 +917,7 @@ function GameView.new(gameState, controller, menu, topbar)
 	local UserInputService = game:GetService('UserInputService')
 	local function startDragSession(id, screenPos)
 		mDraggingProgram = true
+		root().setState({ missionVisible = false })
 		local def = Scripts[id]
 
 		local ghost = Instance.new("ImageLabel")
