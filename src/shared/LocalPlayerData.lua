@@ -196,6 +196,16 @@ function LocalPlayerData:ApplyDebugCheckpoint(level)
 			mNodeInfo[id].Beaten = true
 		end
 	end
+
+	-- Stock up: one of every script sold at the PREVIOUS security level's
+	-- warez shops, approximating the loadout a player would arrive with
+	for id, node in pairs(Netmap.ById) do
+		if node.Warez and node.Level == level - 1 then
+			for unitId, _cost in pairs(node.Warez) do
+				self:AddUnit(unitId)
+			end
+		end
+	end
 end
 
 -- Security level
