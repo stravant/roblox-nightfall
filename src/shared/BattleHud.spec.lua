@@ -55,7 +55,14 @@ return function(t)
 			local column = gui.LeftColumn
 			t.expect(column.InfoWindow.WindowTitle.Text).toBe(Scripts.hack.Name)
 			t.expect(column.InfoWindow.Inset.FlavorText.Text).toBe(Scripts.hack.Desc)
-			-- Dummy definition has no moves left: no move button
+			-- During setup (programs list visible) NO command buttons show
+			for _, command in pairs(Scripts.hack.CommandList) do
+				t.expect(column.CommandRow:FindFirstChild(command.Id)).toBe(nil)
+			end
+			-- Once the game starts (list hidden) the commands appear
+			ReactRoblox.act(function()
+				hud:SetProgramListVisible(false)
+			end)
 			t.expect(column.CommandRow:FindFirstChild("move")).toBe(nil)
 			for _, command in pairs(Scripts.hack.CommandList) do
 				t.expect(column.CommandRow:FindFirstChild(command.Id) ~= nil).toBeTruthy()
@@ -65,6 +72,10 @@ return function(t)
 
 	t.test("a movable unit gets a move button and command selection highlights", function()
 		withHud(function(hud, gui)
+			-- Commands only render once the setup list is out of the way
+			ReactRoblox.act(function()
+				hud:SetProgramListVisible(false)
+			end)
 			local unit = {
 				Enemy = false,
 				MoveLeft = 2,

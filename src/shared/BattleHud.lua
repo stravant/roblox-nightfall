@@ -221,8 +221,10 @@ local function BattleHudContent(props: HudState)
 			Padding = UDim.new(0, 8),
 		}),
 	}
-	for _, entry in props.commands do
-		commandItems[entry.Key] = commandButton(entry, props.selectedCommandId == entry.Key, props.onCommandClick)
+	if not props.programsVisible then
+		for _, entry in props.commands do
+			commandItems[entry.Key] = commandButton(entry, props.selectedCommandId == entry.Key, props.onCommandClick)
+		end
 	end
 
 	-- Programs window rows, inside a capped-height scrolling list so the unit
@@ -299,10 +301,10 @@ local function BattleHudContent(props: HudState)
 			Padding = UDim.new(0, 4),
 		}),
 		UIPadding = e("UIPadding", {
-			PaddingTop = UDim.new(0, 6),
-			PaddingBottom = UDim.new(0, 6),
-			PaddingLeft = UDim.new(0, 6),
-			PaddingRight = UDim.new(0, 6),
+			PaddingTop = UDim.new(0, 3),
+			PaddingBottom = UDim.new(0, 3),
+			PaddingLeft = UDim.new(0, 3),
+			PaddingRight = UDim.new(0, 3),
 		}),
 		-- Prominent hint only during the tutorial; otherwise it lives in the
 		-- window title
@@ -347,8 +349,10 @@ local function BattleHudContent(props: HudState)
 	local pane = props.pane
 
 	-- Everything on the left stacks in one column: the Programs window during
-	-- setup, then the unit info window with its commands right below it
-	local commandCount = #props.commands
+	-- setup, then the unit info window with its commands right below it.
+	-- During setup (programs list visible) the command buttons are hidden:
+	-- they're not usable yet and don't fit alongside the list anyway.
+	local commandCount = if props.programsVisible then 0 else #props.commands
 	local commandRowHeight = commandCount * 54 + math.max(0, commandCount - 1) * 8
 
 	return e(React.Fragment, nil, {
@@ -422,7 +426,7 @@ local function BattleHudContent(props: HudState)
 				if props.dragHintProminent then "Scripts" else "Scripts - Drag to Place",
 				{
 					Name = "ProgramsWindow",
-					Size = UDim2.new(0, 160, 0, listHeight + (if props.dragHintProminent then 74 else 52)),
+					Size = UDim2.new(0, 160, 0, listHeight + (if props.dragHintProminent then 58 else 36)),
 					LayoutOrder = 0,
 				},
 				programItems
