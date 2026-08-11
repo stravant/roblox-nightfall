@@ -101,6 +101,32 @@ return function(t)
 		t.expect(gs:GetUnit(zone.x, zone.y) ~= nil).toBeTruthy()
 	end)
 
+	t.test("grow adds sectors whenever a free filled neighbor exists", function()
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		local zone = gs:GetUploadZones()[1]
+		gs:UploadUnit(zone.x, zone.y, Scripts.medic)
+		gs:StartGame()
+		local medic = gs:GetUnit(zone.x, zone.y)
+
+		-- Count free filled orthogonal neighbors of the head (the old grow
+		-- direction decode never tried up/left, so it could report no growth
+		-- despite free space)
+		local free = 0
+		for _, d in pairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+			if gs:IsFilled(zone.x + d[1], zone.y + d[2])
+				and not gs:GetUnit(zone.x + d[1], zone.y + d[2]) then
+				free += 1
+			end
+		end
+
+		-- Medic hypos itself (grow 2, range 3)
+		gs:UnitExecute(medic, "hypo", zone.x, zone.y)
+		if free > 0 then
+			t.expect(#medic.Tail > 1).toBeTruthy()
+		end
+		t.expect(gs:HasErrors()).toBeFalsy()
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]

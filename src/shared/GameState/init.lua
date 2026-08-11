@@ -342,22 +342,23 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		
 		local function shuffle(list, seed)
 			local r = Random.new(seed)
-			for i = #list, 2 do
+			for i = #list, 2, -1 do
 				local target = r:NextInteger(1, i)
 				list[target], list[i] = list[i], list[target]
 			end
 		end
-		
+
 		local function addSector(unit)
 			for i = #unit.Tail, 1, -1 do
 				local coord = unit.Tail[i]
-				local nums = {0, 1, 2, 3}
-				shuffle(nums, coord.x * Places.PlaceWidth + coord.y)
+				-- All four orthogonal neighbors (the old direction decode only
+				-- ever produced right/down/diagonal, so grow silently failed
+				-- when the free space was up or left of the tail)
+				local dirs = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
+				shuffle(dirs, coord.x * Places.PlaceWidth + coord.y)
 				for j = 1, 4 do
-					local dx = math.floor(nums[j] / 2)
-					local dy = nums[j] % 2
-					local x = coord.x + dx
-					local y = coord.y + dy
+					local x = coord.x + dirs[j][1]
+					local y = coord.y + dirs[j][2]
 					local square = getBoardXY(x, y)
 					if square and square.Filled and not square.Unit and not square.Pickup then
 						square.Unit = unit
