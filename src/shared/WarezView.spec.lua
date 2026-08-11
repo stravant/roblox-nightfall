@@ -43,14 +43,14 @@ return function(t)
 	end
 
 	local function shopRow(gui, id)
-		return gui.MainBox.ShopInset.ShopScroll:FindFirstChild(id)
+		return gui.MainBox.ShopInset:FindFirstChild("ShopScroll", true):FindFirstChild(id)
 	end
 
 	t.test("mounts the window with one scroll row per program, cheapest first", function()
 		withView(10000, function(view, gui)
 			t.expect(gui.MainBox.WindowTitle.Text).toBe("Warez Node")
 			t.expect(gui.MainBox.DoneButton.Text.Text).toBe("Done Shopping")
-			t.expect(gui.MainBox.ShopInset.ShopScroll.ClassName).toBe("ScrollingFrame")
+			t.expect(gui.MainBox.ShopInset:FindFirstChild("ShopScroll", true).ClassName).toBe("ScrollingFrame")
 			t.expect(gui.MainBox.ShopHeadings.HeadingOwned.Text).toBe("Owned")
 			local hack = shopRow(gui, "hack")
 			local slingshot = shopRow(gui, "slingshot")

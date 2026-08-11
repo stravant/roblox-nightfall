@@ -16,6 +16,7 @@ local DeviceInfo = require(game.ReplicatedStorage.DeviceInfo)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
+local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
 
 local e = React.createElement
 
@@ -54,7 +55,7 @@ local function programEntry(data: ProgramEntryData, selected: boolean, owned: nu
 		Active = true,
 		AutoButtonColor = false,
 		BorderSizePixel = 0,
-		Size = UDim2.new(1, -10, 0, 24),
+		Size = UDim2.new(1, -16, 0, 26),
 		LayoutOrder = layoutOrder,
 		BackgroundColor3 = if selected then kBlueColor else kTextWhite,
 		Image = "",
@@ -75,8 +76,8 @@ local function programEntry(data: ProgramEntryData, selected: boolean, owned: nu
 		}),
 		Icon = e("ImageLabel", {
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 50, 0.5, 0),
-			Size = UDim2.new(0, 20, 0, 20),
+			Position = UDim2.new(0, 48, 0.5, 0),
+			Size = UDim2.new(0, 24, 0, 24),
 			BackgroundColor3 = data.Color,
 			BorderColor3 = Color3.new(0, 0, 0),
 			Image = data.Image,
@@ -216,13 +217,17 @@ local function detailPanel(selectedId: string?)
 end
 
 local function WarezContent(props: WarezState)
+	-- Ref shared between the shop list and its Win95 scrollbar
+	local scrollRef = React.useRef(nil)
+
 	local rows: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			VerticalAlignment = Enum.VerticalAlignment.Top,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 2),
+			-- Rows sit flush on the white list background
+			Padding = UDim.new(0, 0),
 		}),
 	}
 	for i, data in props.programs do
@@ -297,17 +302,30 @@ local function WarezContent(props: WarezState)
 				ScaleType = Enum.ScaleType.Slice,
 				SliceCenter = Rect.new(8, 8, 8, 8),
 			}, {
-				ShopScroll = e("ScrollingFrame", {
+				-- Win95 listbox: white scroll area + the classic scrollbar,
+				-- matching the battle setup's scripts list
+				ListArea = e("Frame", {
+					Name = "ListArea",
 					Position = UDim2.new(0, 4, 0, 4),
 					Size = UDim2.new(1, -8, 1, -8),
-					BackgroundTransparency = 1,
+					BackgroundColor3 = Color3.new(1, 1, 1),
 					BorderSizePixel = 0,
-					CanvasSize = UDim2.new(0, 0, 0, 0),
-					AutomaticCanvasSize = Enum.AutomaticSize.Y,
-					ScrollingDirection = Enum.ScrollingDirection.Y,
-					ScrollBarThickness = 8,
-					ScrollBarImageColor3 = Color3.new(0, 0, 0),
-				}, rows),
+				}, {
+					ShopScroll = e("ScrollingFrame", {
+						ref = scrollRef,
+						Size = UDim2.new(1, 0, 1, 0),
+						BackgroundTransparency = 1,
+						BorderSizePixel = 0,
+						CanvasSize = UDim2.new(0, 0, 0, 0),
+						AutomaticCanvasSize = Enum.AutomaticSize.Y,
+						ScrollingDirection = Enum.ScrollingDirection.Y,
+						ScrollBarThickness = 0,
+					}, rows),
+					Scrollbar = e(Win95Scrollbar, {
+						scrollRef = scrollRef,
+						lineScroll = 26,
+					}),
+				}),
 			}),
 			DetailInset = e("ImageLabel", {
 				Position = UDim2.new(0, 222, 0, 26),
