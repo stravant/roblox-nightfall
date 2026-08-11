@@ -19,10 +19,15 @@ function DebugFlags:HasBeatenAllNodes(): boolean
 	return false
 end
 
+-- Master switch for ALL debug UI (checkpoint picker, debug win button, ...)
+function DebugFlags:ShowDebugUI(): boolean
+	return true
+end
+
 -- Show the checkpoint picker on the title screen (jump straight to the first
 -- entry of a given security level)
 function DebugFlags:ShowDebugCheckpoints(): boolean
-	return true
+	return self:ShowDebugUI()
 end
 
 -- Starting credits for fresh player data

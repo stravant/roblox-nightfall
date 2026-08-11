@@ -14,6 +14,7 @@ local Scripts = require(game.ReplicatedStorage.Scripts)
 local BattleHud = require(game.ReplicatedStorage.BattleHud)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local ReplaySubmission = require(game.ReplicatedStorage.ReplaySubmission)
+local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local Signal = require(game.ReplicatedStorage.Signal)
 local TileView = require(script.TileView)
@@ -52,6 +53,22 @@ local function GameViewChrome(props)
 	-- live in the topbar gui via the topbar interface; the chrome here is
 	-- the setup-phase mission box and the end-of-game overlay.
 	return e(React.Fragment, nil, {
+		-- Debug: instantly win the battle (setup phase only)
+		DebugWinButton = if props.debugWinVisible
+			then e("TextButton", {
+				Active = true,
+				AnchorPoint = Vector2.new(0.5, 1),
+				Position = UDim2.new(0.5, 0, 1, -12),
+				Size = UDim2.new(0, 130, 0, 32),
+				BackgroundColor3 = Color3.fromRGB(180, 90, 0),
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 16,
+				TextColor3 = Color3.new(1, 1, 1),
+				Text = "DEBUG: Win",
+				ZIndex = 5,
+				[React.Event.MouseButton1Click] = props.onDebugWin,
+			})
+			else nil,
 		-- The node's mission text, shown until the player starts uploading
 		MissionBox = if props.missionText and props.missionVisible
 			then e("Frame", {
@@ -322,6 +339,10 @@ function GameView.new(gameState, controller, menu, topbar)
 	mRoot = StatefulRoot.createPortaled(mGui, GameViewChrome, {
 		missionText = nil,
 		missionVisible = true,
+		debugWinVisible = DebugFlags:ShowDebugUI(),
+		onDebugWin = function()
+			handleGameEnded(--[[wonGame=]] true, 0)
+		end,
 		endGameOverlayVisible = false,
 		endGameWon = nil,
 		submittingText = "(Submitting play...)",
@@ -800,8 +821,10 @@ function GameView.new(gameState, controller, menu, topbar)
 		updateMenuContext()
 		mTopbar:SetDoneTurnVisible(false)
 		mTopbar:SetLeaveVisible(false)
-		-- The tutorial teaches drag-to-place: show the hint prominently
+		-- The tutorial teaches drag-to-place: show the hint prominently.
+		-- No debug win either: the tutorial script must play out for real.
 		mUnitInfoView:SetDragHintProminent(true)
+		root().setState({ debugWinVisible = false })
 	end
 
 	-- Clear the selection, for tutorial
@@ -1110,8 +1133,8 @@ function GameView.new(gameState, controller, menu, topbar)
 		mTopbar:SetStartVisible(false)
 		mTopbar:SetLeaveVisible(false)
 		mTopbar:SetDoneTurnVisible(mAutoSelectionEnabled)
-		-- Setup is over: the mission box leaves with it
-		root().setState({ missionVisible = false })
+		-- Setup is over: the mission box and debug win button leave with it
+		root().setState({ missionVisible = false, debugWinVisible = false })
 		mUnitInfoView:SetProgramListVisible(false)
 		if mAutoSelectionEnabled then
 			-- TODO: Show / hide in menu
