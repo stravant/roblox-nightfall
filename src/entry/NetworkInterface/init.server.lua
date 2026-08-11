@@ -38,6 +38,11 @@ script.Check.Changed:connect(function()
 end)
 
 Remotes.ProcessReplay.OnServerEvent:connect(function(player, replayStr)
+	-- Client-provided: a non-string would throw in the concats/parsing below
+	if type(replayStr) ~= "string" then
+		warn("NetworkInterface | Non-string replay from "..player.UserId)
+		return
+	end
 	local playerData = PlayerDataCache[player]
 	if not playerData then
 		-- Notify of fail
@@ -72,7 +77,7 @@ end)
 
 Remotes.SkipLevel.OnServerEvent:connect(function(player, nodeId)
 	-- Check param
-	if not Netmap.ById[nodeId] then
+	if type(nodeId) ~= "string" or not Netmap.ById[nodeId] then
 		warn("NetworkInterface | Bad nodeId `"..tostring(nodeId).."` from player "..player.UserId)
 		return
 	end
@@ -98,6 +103,10 @@ end)
 
 Remotes.PurchaseUnit.OnServerEvent:connect(function(player, warezId, programId)
 	-- Check for invalid parameters
+	if type(warezId) ~= "string" or type(programId) ~= "string" then
+		warn("NetworkInterface | Non-string purchase args from player "..player.UserId)
+		return
+	end
 	if not Netmap.ById[warezId] then
 		warn("NetworkInterface | Bad warezId `"..tostring(warezId).."` from player "..player.UserId)
 		return
@@ -204,16 +213,21 @@ function MarketplaceService.ProcessReceipt(info)
 	
 	-- Process the purchase
 	playerData:AddSkips(purchaseId, amount)
-	
+
 	-- Notify the client
 	Remotes.PurchaseSkip:FireClient(player, amount)
-	
+
 	-- Save the changes
-	DataStoreService:SavePlayerDataAsync(playerId, playerData)	
-	
+	local saved = DataStoreService:SavePlayerDataAsync(playerId, playerData)
+
 	-- Save stat
 	ServerStatistics:PlayerBoughtSkips(amount)
-	
-	-- Let Roblox know we processed the purchase
-	return Enum.ProductPurchaseDecision.PurchaseGranted
+
+	-- Only tell Roblox the purchase is done once it's durably recorded; on a
+	-- failed save the receipt retries later and HasProcessedPurchase dedupes
+	if saved then
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	else
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
 end
