@@ -241,7 +241,8 @@ local function BattleHudContent(props: HudState)
 			BackgroundTransparency = if hasAny then 0 else 0.5,
 			BorderSizePixel = 0,
 			Image = "",
-			LayoutOrder = i,
+			-- Inventory appends newest last; show most recently acquired first
+			LayoutOrder = -i,
 			[React.Event.MouseButton1Click] = function()
 				props.onProgramClick(row.Id)
 			end,
