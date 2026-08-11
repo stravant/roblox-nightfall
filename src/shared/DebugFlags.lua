@@ -19,6 +19,12 @@ function DebugFlags:HasBeatenAllNodes(): boolean
 	return false
 end
 
+-- Show the checkpoint picker on the title screen (jump straight to the first
+-- entry of a given security level)
+function DebugFlags:ShowDebugCheckpoints(): boolean
+	return true
+end
+
 -- Starting credits for fresh player data
 function DebugFlags:GetInitialCredits(): number
 	return 500

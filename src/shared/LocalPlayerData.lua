@@ -154,6 +154,50 @@ function LocalPlayerData:AddUnit(id)
 	})
 end
 
+-- Debug checkpoint: jump the local progression to the first entry of the
+-- given security level — every lower-level battle node beaten (with its
+-- credit reward banked), adjacency revealed, warez shops open. Client-side
+-- only; intended for the DebugFlags:ShowDebugCheckpoints() title-screen
+-- picker.
+function LocalPlayerData:ApplyDebugCheckpoint(level)
+	local Places = require(game.ReplicatedStorage.Places)
+
+	mSecurityLevel = level
+
+	-- Beat every battle node below the target level
+	for id, node in pairs(Netmap.ById) do
+		if not node.Warez and node.Level < level then
+			local info = mNodeInfo[id]
+			if not info.Beaten then
+				info.Beaten = true
+				local place = Places[node.PlaceId]
+				if place and place.CreditReward then
+					mCredits = mCredits + place.CreditReward
+				end
+			end
+			info.Seen = true
+			info.Accessible = true
+		end
+	end
+
+	-- Reveal neighbors of everything beaten
+	for id, node in pairs(Netmap.ById) do
+		if mNodeInfo[id].Beaten then
+			for _, adjId in pairs(node.Links) do
+				mNodeInfo[adjId].Seen = true
+				mNodeInfo[adjId].Accessible = true
+			end
+		end
+	end
+
+	-- Revealed warez shops count as beaten (matching normal progression)
+	for id, node in pairs(Netmap.ById) do
+		if node.Warez and mNodeInfo[id].Seen then
+			mNodeInfo[id].Beaten = true
+		end
+	end
+end
+
 -- Security level
 function LocalPlayerData:SetSecurityLevel(level)
 	mSecurityLevel = level
