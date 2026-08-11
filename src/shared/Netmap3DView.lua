@@ -45,12 +45,13 @@ local NOT_BEATEN_COLLISION_GROUP = PhysicsService:GetCollisionGroupId("NotBeaten
 local kPopupWidthPx = 132
 local kPopupHeightPx = kPopupWidthPx * 46 / 132
 -- Popup anchor placement: studs pulled toward the camera along the sight ray
--- (in front of the node/ground without introducing parallax), and how many
--- pixels below the node's center the popup's top edge hangs
-local kPopupPullStuds = 6
-local kPopupDownPx = 30
+-- (in front of the node/ground without introducing parallax — and since the
+-- ray rises toward the camera, pull is also what buys ground clearance), and
+-- how many pixels below the node's center the popup's top edge hangs
+local kPopupPullStuds = 16
+local kPopupDownPx = 34
 -- Reference point on the node the popup hangs beneath (above the base pivot)
-local kPopupNodeCenterY = 4
+local kPopupNodeCenterY = 6
 -- The window chrome texture has a little transparent margin around it, so the
 -- backing part is trimmed slightly smaller than the billboard rect (the
 -- height trim comes off the bottom; the top edge stays anchor-aligned)
