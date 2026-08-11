@@ -867,6 +867,10 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		end
 		return false
 	end
+	-- Public: whether a command targets allies (heals / buffs)
+	function this:IsBeneficialCommand(command)
+		return isBeneficialCommand(command)
+	end
 	
 	function this:GetMovementAndCommandRange(unit, commandId)
 		-- Setup
@@ -886,78 +890,21 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		if commandId and isBeneficialCommand(unit.Definition.Commands[commandId]) then
 			attackTargetsEnemies = not attackTargetsEnemies
 		end
-		
-		for i = 1, unit.MoveLeft do
-			local nextOpenPoints = {}
-			for point, _ in pairs(openPoints) do
-				local x = point.Coord.x
-				local y = point.Coord.y
-				-- Unrolled for performance reasons so we can skip an additional iteration
-				-- or function call here
-				if x > 1 then
-					local adj = mBoard[x-1][y]
-					if adj.Filled and adj.Nonce ~= nonce then 
-						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
-							adj.Nonce = nonce
-							adj.From = point
-							nextOpenPoints[adj] = true
-							table.insert(movementArea, adj.Coord)
-						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId then
-							attackFrom[adj.Coord] = point.Coord
-						end
-					end
-				end
-				if x < w then
-					local adj = mBoard[x+1][y]
-					if adj.Filled and adj.Nonce ~= nonce then
-						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
-							adj.Nonce = nonce
-							adj.From = point
-							nextOpenPoints[adj] = true
-							table.insert(movementArea, adj.Coord)
-						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId then
-							attackFrom[adj.Coord] = point.Coord
-						end
-					end
-				end
-				if y > 1 then
-					local adj = mBoard[x][y-1]
-					if adj.Filled and adj.Nonce ~= nonce then
-						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
-							adj.Nonce = nonce
-							adj.From = point
-							nextOpenPoints[adj] = true
-							table.insert(movementArea, adj.Coord)
-						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId then
-							attackFrom[adj.Coord] = point.Coord
-						end
-					end
-				end
-				if y < h then
-					local adj = mBoard[x][y+1]
-					if adj.Filled and adj.Nonce ~= nonce then
-						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
-							adj.Nonce = nonce
-							adj.From = point
-							nextOpenPoints[adj] = true
-							table.insert(movementArea, adj.Coord)
-						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId then
-							attackFrom[adj.Coord] = point.Coord
-						end
-					end
-				end
-			end
-			openPoints = nextOpenPoints
-		end
-		
-		-- Use the last open points to compute attack area
-		if commandId then
-			local command = unit.Definition.Commands[commandId]
-			local range = command.Range
 
-			-- One is special because it can be used on empty squares, while no other attack can
-			local isOne = (command.Type == 'one') 
-			for square, _ in pairs(openPoints) do
+		-- Command targets are recorded per ring of movement, closest ring
+		-- first, and never overwritten: attacking always uses the MINIMUM
+		-- walk needed to get the target in range. Ring 0 is the unmoved start
+		-- point (attack without moving at all).
+		local command = if commandId then unit.Definition.Commands[commandId] else nil
+		local function recordAttackFrom(ringPoints)
+			if not command then
+				return
+			end
+			local range = command.Range
+			-- One is special because it can be used on empty squares, while
+			-- no other attack can
+			local isOne = (command.Type == 'one')
+			for square, _ in pairs(ringPoints) do
 				local xc = square.Coord.x
 				local yc = square.Coord.y
 				for dx = -range, range do
@@ -978,6 +925,75 @@ function GameState.new(placeData, unitInventory, delayFunc)
 				end
 			end
 		end
+		recordAttackFrom(openPoints)
+
+		for i = 1, unit.MoveLeft do
+			local nextOpenPoints = {}
+			for point, _ in pairs(openPoints) do
+				local x = point.Coord.x
+				local y = point.Coord.y
+				-- Unrolled for performance reasons so we can skip an additional iteration
+				-- or function call here
+				if x > 1 then
+					local adj = mBoard[x-1][y]
+					if adj.Filled and adj.Nonce ~= nonce then 
+						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
+							adj.Nonce = nonce
+							adj.From = point
+							nextOpenPoints[adj] = true
+							table.insert(movementArea, adj.Coord)
+						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId and not attackFrom[adj.Coord] then
+							attackFrom[adj.Coord] = point.Coord
+						end
+					end
+				end
+				if x < w then
+					local adj = mBoard[x+1][y]
+					if adj.Filled and adj.Nonce ~= nonce then
+						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
+							adj.Nonce = nonce
+							adj.From = point
+							nextOpenPoints[adj] = true
+							table.insert(movementArea, adj.Coord)
+						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId and not attackFrom[adj.Coord] then
+							attackFrom[adj.Coord] = point.Coord
+						end
+					end
+				end
+				if y > 1 then
+					local adj = mBoard[x][y-1]
+					if adj.Filled and adj.Nonce ~= nonce then
+						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
+							adj.Nonce = nonce
+							adj.From = point
+							nextOpenPoints[adj] = true
+							table.insert(movementArea, adj.Coord)
+						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId and not attackFrom[adj.Coord] then
+							attackFrom[adj.Coord] = point.Coord
+						end
+					end
+				end
+				if y < h then
+					local adj = mBoard[x][y+1]
+					if adj.Filled and adj.Nonce ~= nonce then
+						if (adj.Unit == nil or adj.Unit == unit) and (isFriendly or not adj.Pickup) then
+							adj.Nonce = nonce
+							adj.From = point
+							nextOpenPoints[adj] = true
+							table.insert(movementArea, adj.Coord)
+						elseif adj.Unit and adj.Unit.Enemy == attackTargetsEnemies and commandId and not attackFrom[adj.Coord] then
+							attackFrom[adj.Coord] = point.Coord
+						end
+					end
+				end
+			end
+			openPoints = nextOpenPoints
+			recordAttackFrom(openPoints)
+		end
+		
+		-- (Command targets were recorded per ring above — closest ring wins —
+		-- rather than from the final ring only, which used to make units walk
+		-- their full movement before a ranged attack)
 		return movementArea, attackFrom
 	end
 	

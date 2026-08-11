@@ -233,6 +233,28 @@ return function(t)
 		t.expect(gs:HasErrors()).toBeFalsy()
 	end)
 
+	t.test("attack-from squares use the minimum walk needed", function()
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		local zone = gs:GetUploadZones()[1]
+		gs:UploadUnit(zone.x, zone.y, Scripts.slingshot)
+		gs:StartGame()
+		local unit = gs:GetUnit(zone.x, zone.y)
+
+		local _points, attackFrom = gs:GetMovementAndCommandRange(unit, "stone")
+		local kRange = 3
+		for target, from in pairs(attackFrom) do
+			-- The from square must actually have the target in range
+			t.expect(math.abs(target.x - from.x) + math.abs(target.y - from.y) <= kRange).toBeTruthy()
+			-- Targets already in range of the START position must attack from
+			-- the start (no walking at all); the old code attacked from the
+			-- outermost movement ring
+			if math.abs(target.x - zone.x) + math.abs(target.y - zone.y) <= kRange then
+				t.expect(from.x).toBe(zone.x)
+				t.expect(from.y).toBe(zone.y)
+			end
+		end
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]

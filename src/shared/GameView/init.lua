@@ -500,6 +500,35 @@ function GameView.new(gameState, controller, menu, topbar)
 		mFlashySquare:Show(coord.x, coord.y)
 	end
 
+	-- Support units (ALL commands beneficial: healers / modifiers like Medic,
+	-- Data Doctor, Turbo) auto-select last, after the attackers have acted —
+	-- you want to know where the fight ended up before spending their buffs
+	local function isSupportUnit(unit)
+		local commandList = unit.Definition.CommandList
+		if #commandList == 0 then
+			return false
+		end
+		for _, command in pairs(commandList) do
+			if not gameState:IsBeneficialCommand(command) then
+				return false
+			end
+		end
+		return true
+	end
+	local function pickNextAutoUnit(exclude)
+		local support = nil
+		for unit in pairs(gameState:GetUnits()) do
+			if not unit.Done and not unit.Enemy and unit ~= exclude then
+				if isSupportUnit(unit) then
+					support = support or unit
+				else
+					return unit
+				end
+			end
+		end
+		return support
+	end
+
 	local function doAutoSelectNextUnit()
 		-- If we won the game, bail out
 		if gameState:HasWon() or gameState:HasLost() then
@@ -507,12 +536,11 @@ function GameView.new(gameState, controller, menu, topbar)
 		end
 
 		if mAutoSelectionEnabled then
-			-- Try to select a next unit
-			for unit in pairs(gameState:GetUnits()) do
-				if not unit.Done and not unit.Enemy and unit ~= mSelection then
-					setSelectionUnit(unit)
-					return
-				end
+			-- Try to select a next unit (attackers before support units)
+			local unit = pickNextAutoUnit(mSelection)
+			if unit then
+				setSelectionUnit(unit)
+				return
 			end
 
 			-- Did not find a next unit. End the turn automatically
@@ -1038,15 +1066,9 @@ function GameView.new(gameState, controller, menu, topbar)
 			-- Hide end turn button
 			mTopbar:SetDoneTurnVisible(false)
 		else
-			-- Start of our turn,
+			-- Start of our turn, prefer attackers over support units
 			if mAutoSelectionEnabled then
-				local firstUnit = nil
-				for unit in pairs(gameState:GetUnits()) do
-					if not unit.Enemy then
-						firstUnit = unit
-						break
-					end
-				end
+				local firstUnit = pickNextAutoUnit(nil)
 				setSelectionUnit(firstUnit) -- must not be nil since if we had no units the game would be over
 			end
 
