@@ -422,6 +422,7 @@ function GameView.new(gameState, controller, menu, topbar)
 						mActionableSquares[x] = {}
 					end
 				end
+				local movePoints = {}
 				for _, point in pairs(points) do
 					local dx = math.abs(point.x - headX)
 					local dy = math.abs(point.y - headY)
@@ -435,12 +436,20 @@ function GameView.new(gameState, controller, menu, topbar)
 						tileGui.ImageTransparency = 0.4
 					end
 					mHighlightedTiles:Set(point.x, point.y, tileGui)
+					movePoints[point.x + point.y * Places.PlaceWidth] = true
 					if not unit.Enemy then
 						mActionableSquares[point.x][point.y] = 'move'
 					end
 				end
 				local command = unit.Definition.Commands[tentativeCommandId]
 				for targetPoint, from in pairs(attackFrom) do
+					-- Tile-targeting commands (e.g. Bit-Man's Zero/One) can
+					-- target squares inside the movement range; movement wins
+					-- in this combined view or the two overlays checkerboard.
+					-- Explicitly selecting the command shows the full range.
+					if movePoints[targetPoint.x + targetPoint.y * Places.PlaceWidth] then
+						continue
+					end
 					if not unit.Enemy then
 						mActionableSquares[targetPoint.x][targetPoint.y] = from
 					end
