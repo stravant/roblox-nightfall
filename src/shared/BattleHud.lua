@@ -700,10 +700,14 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	function this:TutorialHighlightUnit(unitId: string)
 		mOnlySelectUnit = unitId
 		local row = findProgramRow(unitId)
-		if row then
-			-- Centered on the row (not off its edge): the scrolling list
-			-- clips anything outside itself
-			mTutorialArrow:Show(row, -90, UDim2.new(0.5, 0, 0.5, 0))
+		local window = mGui:FindFirstChild("ProgramsWindow", true)
+		if row and window then
+			-- Anchored to the WINDOW (inside the scrolling list the arrow
+			-- would be clipped) at the row's left edge, pointing right at it:
+			-- keeps it clear of the drag-demo hand gliding right off the row
+			local offset = row.AbsolutePosition - window.AbsolutePosition
+			mTutorialArrow:Show(window, 90,
+				UDim2.new(0, offset.X - 20, 0, offset.Y + row.AbsoluteSize.Y / 2))
 		end
 	end
 
