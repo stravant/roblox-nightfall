@@ -233,7 +233,7 @@ local function BattleHudContent(props: HudState)
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 4),
+			Padding = UDim.new(0, 1),
 		}),
 	}
 	for i, row in props.programs do
@@ -261,8 +261,8 @@ local function BattleHudContent(props: HudState)
 		}, {
 			Icon = e("ImageLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 3, 0.5, 0),
-				Size = UDim2.new(0, 20, 0, 20),
+				Position = UDim2.new(0, 2, 0.5, 0),
+				Size = UDim2.new(0, 24, 0, 24),
 				BackgroundColor3 = def.Color,
 				BorderColor3 = Color3.new(0, 0, 0),
 				Image = def.Image,
@@ -270,7 +270,7 @@ local function BattleHudContent(props: HudState)
 			}),
 			CountLabel = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 27, 0.5, 0),
+				Position = UDim2.new(0, 30, 0.5, 0),
 				Size = UDim2.new(0, 22, 0, 20),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
@@ -280,8 +280,8 @@ local function BattleHudContent(props: HudState)
 			}),
 			NameLabel = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 50, 0.5, 0),
-				Size = UDim2.new(1, -54, 0, 20),
+				Position = UDim2.new(0, 54, 0.5, 0),
+				Size = UDim2.new(1, -58, 0, 20),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
 				TextSize = 13,
@@ -293,7 +293,7 @@ local function BattleHudContent(props: HudState)
 		})
 	end
 	local visibleRows = math.clamp(#props.programs, 1, kMaxVisibleProgramRows)
-	local listHeight = visibleRows * 24 + (visibleRows - 1) * 4
+	local listHeight = visibleRows * 24 + (visibleRows - 1) * 1
 	local programItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
@@ -341,7 +341,7 @@ local function BattleHudContent(props: HudState)
 			}, rowItems),
 			Scrollbar = e(Win95Scrollbar, {
 				scrollRef = scrollRef,
-				lineScroll = 28,
+				lineScroll = 25,
 			}),
 		}),
 	}
