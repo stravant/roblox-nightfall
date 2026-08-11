@@ -25,7 +25,7 @@ local kWindowImageRectSize = Vector2.new(32, 48)
 local kInsetImage = "rbxassetid://1378143823"
 
 -- Programs list scrolls once it holds more than this many rows
-local kMaxVisibleProgramRows = 5
+local kMaxVisibleProgramRows = 4
 -- A press that moves this far horizontally becomes a unit drag (vertical
 -- movement of the same size stays a list scroll)
 local kProgramDragThresholdPx = 10
@@ -298,10 +298,10 @@ local function BattleHudContent(props: HudState)
 			PaddingRight = UDim.new(0, 6),
 		}),
 		Header = e("TextLabel", {
-			Size = UDim2.new(1, 0, 0, 26),
+			Size = UDim2.new(1, 0, 0, 18),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSansBold,
-			TextSize = 20,
+			TextSize = 17,
 			TextColor3 = Color3.new(0, 0, 0.5),
 			Text = "Drag to Place",
 			LayoutOrder = 0,
@@ -397,7 +397,7 @@ local function BattleHudContent(props: HudState)
 		ProgramsWindow = if props.programsVisible
 			then windowChrome("Programs", {
 				Name = "ProgramsWindow",
-				Size = UDim2.new(0, 160, 0, listHeight + 82),
+				Size = UDim2.new(0, 160, 0, listHeight + 74),
 				LayoutOrder = 0,
 			}, programItems)
 			else nil,
