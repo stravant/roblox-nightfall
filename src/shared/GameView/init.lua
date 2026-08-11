@@ -480,6 +480,8 @@ function GameView.new(gameState, controller, menu, topbar)
 		mFlashySquare:Show(unit.Tail[1].x, unit.Tail[1].y)
 		mHighlightedTiles:ClearAll()
 		mUnitInfoView:SetSelectedUnit(unit)
+		-- Anything populating the info window dismisses the mission text
+		root().setState({ missionVisible = false })
 
 		mTopbar:SetUndoVisible(gameState:CanUndo())
 
@@ -557,8 +559,7 @@ function GameView.new(gameState, controller, menu, topbar)
 		mSelectionType = 'upload'
 		mUnitsView:ClearFlashUnit()
 		mFlashySquare:Show(coord.x, coord.y)
-		-- The player is getting on with uploading: the mission text has done
-		-- its job
+		-- Anything populating the info window dismisses the mission text
 		root().setState({ missionVisible = false })
 	end
 
@@ -917,6 +918,8 @@ function GameView.new(gameState, controller, menu, topbar)
 	local UserInputService = game:GetService('UserInputService')
 	local function startDragSession(id, screenPos)
 		mDraggingProgram = true
+		-- Show what's being dragged in the info window right away
+		mUnitInfoView:SetSelectedUnitDefinition(id)
 		root().setState({ missionVisible = false })
 		local def = Scripts[id]
 
@@ -1301,6 +1304,9 @@ function GameView.new(gameState, controller, menu, topbar)
 				local pickup = gameState:GetPickup(x, y)
 				if pickup then
 					mUnitInfoView:SetSelectedPickup(pickup)
+					-- Anything populating the info window dismisses the
+					-- mission text
+					root().setState({ missionVisible = false })
 				end
 			end
 		end
