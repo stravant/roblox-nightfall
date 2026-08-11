@@ -797,7 +797,7 @@ node{
 node{
 	Id = 'pd46';
 	Links = {'pd47'};
-	PlaceId = 'L56';
+	PlaceId = 'L46';
 	Name = "Executive Protocol";
 	Mission = "Dignity has filled this node with corrupt scripts set to attack anyone who logs in. Terminate these corrupted scripts to proceed.";
 	Conversation = conversation{
