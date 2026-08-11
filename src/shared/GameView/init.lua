@@ -360,6 +360,11 @@ function GameView.new(gameState, controller, menu, topbar)
 		grow = TileTemplates.AttackModify;
 	}
 	local function setSelectedCommand(commandId)
+		-- A unit may have NO usable command (e.g. all commands cost more
+		-- sectors than it has left): nothing to select or highlight
+		if not commandId or not mSelection then
+			return
+		end
 		mSelectedCommand = commandId
 		if not mSelection.Enemy then
 			mActionableSquares = {}
@@ -384,9 +389,12 @@ function GameView.new(gameState, controller, menu, topbar)
 	end
 
 	-- The the command that this unit can use
-	-- Usable: meets the size requirement AND survives the sector cost
+	-- Usable: meets the size requirement AND survives the sector cost —
+	-- except deliberate suicide commands (cost >= max size, e.g.
+	-- Self-Destruct), which are always their own reward
 	local function canUseCommand(unit, command)
-		return #unit.Tail >= command.SizeReq and #unit.Tail > command.Cost
+		return #unit.Tail >= command.SizeReq
+			and (#unit.Tail > command.Cost or command.Cost >= unit.Definition.MaxSize)
 	end
 	local function getUsableCommand(unit)
 		-- If we can use the last selected command, use that
@@ -553,8 +561,19 @@ function GameView.new(gameState, controller, menu, topbar)
 			else
 				-- Attack, but need to move first
 				controller:UnitMove(mSelection, action.x, action.y)
+				-- The move can win the game (collecting the last codes),
+				-- ending the battle and clearing the selection under us
+				if gameState:HasWon() or not mSelection then
+					return
+				end
 				gameState:DelayFunc('AttackIntent')
-				controller:UnitExecute(mSelection, getUsableCommand(mSelection), x, y)
+				if gameState:HasWon() or not mSelection then
+					return
+				end
+				local commandId = getUsableCommand(mSelection)
+				if commandId then
+					controller:UnitExecute(mSelection, commandId, x, y)
+				end
 				mActionableSquares = nil
 				doAutoSelectNextUnit()
 			end
@@ -773,6 +792,11 @@ function GameView.new(gameState, controller, menu, topbar)
 			endCn:Disconnect()
 			ghost:Destroy()
 			mDraggingProgram = false
+			if mDestroyed then
+				-- The battle was torn down mid-drag (e.g. forfeit from the
+				-- menu with a second touch)
+				return
+			end
 			local x, y = mBattleBoard:GridAtScreen(Vector2.new(input.Position.X, input.Position.Y))
 			if x and y and tryUploadProgram(id, x, y) then
 				SoundManager:Play('SelectUnit')

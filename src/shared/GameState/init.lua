@@ -185,7 +185,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		for _, entry in pairs(mThisTurnHistory) do
 			if entry.MoveString ~= "" or entry.CommandString then
 				local str = "U"..entry.OriginalTail[1].x..","..entry.OriginalTail[1].y
-				if entry.MoveStr ~= "" then
+				if entry.MoveString ~= "" then
 					str = str.."M"..entry.MoveString
 				end
 				if entry.CommandString then
@@ -195,7 +195,9 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			end
 		end
 		mReplay = mReplay.."E"
-		mThisTurnHistory = nil
+		-- Emptied, NOT nil'd: the game can end mid-turn (winning move), after
+		-- which stray actions from the same interaction still consult it
+		mThisTurnHistory = {}
 	end
 	
 	local function getThisTurnHistoryEntry(unit)
@@ -266,9 +268,11 @@ function GameState.new(placeData, unitInventory, delayFunc)
 				mLastMovedUnit.Done = true
 				this.UnitUpdated:fire(mLastMovedUnit)
 			end
-		else
-			mLastMovedUnit = unit
 		end
+		-- ALWAYS track the mover (this used to only happen in the else branch,
+		-- so the unit moved after a partial-mover was never itself marked done
+		-- when a third unit moved)
+		mLastMovedUnit = unit
 		
 		-- We have a valid move. Perform it
 		if targetSq.Unit == unit then
@@ -625,9 +629,16 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	
 	-- Do the AI turn
 	local function startAITurn()
-		-- For each enemy unit, have the AI move it
-		for _, unit in pairs(mUnitList) do
-			if unit.Enemy then
+		-- Iterate a snapshot: doAIMove can remove units from mUnitList
+		-- (killing a player unit), and mutating the list mid-pairs made the
+		-- iterator skip the enemy that shifted into the removed slot
+		local units = {}
+		for i, unit in ipairs(mUnitList) do
+			units[i] = unit
+		end
+		for _, unit in ipairs(units) do
+			-- The unit itself may have died meanwhile (e.g. cost/self-damage)
+			if unit.Enemy and mUnitSet[unit] then
 				doAIMove(unit)
 				if this:HasLost() then
 					break -- don't keep moving units (AI won, or player conceded)
@@ -683,6 +694,12 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	end
 	
 	function this:UploadUnit(x, y, unitData)
+		-- Unknown program id in a replay reaches here as a nil definition
+		if not unitData then
+			print("INVALID: Upload of unknown unit at "..tostring(x)..", "..tostring(y))
+			mInvalidActionCount = mInvalidActionCount + 1
+			return
+		end
 		-- Check that it's a valid upload zone
 		local isValid = false
 		for _, c in pairs(mUploadZoneList) do
@@ -1000,7 +1017,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		-- Valid action check, check that square is in bounds
 		--local x = unit.Tail[1].x + dx
 		--local y = unit.Tail[1].y + dy
-		if x < 1 and x > Places.PlaceWidth and y < 1 and y > Places.PlaceHeight then 
+		if x < 1 or x > Places.PlaceWidth or y < 1 or y > Places.PlaceHeight then
 			print("INVALID: Move unit out of bounds")
 			mInvalidActionCount = mInvalidActionCount + 1
 			return
@@ -1041,8 +1058,16 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	end
 	
 	function this:UnitExecute(unit, commandId, x, y)
-		local command = unit.Definition.Commands[commandId]		
-		
+		local command = unit.Definition.Commands[commandId]
+
+		-- Valid action check, the command must belong to this unit (replays
+		-- can name arbitrary command ids)
+		if not command then
+			print("INVALID: Unknown command "..tostring(commandId).." for "..unit.Definition.Id)
+			mInvalidActionCount = mInvalidActionCount + 1
+			return
+		end
+
 		-- Valid action check, can only move our units
 		if unit.Enemy then
 			print("INVALID: Activate command of enemy unit "..unit.Definition.Id.." targeting "..x..", "..y)
@@ -1065,19 +1090,21 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			return
 		end
 
-		-- Valid action check, the unit must survive the command's sector cost
-		if #unit.Tail <= command.Cost then
+		-- Valid action check, the unit must survive the command's sector cost.
+		-- EXCEPT deliberate suicide commands (Kamikazee / Self-Destruct),
+		-- marked by a cost the unit could never satisfy (>= its max size).
+		if #unit.Tail <= command.Cost and command.Cost < unit.Definition.MaxSize then
 			print("INVALID: Attack costs "..command.Cost.." sectors but the unit only has "..#unit.Tail)
 			mInvalidActionCount = mInvalidActionCount + 1
 			return
 		end
 		
 		-- Valid action check, in bounds
-		if x < 1 and x > Places.PlaceWidth and y < 1 and y > Places.PlaceHeight then 
+		if x < 1 or x > Places.PlaceWidth or y < 1 or y > Places.PlaceHeight then
 			print("INVALID: Attack square out of bounds")
 			mInvalidActionCount = mInvalidActionCount + 1
 			return
-		end	
+		end
 		
 		unitExecuteImpl(unit, command, x, y)
 		

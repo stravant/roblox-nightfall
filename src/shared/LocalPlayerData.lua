@@ -110,7 +110,9 @@ function LocalPlayerData:HasSeenNode(id)
 	if DebugFlags:HasBeatenAllNodes() then
 		return true
 	else
-		return mNodeInfo[id].Seen or mNodeInfo[id].Warez
+		-- Normalized to a real boolean: callers assign this into boolean
+		-- instance properties
+		return (mNodeInfo[id].Seen or mNodeInfo[id].Warez) and true or false
 	end
 end
 

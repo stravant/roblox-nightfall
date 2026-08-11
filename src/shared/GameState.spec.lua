@@ -198,6 +198,41 @@ return function(t)
 		t.expect(gs:IsEnemyTurn()).toBeTruthy() -- never handed back to the player
 	end)
 
+	t.test("invalid replay-style actions are rejected without throwing", function()
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		local zone = gs:GetUploadZones()[1]
+
+		-- Unknown unit id in a replay reaches UploadUnit as a nil definition
+		gs:UploadUnit(zone.x, zone.y, nil)
+		t.expect(gs:HasErrors()).toBeTruthy()
+
+		gs:UploadUnit(zone.x, zone.y, Scripts.hack)
+		gs:StartGame()
+		local unit = gs:GetUnit(zone.x, zone.y)
+
+		-- Out-of-bounds move (the old and-chained bounds check never fired
+		-- and the board indexed out of range)
+		gs:UnitMove(unit, 0, zone.y)
+		t.expect(gs:GetUnit(zone.x, zone.y)).toBe(unit)
+
+		-- Command belonging to a different unit
+		gs:UnitExecute(unit, "stone", zone.x, zone.y)
+		t.expect(unit.Done).toBeFalsy()
+	end)
+
+	t.test("suicide commands (cost >= max size) stay usable", function()
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		local zone = gs:GetUploadZones()[1]
+		gs:UploadUnit(zone.x, zone.y, Scripts.buzzbomb)
+		gs:StartGame()
+		local bomb = gs:GetUnit(zone.x, zone.y)
+
+		-- Kamikazee costs 1337 sectors: allowed as a deliberate suicide
+		gs:UnitExecute(bomb, "kamikazee", zone.x, zone.y)
+		t.expect(gs:GetUnit(zone.x, zone.y)).toBe(nil)
+		t.expect(gs:HasErrors()).toBeFalsy()
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]

@@ -580,8 +580,10 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 				Label = if command.SizeReq > 0 then command.Name .. " (" .. command.SizeReq .. ")" else command.Name,
 				Description = commandBodyText(unit.Definition.Name, command),
 				-- Disabled if below the size requirement, or if the sector
-				-- cost would consume the whole unit
-				Disabled = #unit.Tail < command.SizeReq or #unit.Tail <= command.Cost,
+				-- cost would consume the whole unit — except deliberate
+				-- suicide commands (cost >= max size, e.g. Self-Destruct)
+				Disabled = #unit.Tail < command.SizeReq
+					or (#unit.Tail <= command.Cost and command.Cost < unit.Definition.MaxSize),
 				IsMove = false,
 			})
 		end

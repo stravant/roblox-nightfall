@@ -42,15 +42,26 @@ function GameController.new(gameState: any)
 
 	function this:UnitExecute(unit: any, commandId: string, x: number, y: number)
 		if not tryLock() then return end
-		gameState:UnitExecute(unit, commandId, x, y)
+		-- Always release the lock, or one throw soft-locks the whole battle
+		local ok, err = pcall(function()
+			gameState:UnitExecute(unit, commandId, x, y)
+		end)
 		unlock()
+		if not ok then
+			error(err, 0)
+		end
 	end
 
 	function this:EndTurn()
 		if mStartEndEnabled then
 			if not tryLock() then return end
-			gameState:EndTurn()
+			local ok, err = pcall(function()
+				gameState:EndTurn()
+			end)
 			unlock()
+			if not ok then
+				error(err, 0)
+			end
 		end
 	end
 

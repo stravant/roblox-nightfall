@@ -4,7 +4,6 @@ local UserInputService = game:GetService("UserInputService")
 local Signal = require(game.ReplicatedStorage.Signal)
 local Netmap = require(game.ReplicatedStorage.Netmap)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
-local Scrollbar = require(game.ReplicatedStorage.ScrollingFrame)
 local TutorialArrow = require(game.ReplicatedStorage.TutorialArrowView)
 local NetmapCamera = require(game.ReplicatedStorage.NetmapCamera)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
@@ -463,8 +462,9 @@ function Netmap3DView.new(topbarCredits)
 		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
 		-- The enlarged hit cylinder only intercepts hovers/clicks once the
-		-- node is actually interactable
-		nodeView.HitArea.CanQuery = nodeView.Seen and LocalPlayerData:CanAccessNode(nodeView.Id)
+		-- node is actually interactable (normalized: the and-chain can yield
+		-- nil, which is not assignable to a boolean property)
+		nodeView.HitArea.CanQuery = (nodeView.Seen and LocalPlayerData:CanAccessNode(nodeView.Id)) and true or false
 		local isWarez = Netmap.ById[nodeView.Id].Warez ~= nil
 		if nodeView.Seen and not nodeView.Beaten then
 			local name = nodeDisplayName(nodeView.Id)
@@ -627,7 +627,12 @@ function Netmap3DView.new(topbarCredits)
 	end
 
 	function this:SetNodeBeaten(id)
-		setBeaten(mNodeView[id], true)
+		local nodeView = mNodeView[id]
+		if not nodeView then
+			warn("Missing node to set beaten:", id)
+			return
+		end
+		setBeaten(nodeView, true)
 		for _, adjId in pairs(Netmap.ById[id].Links) do
 			local adjNode = mNodeView[adjId]
 			if adjNode then
