@@ -530,7 +530,10 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 			mProgramPress = nil
 			local scroll = findProgramScroll()
 			if scroll then
+				-- Fully inert while the drag is out: no touch scrolling, and
+				-- the Win95 scrollbar ignores the transiting pointer too
 				scroll.ScrollingEnabled = false
+				scroll:SetAttribute("SuppressScrollbar", true)
 				mScrollDisabled = scroll
 			end
 			this.ProgramDragBegan:fire(id, pos)
@@ -542,6 +545,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 			mProgramPress = nil
 			if mScrollDisabled then
 				mScrollDisabled.ScrollingEnabled = true
+				mScrollDisabled:SetAttribute("SuppressScrollbar", false)
 				mScrollDisabled = nil
 			end
 		end

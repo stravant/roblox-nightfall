@@ -28,10 +28,17 @@ local function Win95Scrollbar(props: Props)
 	local thumbRef = React.useRef(nil)
 	local trackRef = React.useRef(nil)
 
+	-- Setting the "SuppressScrollbar" attribute on the ScrollingFrame makes
+	-- this scrollbar completely inert (used while a list row is being dragged
+	-- out: a held pointer transiting the scrollbar must not scroll)
+	local function suppressed(scroll: ScrollingFrame): boolean
+		return scroll:GetAttribute("SuppressScrollbar") == true
+	end
+
 	local lineScroll = props.lineScroll or 28
 	local function scrollBy(dy: number)
 		local scroll = props.scrollRef.current :: ScrollingFrame?
-		if scroll then
+		if scroll and not suppressed(scroll) then
 			-- The engine clamps CanvasPosition for us
 			scroll.CanvasPosition = scroll.CanvasPosition + Vector2.new(0, dy)
 		end
@@ -71,6 +78,9 @@ local function Win95Scrollbar(props: Props)
 		local dragStartY: number? = nil
 		local dragStartScroll = 0
 		table.insert(cns, thumb.InputBegan:Connect(function(input: InputObject)
+			if suppressed(scroll) then
+				return
+			end
 			if input.UserInputType == Enum.UserInputType.MouseButton1
 				or input.UserInputType == Enum.UserInputType.Touch then
 				dragStartY = input.Position.Y
@@ -79,6 +89,10 @@ local function Win95Scrollbar(props: Props)
 		end))
 		table.insert(cns, UserInputService.InputChanged:Connect(function(input: InputObject)
 			if not dragStartY then
+				return
+			end
+			if suppressed(scroll) then
+				dragStartY = nil -- cancel any in-progress thumb drag
 				return
 			end
 			if input.UserInputType ~= Enum.UserInputType.MouseMovement
@@ -102,6 +116,9 @@ local function Win95Scrollbar(props: Props)
 
 		-- Clicking the gutter above/below the thumb pages a window at a time
 		table.insert(cns, track.InputBegan:Connect(function(input: InputObject)
+			if suppressed(scroll) then
+				return
+			end
 			if input.UserInputType ~= Enum.UserInputType.MouseButton1
 				and input.UserInputType ~= Enum.UserInputType.Touch then
 				return
