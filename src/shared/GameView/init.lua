@@ -907,8 +907,8 @@ function GameView.new(gameState, controller, menu, topbar)
 			return
 		end
 		if not wonGame and not gameState:IsGameStarted() then
-			-- They didn't even start the game, just bail out
-			SoundManager:Play('LoseBattle')
+			-- They didn't even start the game (Leave / pre-start forfeit):
+			-- just bail out quietly, that's not a loss
 			this.CloseGame:fire(false, nil, false)
 			return
 		end
