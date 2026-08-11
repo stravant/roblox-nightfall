@@ -1,3 +1,4 @@
+--!strict
 
 return {
     Cyan = Color3.new(0, 1, 1);

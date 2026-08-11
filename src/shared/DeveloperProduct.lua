@@ -1,3 +1,4 @@
+--!strict
 local DeveloperProduct = {}
 
 DeveloperProduct.Skip1 = 145456721

@@ -39,8 +39,10 @@ function LocalPlayerData:Load()
 	mCredits = data.Credits or error("Missing credits")
 	mSecurityLevel = data.SecurityLevel or error("Missing security level")
 	mUnitInventory = data.Units or error("Missing inventory")
-	mSkipsUsed = #data.SkipsUsed or error("Missing skips used")
-	mSkipsAvailable = data.SkipsPurchased - mSkipsUsed
+	-- (was `#data.SkipsUsed or error(...)`: the `or` bound to the length
+	-- result, so a missing list threw a raw length-of-nil error instead)
+	mSkipsUsed = #(data.SkipsUsed or error("Missing skips used"))
+	mSkipsAvailable = (data.SkipsPurchased or 0) - mSkipsUsed
 	
 	mIsFirstTimeUser = data.IsFirstTimeUser
 

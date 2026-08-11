@@ -1,3 +1,4 @@
+--!strict
 local Copy = require(game.ReplicatedStorage.Copy)
 
 local NodeStats = {}
@@ -50,6 +51,11 @@ function NodeStats.new(data)
 	
 	local mNameCache = {}
 	local function getName(id)
+		if not id then
+			-- No record holder yet (fresh node); indexing the cache with nil
+			-- would throw
+			return "<nobody>"
+		end
 		local name = mNameCache[id]
 		if not name then
 			local st, p = pcall(function()
@@ -120,18 +126,23 @@ function NodeStats.new(data)
 			mData.TotalMoves = mData.TotalMoves + replayResult.MoveCount
 			mData.TotalTurns = mData.TotalTurns + replayResult.TurnCount
 			
-			-- Check for bests
-			if replayResult.TurnCount <= mData.LeastTurns.PrimaryTurns and 
-				replayResult.MoveCount < mData.LeastTurns.SecondaryMoves then
+			-- Check for bests: strictly better on the primary metric always
+			-- wins; ties fall to the secondary metric. (The old logic
+			-- required improving BOTH, so a strictly-better primary with a
+			-- worse secondary was wrongly rejected.)
+			if replayResult.TurnCount < mData.LeastTurns.PrimaryTurns
+				or (replayResult.TurnCount == mData.LeastTurns.PrimaryTurns
+					and replayResult.MoveCount < mData.LeastTurns.SecondaryMoves) then
 				-- Have a new best turns
 				mData.LeastTurns.PrimaryTurns = replayResult.TurnCount
 				mData.LeastTurns.SecondaryMoves = replayResult.MoveCount
 				mData.LeastTurns.ReplayString = replayString
 				mData.LeastTurns.PlayerId = playerId
 			end
-			
-			if replayResult.MoveCount <= mData.LeastMoves.PrimaryMoves and
-				replayResult.UnitCount < mData.LeastMoves.SecondaryUnits then
+
+			if replayResult.MoveCount < mData.LeastMoves.PrimaryMoves
+				or (replayResult.MoveCount == mData.LeastMoves.PrimaryMoves
+					and replayResult.UnitCount < mData.LeastMoves.SecondaryUnits) then
 				-- have a new best moves
 				mData.LeastMoves.PrimaryMoves = replayResult.MoveCount
 				mData.LeastMoves.SecondaryUnits = replayResult.UnitCount
@@ -139,8 +150,9 @@ function NodeStats.new(data)
 				mData.LeastMoves.PlayerId = playerId
 			end
 
-			if replayResult.UnitCount <= mData.LeastUnits.PrimaryUnits and
-				replayResult.MoveCount < mData.LeastUnits.SecondaryMoves then
+			if replayResult.UnitCount < mData.LeastUnits.PrimaryUnits
+				or (replayResult.UnitCount == mData.LeastUnits.PrimaryUnits
+					and replayResult.MoveCount < mData.LeastUnits.SecondaryMoves) then
 				-- have a new best unit count
 				mData.LeastUnits.PrimaryUnits = replayResult.UnitCount
 				mData.LeastUnits.SecondaryMoves = replayResult.MoveCount
