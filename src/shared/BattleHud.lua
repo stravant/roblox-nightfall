@@ -237,6 +237,10 @@ local function BattleHudContent(props: HudState)
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, 2),
 		}),
+		UIPadding = e("UIPadding", {
+			PaddingTop = UDim.new(0, 1),
+			PaddingBottom = UDim.new(0, 1),
+		}),
 	}
 	for i, row in props.programs do
 		local def = Scripts[row.Id]
@@ -295,7 +299,8 @@ local function BattleHudContent(props: HudState)
 		})
 	end
 	local visibleRows = math.clamp(#props.programs, 1, kMaxVisibleProgramRows)
-	local listHeight = visibleRows * 24 + (visibleRows - 1) * 2
+	-- Rows + inter-row gaps + 1px top/bottom padding
+	local listHeight = visibleRows * 24 + (visibleRows - 1) * 2 + 2
 	local programItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
