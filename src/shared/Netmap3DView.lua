@@ -44,6 +44,13 @@ local NOT_BEATEN_COLLISION_GROUP = PhysicsService:GetCollisionGroupId("NotBeaten
 -- Node popup billboard size in pixels (the layout's authored size)
 local kPopupWidthPx = 132
 local kPopupHeightPx = kPopupWidthPx * 46 / 132
+-- Popup anchor placement: studs pulled toward the camera along the sight ray
+-- (in front of the node/ground without introducing parallax), and how many
+-- pixels below the node's center the popup's top edge hangs
+local kPopupPullStuds = 6
+local kPopupDownPx = 30
+-- Reference point on the node the popup hangs beneath (above the base pivot)
+local kPopupNodeCenterY = 4
 -- The window chrome texture has a little transparent margin around it, so the
 -- backing part is trimmed slightly smaller than the billboard rect (the
 -- height trim comes off the bottom; the top edge stays anchor-aligned)
@@ -269,11 +276,11 @@ function Netmap3DView.new(topbarCredits)
 		adornee.CanCollide = false
 		adornee.CanQuery = false
 		adornee.Size = Vector3.new(1, 1, 1)
-		-- Pulled several studs toward the camera (fixed 45-degree yaw) so the
-		-- popup sits in front of its node AND above the island surface — the
-		-- angled camera makes the forward pull read as "below the node" on
-		-- screen without sinking the popup into the ground
-		adornee.CFrame = nodeView.CFrame * CFrame.new(10.5, 8, 10.5)
+		-- The anchor is repositioned every frame (updatePopupBackings): pulled
+		-- toward the camera ALONG THE SIGHT RAY (which contributes zero
+		-- parallax against the node) and offset screen-down in the camera
+		-- plane by a fixed pixel amount. Parked at the node until then.
+		adornee.CFrame = CFrame.new(nodeView.CFrame.Position)
 		adornee.Parent = workspace
 
 		local backing = Instance.new("Part")
@@ -387,6 +394,7 @@ function Netmap3DView.new(topbarCredits)
 
 		nodeView.Popup = {
 			Kind = kind,
+			NodeCenter = nodeView.CFrame.Position + Vector3.new(0, kPopupNodeCenterY, 0),
 			Adornee = adornee,
 			Backing = backing,
 			Billboard = billboard,
@@ -408,9 +416,13 @@ function Netmap3DView.new(topbarCredits)
 			nodeView.Popup = nil
 		end
 	end
-	-- Reverse-project the opaque backing part to exactly cover the pixel-sized
-	-- billboard's screen rect at the adornee's depth (re-done every frame
-	-- since the world size per pixel changes as the camera pans/zooms)
+	-- Per-frame popup transforms:
+	-- 1. The billboard anchor: pulled toward the camera ALONG THE SIGHT RAY
+	--    (points on the ray project exactly onto the node — no parallax when
+	--    panning) and offset screen-down in the camera plane by a fixed pixel
+	--    amount, so the popup stays glued below its node on screen.
+	-- 2. The opaque backing part: reverse-projected to exactly cover the
+	--    pixel-sized billboard's screen rect at the anchor's depth.
 	local function updatePopupBackings()
 		local camera = workspace.CurrentCamera
 		local viewportY = camera.ViewportSize.Y
@@ -422,7 +434,15 @@ function Netmap3DView.new(topbarCredits)
 		for _, nodeView in pairs(mNodeView) do
 			local popup = nodeView.Popup
 			if popup then
-				local anchorPos = popup.Adornee.Position
+				local nodeToCam = camCF.Position - popup.NodeCenter
+				local nodeDist = nodeToCam.Magnitude
+				if nodeDist < kPopupPullStuds + 1 then
+					continue -- degenerate: camera inside the node
+				end
+				local anchorPos = popup.NodeCenter
+					+ nodeToCam.Unit * kPopupPullStuds
+					- camCF.UpVector * (kPopupDownPx * nodeDist * worldPerPixelPerStud)
+				popup.Adornee.CFrame = CFrame.new(anchorPos)
 				local dist = (anchorPos - camCF.Position).Magnitude
 				local worldPerPixel = dist * worldPerPixelPerStud
 				-- Additionally pulled in a stud per side: the depth offset
