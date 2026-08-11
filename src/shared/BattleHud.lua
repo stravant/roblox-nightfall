@@ -146,8 +146,10 @@ local function windowChrome(title: string, props: { [string]: any }, children: {
 end
 
 local function commandButton(entry: CommandEntry, selected: boolean, onClick: (entry: CommandEntry) -> ())
-	local textColor = if selected then Color3.new(1, 1, 1)
-		elseif entry.Disabled then Color3.new(0.4, 0.4, 0.4)
+	-- Disabled buttons grey the CHROME; the text goes white for contrast
+	-- (grey-on-grey was unreadable)
+	local textColor = if selected or entry.Disabled
+		then Color3.new(1, 1, 1)
 		else Color3.new(0, 0, 0)
 	return e(WindowsButton, {
 		Name = entry.Key,
@@ -179,7 +181,7 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 			Font = Enum.Font.SourceSans,
 			TextSize = 14,
 			TextColor3 = if selected then Color3.new(0.85, 0.85, 1)
-				elseif entry.Disabled then Color3.new(0.45, 0.45, 0.45)
+				elseif entry.Disabled then Color3.new(1, 1, 1)
 				else Color3.new(0.25, 0.25, 0.25),
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
