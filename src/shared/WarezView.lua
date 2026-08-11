@@ -79,7 +79,7 @@ local function programEntry(data: ProgramEntryData, selected: boolean, owned: nu
 			Position = UDim2.new(0, 48, 0.5, 0),
 			Size = UDim2.new(0, 24, 0, 24),
 			BackgroundColor3 = data.Color,
-			BorderColor3 = Color3.new(0, 0, 0),
+			BorderSizePixel = 0,
 			Image = data.Image,
 		}),
 		NameLabel = e("TextLabel", {

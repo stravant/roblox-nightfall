@@ -266,7 +266,7 @@ local function BattleHudContent(props: HudState)
 				Position = UDim2.new(0, 2, 0.5, 0),
 				Size = UDim2.new(0, 24, 0, 24),
 				BackgroundColor3 = def.Color,
-				BorderColor3 = Color3.new(0, 0, 0),
+				BorderSizePixel = 0,
 				Image = def.Image,
 				ImageTransparency = if hasAny then 0 else 0.5,
 			}),
