@@ -367,7 +367,7 @@ function MainView.new()
 		local warezGui = WarezView.new(nodeId, Netmap.ById[nodeId].Warez)
 		local purchaseConnection = warezGui.MadePurchase:connect(function(id)
 			mNetmapView:UpdateCreditDisplay()
-			this:ShowNotification("Acquired program "..Scripts[id].Name)
+			this:ShowNotification("Acquired program "..Scripts[id].Name, Scripts[id])
 		end)
 		local doneConnection;
 		doneConnection = warezGui.Done:connect(function()
@@ -479,7 +479,7 @@ function MainView.new()
 					this:ShowNotification("Upgraded security level to "..f.Level)
 				elseif f.Type == 'getProgram' then
 					LocalPlayerData:AddUnit(f.Id)
-					this:ShowNotification("Received program: "..Scripts[f.Id].Name)
+					this:ShowNotification("Received program: "..Scripts[f.Id].Name, Scripts[f.Id])
 				elseif f.Type == 'getCredits' then
 					LocalPlayerData:AddCredits(f.Amount)
 					mNetmapView:UpdateCreditDisplay()
@@ -498,8 +498,9 @@ function MainView.new()
 	end
 	
 	-- Replacement for the old script.NotificationBox template clone (see
-	-- ui-reference/ModuleTemplates/MainView.json)
-	local function makeNotificationBox(text)
+	-- ui-reference/ModuleTemplates/MainView.json). iconDef is an optional
+	-- program definition (Image + Color) shown beside the text.
+	local function makeNotificationBox(text, iconDef)
 		local box = Instance.new("ImageLabel")
 		box.Name = "NotificationBox"
 		box.AnchorPoint = Vector2.new(1, 1)
@@ -533,10 +534,20 @@ function MainView.new()
 		inset.ScaleType = Enum.ScaleType.Slice
 		inset.SliceCenter = Rect.new(8, 8, 8, 8)
 		inset.Parent = box
+		if iconDef then
+			local icon = Instance.new("ImageLabel")
+			icon.Name = "Icon"
+			icon.Position = UDim2.new(0, 4, 0, 4)
+			icon.Size = UDim2.new(0, 32, 0, 32)
+			icon.BackgroundColor3 = iconDef.Color
+			icon.BorderColor3 = Color3.new(0, 0, 0)
+			icon.Image = iconDef.Image
+			icon.Parent = inset
+		end
 		local content = Instance.new("TextLabel")
 		content.Name = "Content"
-		content.Position = UDim2.new(0, 0, 0, 2)
-		content.Size = UDim2.new(1, 0, 1, 0)
+		content.Position = UDim2.new(0, if iconDef then 40 else 0, 0, 2)
+		content.Size = UDim2.new(1, if iconDef then -42 else 0, 1, 0)
 		content.BackgroundTransparency = 1
 		content.Font = Enum.Font.SourceSans
 		content.TextSize = 18
@@ -549,8 +560,8 @@ function MainView.new()
 	end
 
 	local NotificationBoxTween = TweenInfo.new(1.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, 0, true)
-	function this:ShowNotification(text)
-		local box = makeNotificationBox(text)
+	function this:ShowNotification(text, iconDef)
+		local box = makeNotificationBox(text, iconDef)
 		-- Sibling of (and above) the modal views like the warez shop, so the
 		-- notification isn't dimmed by their backdrops
 		box.ZIndex = 10
