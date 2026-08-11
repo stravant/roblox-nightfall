@@ -904,7 +904,9 @@ function GameView.new(gameState, controller, menu, topbar)
 
 	-- Drag out of the Programs window
 	mUnitInfoView.ProgramDragBegan:connect(function(id, viewportPos)
-		if gameState:IsGameStarted() or mDestroyed then
+		if gameState:IsGameStarted() or mDestroyed or mDraggingProgram then
+			-- mDraggingProgram: never start a second session mid-drag (the
+			-- held pointer transiting other list rows must keep the original)
 			return
 		end
 		startDragSession(id, viewportPos)

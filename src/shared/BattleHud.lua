@@ -474,6 +474,9 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	-- Program list press being disambiguated (scroll vs drag-out), and the
 	-- scroll frame whose scrolling is suspended during a drag
 	local mProgramPress: { Id: string, Start: Vector2 }? = nil
+	-- A drag-out is in progress: ignore row presses until release (the held
+	-- pointer transiting other rows must not start a second drag)
+	local mDragActive = false
 	local mScrollDisabled: ScrollingFrame? = nil
 	local mConnections: { RBXScriptConnection } = {}
 
@@ -498,6 +501,9 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 			end
 		end,
 		onProgramPress = function(id: string, viewportPos: Vector2)
+			if mDragActive then
+				return
+			end
 			if mProgramsById[id].Count > 0 and (not mOnlySelectUnit or mOnlySelectUnit == id) then
 				-- Don't start the drag yet: wait to see whether the gesture
 				-- goes horizontal (drag out) or vertical (scroll the list)
@@ -528,6 +534,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		elseif math.abs(delta.X) >= kProgramDragThresholdPx then
 			local id = mProgramPress.Id
 			mProgramPress = nil
+			mDragActive = true
 			local scroll = findProgramScroll()
 			if scroll then
 				-- Fully inert while the drag is out: no touch scrolling, and
@@ -543,6 +550,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
 			mProgramPress = nil
+			mDragActive = false
 			if mScrollDisabled then
 				mScrollDisabled.ScrollingEnabled = true
 				mScrollDisabled:SetAttribute("SuppressScrollbar", false)
