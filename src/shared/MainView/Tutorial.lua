@@ -66,7 +66,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	tutorialDialogue:GetGui().Parent = container
 
 	tutorialDialogue:SetText("Jack into the smart HQ node.")
-	netmapView:HighlightNode('hq')
+	netmapView:FocusOnNode('hq')
 	netmapView:TutorialPointAtNode('hq')
 	while netmapView.NodeSelected:wait() ~= 'hq' do
 	end
@@ -185,8 +185,9 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	topbar:SetOnUndo(nil)
 	topbar:SetCreditsVisible(true)
 	netmapView:GetGui().Visible = true
-	-- Land the camera on the node that was just beaten
-	netmapView:HighlightNode('hq')
+	-- Land the camera on the node that was just beaten (no pointer arrow:
+	-- there's nothing to do at a defeated node)
+	netmapView:FocusOnNode('hq')
 	SoundManager:Play('MainBackgroundLoop')
 
 	if onBattleWon then

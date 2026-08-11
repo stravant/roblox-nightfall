@@ -650,6 +650,17 @@ function Netmap3DView.new(topbarCredits)
 	-- newer pointer, e.g. the tutorial's own)
 	local mPointerSession = 0
 
+	-- Glide the camera to a node WITHOUT the pointer arrow (e.g. landing on
+	-- the node that was just beaten)
+	function this:FocusOnNode(id)
+		local node = mNodeView[id]
+		if node then
+			mCamera:FocusOn(node.CFrame.Position, true)
+		else
+			warn("Missing node to focus on:", id)
+		end
+	end
+
 	function this:HighlightNode(id)
 		print("Highlight node:", id)
 		local node = mNodeView[id]
