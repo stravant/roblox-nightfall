@@ -16,6 +16,7 @@ local TutorialArrowView = require(game.ReplicatedStorage.TutorialArrowView)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
+local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
 
 local e = React.createElement
 
@@ -23,7 +24,6 @@ local kWindowImage = "rbxassetid://1378189463"
 local kWindowSliceCenter = Rect.new(16, 24, 16, 24)
 local kWindowImageRectSize = Vector2.new(32, 48)
 local kInsetImage = "rbxassetid://1378143823"
-local kGutterImage = "rbxassetid://1372920646"
 
 -- Programs list scrolls once it holds more than this many rows
 local kMaxVisibleProgramRows = 4
@@ -203,6 +203,10 @@ type HudState = {
 }
 
 local function BattleHudContent(props: HudState)
+	-- Ref shared between the scripts list and its Win95 scrollbar. Created
+	-- before the early return: hooks must run unconditionally.
+	local scrollRef = React.useRef(nil)
+
 	if props.hidden then
 		return nil
 	end
@@ -313,35 +317,30 @@ local function BattleHudContent(props: HudState)
 				LayoutOrder = 0,
 			})
 			else nil,
-		-- Win95 listbox look: white scroll area with an always-visible
-		-- scrollbar gutter on the right so it reads as scrollable
+		-- Win95 listbox look: white scroll area with the classic scrollbar
+		-- (gutter, arrows, draggable thumb) on the right
 		ListArea = e("Frame", {
 			LayoutOrder = 1,
 			Size = UDim2.new(1, 0, 0, listHeight),
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			BorderSizePixel = 0,
 		}, {
-			ScrollGutter = e("ImageLabel", {
-				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, 0, 0, 0),
-				Size = UDim2.new(0, 16, 1, 0),
-				BackgroundTransparency = 1,
-				Image = kGutterImage,
-				ScaleType = Enum.ScaleType.Tile,
-				TileSize = UDim2.new(0, 16, 0, 16),
-			}),
 			-- ScrollingEnabled is intentionally NOT declared here: it's
 			-- toggled imperatively while a script is dragged out of the list
 			ProgramScroll = e("ScrollingFrame", {
+				ref = scrollRef,
 				Size = UDim2.new(1, 0, 1, 0),
 				BackgroundTransparency = 1,
 				BorderSizePixel = 0,
 				CanvasSize = UDim2.new(0, 0, 0, 0),
 				AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				ScrollingDirection = Enum.ScrollingDirection.Y,
-				ScrollBarThickness = 16,
-				ScrollBarImageColor3 = Color3.fromRGB(192, 192, 192),
+				ScrollBarThickness = 0,
 			}, rowItems),
+			Scrollbar = e(Win95Scrollbar, {
+				scrollRef = scrollRef,
+				lineScroll = 28,
+			}),
 		}),
 	}
 
