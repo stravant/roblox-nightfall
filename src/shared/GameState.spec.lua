@@ -169,6 +169,35 @@ return function(t)
 		t.expect(gs:HasErrors()).toBeFalsy()
 	end)
 
+	t.test("conceding mid-enemy-turn stops the AI and loses cleanly", function()
+		-- Concede from inside the enemy turn's first action delay, like a
+		-- player forfeiting while watching the AI act
+		local gs
+		local concededDuringEnemyTurn = false
+		local function delayFunc(ident)
+			if gs and gs:IsEnemyTurn() and not concededDuringEnemyTurn then
+				concededDuringEnemyTurn = true
+				gs:Concede()
+			end
+		end
+		gs = GameState.new(Places.L12, makeInventory(), delayFunc)
+		local zone = gs:GetUploadZones()[1]
+		gs:UploadUnit(zone.x, zone.y, Scripts.hack)
+		gs:StartGame()
+
+		local endedWon = nil
+		gs.GameEnded:connect(function(won)
+			endedWon = won
+		end)
+		gs:EndTurn()
+		task.wait() -- signals are BindableEvent-based (async)
+
+		t.expect(concededDuringEnemyTurn).toBeTruthy()
+		t.expect(gs:HasLost()).toBeTruthy()
+		t.expect(endedWon).toBe(false)
+		t.expect(gs:IsEnemyTurn()).toBeTruthy() -- never handed back to the player
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]

@@ -255,7 +255,15 @@ function GameView.new(gameState, controller, menu, topbar)
 					-- TODO: "Are you sure?" dialgue
 					if mAutoSelectionEnabled then
 						menu:Hide()
-						handleGameEnded(false, 0)
+						if gameState:IsGameStarted() then
+							-- Concede through the game state: forfeiting
+							-- mid-enemy-turn must stop the AI and end via the
+							-- normal GameEnded path, not yank the battle out
+							-- from under the running AI
+							gameState:Concede()
+						else
+							handleGameEnded(false, 0)
+						end
 					end
 				end,
 				onSkip = function()
@@ -876,6 +884,10 @@ function GameView.new(gameState, controller, menu, topbar)
 
 	-- Skip node
 	trySkip = function()
+		if gameState:IsEnemyTurn() then
+			-- Skipping tears the battle down; wait out the enemy turn
+			return
+		end
 		if mAutoSelectionEnabled then
 			if LocalPlayerData:GetSkips() > 0 then
 				handleGameEnded(--[[wonGame=]] true, --[[creditsEarned=]] 0, --[[skipping=]] true)

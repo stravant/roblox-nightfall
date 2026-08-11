@@ -125,6 +125,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	-- Has the game started and what turn is it if it has?
 	local mGameStarted = false
 	local mIsEnemyTurn = false
+	local mConceded = false
 	
 	-- Used to flag during flood-filling operations of the board without having to do
 	-- an extra "clear flag" pass first.
@@ -629,7 +630,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			if unit.Enemy then
 				doAIMove(unit)
 				if this:HasLost() then
-					break -- don't keep moving units if the AI already won
+					break -- don't keep moving units (AI won, or player conceded)
 				end
 			end
 		end
@@ -1100,12 +1101,29 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	end
 	
 	function this:HasLost()
+		if mConceded then
+			return true
+		end
 		for _, unit in pairs(mUnitList) do
 			if not unit.Enemy then
 				return false
 			end
-		end	
+		end
 		return true
+	end
+
+	-- Forfeit the battle. Safe to call at any time, INCLUDING mid-enemy-turn:
+	-- the AI loop stops at its next unit (HasLost reads the flag) and the loss
+	-- flows through the normal EndTurn -> endGame -> GameEnded path. On the
+	-- player's turn the loss is processed immediately.
+	function this:Concede()
+		if mConceded or not mGameStarted then
+			return
+		end
+		mConceded = true
+		if not mIsEnemyTurn then
+			endGame(false)
+		end
 	end
 
 	function this:HasWon()
