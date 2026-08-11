@@ -155,14 +155,25 @@ local function detailPanel(selectedId: string?)
 	for _, command in def.CommandList do
 		table.insert(attackLines, commandSummary(command))
 	end
-	local attacksY = 88
-	local attacksHeight = math.max(1, #attackLines) * 20
-	local flavorY = attacksY + attacksHeight + 8
 
+	-- Stacked with a list layout so the attacks block can WRAP and auto-size
+	-- (some attack summaries are longer than the pane) with the description
+	-- flowing below it
 	return {
+		UIPadding = e("UIPadding", {
+			PaddingTop = UDim.new(0, 6),
+			PaddingBottom = UDim.new(0, 6),
+			PaddingLeft = UDim.new(0, 8),
+			PaddingRight = UDim.new(0, 8),
+		}),
+		UIListLayout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Vertical,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 6),
+		}),
 		DetailName = e("TextLabel", {
-			Position = UDim2.new(0, 8, 0, 6),
-			Size = UDim2.new(1, -16, 0, 22),
+			LayoutOrder = 1,
+			Size = UDim2.new(1, 0, 0, 22),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSansBold,
 			TextSize = 18,
@@ -170,40 +181,48 @@ local function detailPanel(selectedId: string?)
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Text = def.Name,
 		}),
-		DetailIcon = e("ImageLabel", {
-			Position = UDim2.new(0, 8, 0, 32),
-			Size = UDim2.new(0, 40, 0, 40),
-			BackgroundColor3 = def.Color,
-			BorderColor3 = Color3.new(0, 0, 0),
-			Image = def.Image,
-		}),
-		StatsText = e("TextLabel", {
-			Position = UDim2.new(0, 56, 0, 32),
-			Size = UDim2.new(1, -64, 0, 48),
+		StatsBlock = e("Frame", {
+			LayoutOrder = 2,
+			Size = UDim2.new(1, 0, 0, 42),
 			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSans,
-			TextSize = 20,
-			RichText = true,
-			TextColor3 = kTextBlack,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextYAlignment = Enum.TextYAlignment.Top,
-			Text = string.format("Move: <b>%d</b>\nMax Size: <b>%d</b>", def.Move, def.MaxSize),
+		}, {
+			DetailIcon = e("ImageLabel", {
+				Size = UDim2.new(0, 40, 0, 40),
+				BackgroundColor3 = def.Color,
+				BorderColor3 = Color3.new(0, 0, 0),
+				Image = def.Image,
+			}),
+			StatsText = e("TextLabel", {
+				Position = UDim2.new(0, 48, 0, 0),
+				Size = UDim2.new(1, -48, 0, 42),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSans,
+				TextSize = 20,
+				RichText = true,
+				TextColor3 = kTextBlack,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Top,
+				Text = string.format("Move: <b>%d</b>\nMax Size: <b>%d</b>", def.Move, def.MaxSize),
+			}),
 		}),
 		Attacks = e("TextLabel", {
-			Position = UDim2.new(0, 8, 0, attacksY),
-			Size = UDim2.new(1, -16, 0, attacksHeight),
+			LayoutOrder = 3,
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Size = UDim2.new(1, 0, 0, 0),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
 			TextSize = 16,
 			RichText = true,
 			TextColor3 = kTextBlack,
+			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
 			Text = table.concat(attackLines, "\n"),
 		}),
 		FlavorText = e("TextLabel", {
-			Position = UDim2.new(0, 8, 0, flavorY),
-			Size = UDim2.new(1, -16, 1, -flavorY - 8),
+			LayoutOrder = 4,
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Size = UDim2.new(1, 0, 0, 0),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
 			TextSize = 18,

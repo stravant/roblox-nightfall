@@ -73,8 +73,9 @@ return function(t)
 			local detail = gui.MainBox.DetailInset
 			t.expect(detail.DetailName.Text).toBe("Hack")
 			-- Stats and attacks are rich text
-			t.expect(detail.StatsText.Text:find("Move") ~= nil).toBeTruthy()
-			t.expect(detail.StatsText.Text:find("<b>2</b>") ~= nil).toBeTruthy()
+			local statsText = detail:FindFirstChild("StatsText", true)
+			t.expect(statsText.Text:find("Move") ~= nil).toBeTruthy()
+			t.expect(statsText.Text:find("<b>2</b>") ~= nil).toBeTruthy()
 			t.expect(detail.Attacks.Text:find("Slice") ~= nil).toBeTruthy()
 			t.expect(detail.Attacks.Text:find("2 dmg") ~= nil).toBeTruthy()
 		end)
