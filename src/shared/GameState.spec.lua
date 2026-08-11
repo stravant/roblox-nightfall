@@ -127,6 +127,21 @@ return function(t)
 		t.expect(gs:HasErrors()).toBeFalsy()
 	end)
 
+	t.test("commands whose sector cost would consume the unit are rejected", function()
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		local zone = gs:GetUploadZones()[1]
+		gs:UploadUnit(zone.x, zone.y, Scripts.turbo)
+		gs:StartGame()
+		local turbo = gs:GetUnit(zone.x, zone.y)
+
+		-- Boost costs 1 sector; at size 1 it would delete Turbo itself (and
+		-- used to crash the view via an update for the dead unit)
+		gs:UnitExecute(turbo, "boost", zone.x, zone.y)
+		t.expect(gs:GetUnit(zone.x, zone.y)).toBe(turbo)
+		t.expect(#turbo.Tail).toBe(1)
+		t.expect(turbo.Done).toBeFalsy()
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]

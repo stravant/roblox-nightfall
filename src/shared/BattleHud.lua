@@ -568,7 +568,9 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 				Key = command.Id,
 				Label = if command.SizeReq > 0 then command.Name .. " (" .. command.SizeReq .. ")" else command.Name,
 				Description = commandBodyText(unit.Definition.Name, command),
-				Disabled = #unit.Tail < command.SizeReq,
+				-- Disabled if below the size requirement, or if the sector
+				-- cost would consume the whole unit
+				Disabled = #unit.Tail < command.SizeReq or #unit.Tail <= command.Cost,
 				IsMove = false,
 			})
 		end

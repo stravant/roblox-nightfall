@@ -376,17 +376,21 @@ function GameView.new(gameState, controller, menu, topbar)
 	end
 
 	-- The the command that this unit can use
+	-- Usable: meets the size requirement AND survives the sector cost
+	local function canUseCommand(unit, command)
+		return #unit.Tail >= command.SizeReq and #unit.Tail > command.Cost
+	end
 	local function getUsableCommand(unit)
 		-- If we can use the last selected command, use that
 		local lastCommandForThisUnitType = mLastUsedCommandId[unit.Definition.Id]
-		if lastCommandForThisUnitType and #unit.Tail >= unit.Definition.Commands[lastCommandForThisUnitType].SizeReq then
+		if lastCommandForThisUnitType and canUseCommand(unit, unit.Definition.Commands[lastCommandForThisUnitType]) then
 			return lastCommandForThisUnitType
 		end
 
 		-- The "better" commands are last, so start with them
 		for i = #unit.Definition.CommandList, 1, -1 do
 			local command = unit.Definition.CommandList[i]
-			if #unit.Tail >= command.SizeReq then
+			if canUseCommand(unit, command) then
 				return command.Id
 			end
 		end

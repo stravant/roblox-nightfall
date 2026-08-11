@@ -474,13 +474,17 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		-- Perform cost
 		for i = 1, math.min(#unit.Tail, command.Cost) do
 			deleteSector(unit)
-		end	
-		
+		end
+
 		-- Done
 		if not unit.Enemy then
 			unit.Done = true
 		end
-		this.UnitUpdated:fire(unit)
+		-- The cost may have consumed the unit entirely (deleteSector already
+		-- fired UnitRemoved); don't fire an update for a dead unit
+		if #unit.Tail > 0 then
+			this.UnitUpdated:fire(unit)
+		end
 	end
 	
 	-- Start the player's turn (Refresh their units)
@@ -1049,11 +1053,18 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		end
 
 		-- Valid action check, unit is ready and big enough
-		if unit.Done or #unit.Tail < command.SizeReq then 
+		if unit.Done or #unit.Tail < command.SizeReq then
 			print("INVALID: Attack with Done = "..tostring(unit.Done)..", size="..#unit.Tail.." vs req "..command.SizeReq)
 			mInvalidActionCount = mInvalidActionCount + 1
 			return
-		end		
+		end
+
+		-- Valid action check, the unit must survive the command's sector cost
+		if #unit.Tail <= command.Cost then
+			print("INVALID: Attack costs "..command.Cost.." sectors but the unit only has "..#unit.Tail)
+			mInvalidActionCount = mInvalidActionCount + 1
+			return
+		end
 		
 		-- Valid action check, in bounds
 		if x < 1 and x > Places.PlaceWidth and y < 1 and y > Places.PlaceHeight then 
