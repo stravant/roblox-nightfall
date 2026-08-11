@@ -436,7 +436,7 @@ node{
 	Conversation = conversation{
 		User = 'superphreak';
 		Parts = {
-			main = part("Hey newbie. Still working on getting smart on its feet. What are you up to?", "Do you know Wintermutant?", 'a');
+			main = part("Hey newbie. Still working on getting smart on its feet. What are you up to?", "Do you know Minish?", 'a');
 			a = part("He's a good kid. By the way, that node up there is network city. And there are a couple more warez nodes hidden out on the net.", "Nice.", 'b');
 			b = part("And while you're looking at software, don't just load up on attack programs. You should check out some meta programs like metic and turbo. There may come a time when you need to boost up your hack to handle an _____ enemy. ___ oops gotta go.", "Done", 'end');
 		};
@@ -733,10 +733,10 @@ node{
 		User = 'superphreak';
 		Parts = {
 			main = part(" __ __ ___ It's __ harder and harder to __ __ but I've got important information __ __ ready?", "Go ahead.", 'a');
-			a = part("I've finished my trace on Dignity. Surprise surprise, he's the source __ __ __ corrupt programs and security screw-ups. Disarray's been infiltrating __ __ __ the web. I don't know why.", "What about the program he took?", 'b');
+			a = part("I've finished my trace on Dignity. Surprise surprise, he's the source __ __ __ corrupt programs and security screw-ups. Dignity's been infiltrating __ __ __ the web. I don't know why.", "What about the program he took?", 'b');
 			b = part("__ __ A well-guarded communications hub. He's using the stolen script __ __ access to all the nodes on the net __ __ I just don't understand the point. Any ideas?", "Does Nightfall mean anything to you?", 'c');
 			c = part("Nightfall? What does that mean?", "Dignity's secret project?", 'd');
-			d = part("Nightfall... that's it! Disarray's __ _ use his Nightfall script to black out the net. Total midnight! __ __ __ crash the entire system! You have to stop him!!", "How?", 'e');
+			d = part("Nightfall... that's it! Dignity's __ _ use his Nightfall script to black out the net. Total midnight! __ __ __ crash the entire system! You have to stop him!!", "How?", 'e');
 			e = part("Get ___ __ his personal node, defeat the secuity, __ deactivate the Nightfall script. And hurry, __ __ have much time!", "I'm on it.", 'end');
 		};
 		Function = nil;
