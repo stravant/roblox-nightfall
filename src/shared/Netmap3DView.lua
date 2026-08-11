@@ -258,10 +258,10 @@ function Netmap3DView.new(topbarCredits)
 
 	local removeNodePopup
 	-- kind: identity for the popup style; a state change to a different kind
-	-- rebuilds the popup. flash: whether the body text blinks. locked: when
-	-- true, a translucent black overlay with a lock notice covers the
-	-- (otherwise normal) popup.
-	local function ensureNodePopup(nodeView, kind, titleText, statusText, statusColor, flash, locked)
+	-- rebuilds the popup. flash: whether the body text blinks. lockedText:
+	-- when set, a translucent black overlay showing it covers the (otherwise
+	-- normal) popup.
+	local function ensureNodePopup(nodeView, kind, titleText, statusText, statusColor, flash, lockedText)
 		if nodeView.Popup then
 			if nodeView.Popup.Kind == kind then
 				return
@@ -358,7 +358,7 @@ function Netmap3DView.new(topbarCredits)
 
 		-- Locked nodes show the normal popup dimmed under a translucent black
 		-- overlay with the lock notice filling it
-		if locked then
+		if lockedText then
 			local overlay = Instance.new("Frame")
 			overlay.Size = UDim2.new(1, 0, 1, 0)
 			overlay.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -374,7 +374,7 @@ function Netmap3DView.new(topbarCredits)
 			lockText.TextColor3 = Color3.new(1, 1, 1)
 			lockText.TextStrokeColor3 = Color3.new(0, 0, 0)
 			lockText.TextStrokeTransparency = 0
-			lockText.Text = "\u{1F512} Insufficient\nSecurity Level"
+			lockText.Text = lockedText
 			lockText.Parent = overlay
 		end
 
@@ -499,9 +499,16 @@ function Netmap3DView.new(topbarCredits)
 					removeNodePopup(nodeView)
 				else
 					-- Revealed but unreachable: the normal infected popup,
-					-- dimmed under a lock overlay
-					ensureNodePopup(nodeView, "locked", name,
-						"\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0), true, true)
+					-- dimmed under a lock overlay stating why. Insufficient
+					-- security takes priority; otherwise there's no link yet.
+					local lockedText
+					if Netmap.ById[nodeView.Id].Level > LocalPlayerData:GetSecurityLevel() then
+						lockedText = "\u{1F512} Insufficient\nSecurity Level"
+					else
+						lockedText = "\u{1F512} No Link\nEstablished"
+					end
+					ensureNodePopup(nodeView, "locked:" .. lockedText, name,
+						"\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0), true, lockedText)
 				end
 			elseif isWarez then
 				-- Warez nodes are shops: advertise, don't alarm
