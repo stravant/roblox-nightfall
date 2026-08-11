@@ -233,7 +233,7 @@ local function BattleHudContent(props: HudState)
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 1),
+			Padding = UDim.new(0, 2),
 		}),
 	}
 	for i, row in props.programs do
@@ -293,7 +293,7 @@ local function BattleHudContent(props: HudState)
 		})
 	end
 	local visibleRows = math.clamp(#props.programs, 1, kMaxVisibleProgramRows)
-	local listHeight = visibleRows * 24 + (visibleRows - 1) * 1
+	local listHeight = visibleRows * 24 + (visibleRows - 1) * 2
 	local programItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
@@ -341,7 +341,7 @@ local function BattleHudContent(props: HudState)
 			}, rowItems),
 			Scrollbar = e(Win95Scrollbar, {
 				scrollRef = scrollRef,
-				lineScroll = 25,
+				lineScroll = 26,
 			}),
 		}),
 	}

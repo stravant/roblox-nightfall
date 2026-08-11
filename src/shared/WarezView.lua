@@ -226,8 +226,8 @@ local function WarezContent(props: WarezState)
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			VerticalAlignment = Enum.VerticalAlignment.Top,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			-- Rows sit flush on the white list background
-			Padding = UDim.new(0, 0),
+			-- A hair of breathing room between rows on the white background
+			Padding = UDim.new(0, 1),
 		}),
 	}
 	for i, data in props.programs do
@@ -323,7 +323,7 @@ local function WarezContent(props: WarezState)
 					}, rows),
 					Scrollbar = e(Win95Scrollbar, {
 						scrollRef = scrollRef,
-						lineScroll = 26,
+						lineScroll = 27,
 					}),
 				}),
 			}),
