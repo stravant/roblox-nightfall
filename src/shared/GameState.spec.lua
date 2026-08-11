@@ -142,6 +142,33 @@ return function(t)
 		t.expect(turbo.Done).toBeFalsy()
 	end)
 
+	t.test("boost raises the target's remaining movement immediately", function()
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		local zone = gs:GetUploadZones()[1]
+		gs:UploadUnit(zone.x, zone.y, Scripts.turbo)
+		gs:StartGame()
+		local turbo = gs:GetUnit(zone.x, zone.y)
+
+		-- Move one square so turbo has 2 sectors (enough to pay boost's cost)
+		local points = gs:GetMovementAndCommandRange(turbo, nil)
+		local moveTo = nil
+		for _, p in pairs(points) do
+			if math.abs(p.x - zone.x) + math.abs(p.y - zone.y) == 1 then
+				moveTo = p
+				break
+			end
+		end
+		t.expect(moveTo ~= nil).toBeTruthy()
+		gs:UnitMove(turbo, moveTo.x, moveTo.y)
+
+		local moveLeftBefore = turbo.MoveLeft
+		gs:UnitExecute(turbo, "boost", turbo.Tail[1].x, turbo.Tail[1].y)
+		t.expect(turbo.Move).toBe(4)
+		-- The boost must be usable the same turn, not only after refresh
+		t.expect(turbo.MoveLeft).toBe(moveLeftBefore + 1)
+		t.expect(gs:HasErrors()).toBeFalsy()
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]

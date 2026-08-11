@@ -422,12 +422,17 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			if not mIsEnemyTurn then
 				local historyEntry = mThisTurnHistory[#mThisTurnHistory]
 				local originalMove = target.Move
+				local originalMoveLeft = target.MoveLeft
 				historyEntry.UndoAction = function()
 					target.Move = originalMove
+					target.MoveLeft = originalMoveLeft
 					this.UnitUpdated:fire(target)
 				end
 			end
 			target.Move = math.min(10, math.max(0, target.Move + command.Amount))
+			-- Also adjust the movement remaining THIS turn, so a boost is
+			-- usable immediately (and a slow takes effect immediately)
+			target.MoveLeft = math.min(10, math.max(0, target.MoveLeft + command.Amount))
 			this.UnitUpdated:fire(target)
 		elseif command.Type == 'zero' then
 			if mBoard[x][y].Filled then
