@@ -21,6 +21,12 @@ local DialogueView = require(game.ReplicatedStorage.DialogueView)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
+local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
+
+-- Onboarding funnel detail: best-effort, the server validates/dedupes
+local function funnelStep(step)
+	game.ReplicatedStorage.Remotes.FunnelStep:FireServer(step)
+end
 
 local Tutorial = {}
 
@@ -65,6 +71,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	while netmapView.NodeSelected:wait() ~= 'hq' do
 	end
 	netmapView:ClearTutorialPointer()
+	funnelStep(OnboardingSteps.TutorialEntered)
 
 	----------------------------------------------------------------------
 	-- The guided databattle
@@ -116,6 +123,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	gameView:ShowTutorialArrowProgramList('hack')
 	gameView:ShowDragDemo('hack', 4, 5)
 	gameState.UnitAdded:wait()
+	funnelStep(OnboardingSteps.ScriptPlaced)
 	gameView:ClearDragDemo()
 	gameView:ClearTutorialArrow()
 	tutorialDialogue:SetText("One more: drag Slingshot onto the next spot.")
@@ -130,6 +138,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	gameController:SetStartEndEnabled(true)
 	gameView:ShowTutorialArrowStartGame()
 	gameState.TurnChanged:wait()
+	funnelStep(OnboardingSteps.BattleStarted)
 	gameController:SetStartEndEnabled(false)
 	gameView:ClearTutorialArrow()
 	gameView:ClearSelection()
@@ -145,6 +154,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	gameView:TutorialSelectCommand('slice')
 	tutorialDialogue:SetText("In range! Click the enemy script to attack.")
 	waitForClick(7, 5)
+	funnelStep(OnboardingSteps.FirstAttack)
 
 	-- Second script: teach command selection explicitly with the ranged attack
 	tutorialDialogue:SetText("Direct hit! Now your Slingshot: click it.")

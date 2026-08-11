@@ -10,10 +10,20 @@ local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
 
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local Netmap = require(game.ReplicatedStorage.Netmap)
+local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
 
 local Remotes = game.ReplicatedStorage.Remotes
 
 local PlayerDataCache = {}
+
+-- Client-reported onboarding funnel detail steps. Only whitelisted step
+-- numbers are accepted; Roblox itself dedupes repeats and backfills skips.
+Remotes.FunnelStep.OnServerEvent:connect(function(player, step)
+	if type(step) ~= "number" or not OnboardingSteps.ClientReportable[step] then
+		return
+	end
+	ServerStatistics:OnboardingStep(player, step)
+end)
 
 Remotes.BeatTutorial.OnServerEvent:connect(function(player)
 	-- Get the player data if it exist

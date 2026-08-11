@@ -150,6 +150,7 @@ function ServerPlayerData.new(playerId, serialized)
 				getNodeStatus(f.Id).Seen = true
 			elseif f.Type == 'upgradeSecurity' then
 				mSecurityLevel = f.Level
+				ServerStatistics:SecurityLevelReached(playerId, f.Level)
 			elseif f.Type == 'getProgram' then
 				addUnit(f.Id)
 			elseif f.Type == 'getCredits' then

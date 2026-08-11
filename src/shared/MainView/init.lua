@@ -12,6 +12,7 @@ local WarezView = require(game.ReplicatedStorage.WarezView)
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local MainMenuView = require(game.ReplicatedStorage.MainMenuView)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
+local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
@@ -360,6 +361,8 @@ function MainView.new()
 	
 	-- Warez node
 	function this:VisitWarez(nodeId)
+		-- Onboarding funnel: found the shop (server dedupes)
+		game.ReplicatedStorage.Remotes.FunnelStep:FireServer(OnboardingSteps.ShopVisited)
 		ModalManager:SetModal(true)
 		this:ProcessWonBattle(nodeId, 0) -- make it visible / beaten
 		
@@ -391,6 +394,8 @@ function MainView.new()
 	
 	-- Play a game at a place
 	function this:PlayGame(placeId, nodeId)
+		-- Onboarding funnel: entered a first real battle (server dedupes)
+		game.ReplicatedStorage.Remotes.FunnelStep:FireServer(OnboardingSteps.NodeChosen)
 		ModalManager:SetModal(true)
 		local placeData = Places[placeId]
 		if not placeData then

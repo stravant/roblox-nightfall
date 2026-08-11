@@ -21,6 +21,7 @@ local AnalyticsService = game:GetService("AnalyticsService")
 local Players = game:GetService("Players")
 
 local Netmap = require(game.ReplicatedStorage.Netmap)
+local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
 
 local kCurrency = "Credits"
 local kProgressionPath = "Databattles"
@@ -51,25 +52,27 @@ local function nodeLevel(nodeId: string): number
 end
 
 --------------------------------------------------------------------------------
--- Onboarding
+-- Onboarding (see OnboardingSteps for the full funnel definition)
 --------------------------------------------------------------------------------
 
-function ServerStatistics:PlayerJoined(playerOrId: any, isNewPlayer: boolean)
+function ServerStatistics:OnboardingStep(playerOrId: any, step: number)
 	local player = resolve(playerOrId)
-	if player and isNewPlayer then
-		try("Onboarding Joined", function()
-			AnalyticsService:LogOnboardingFunnelStepEvent(player, 1, "Joined")
+	local stepName = OnboardingSteps.StepNames[step]
+	if player and stepName then
+		try("Onboarding " .. stepName, function()
+			AnalyticsService:LogOnboardingFunnelStepEvent(player, step, stepName)
 		end)
 	end
 end
 
-function ServerStatistics:PlayerBeatTutorial(playerOrId: any)
-	local player = resolve(playerOrId)
-	if player then
-		try("Onboarding TutorialBeaten", function()
-			AnalyticsService:LogOnboardingFunnelStepEvent(player, 2, "TutorialBeaten")
-		end)
+function ServerStatistics:PlayerJoined(playerOrId: any, isNewPlayer: boolean)
+	if isNewPlayer then
+		self:OnboardingStep(playerOrId, OnboardingSteps.Joined)
 	end
+end
+
+function ServerStatistics:PlayerBeatTutorial(playerOrId: any)
+	self:OnboardingStep(playerOrId, OnboardingSteps.TutorialBeaten)
 end
 
 --------------------------------------------------------------------------------
@@ -92,6 +95,10 @@ function ServerStatistics:PlayerPlayedLevel(playerOrId: any, nodeId: string, did
 			AnalyticsService:LogProgressionFailEvent(player, kProgressionPath, level, nodeId)
 		end
 	end)
+	if didWin and nodeId ~= 'hq' then
+		-- First real (post-tutorial) win; Roblox keeps only the first instance
+		self:OnboardingStep(player, OnboardingSteps.FirstRealWin)
+	end
 end
 
 function ServerStatistics:PlayerQuitLevelEarly(playerOrId: any, nodeId: string)
@@ -147,6 +154,13 @@ function ServerStatistics:UnitPurchased(playerOrId: any, unitId: string, price: 
 				Enum.AnalyticsEconomyTransactionType.Shop.Name,
 				unitId)
 		end)
+		self:OnboardingStep(player, OnboardingSteps.ScriptPurchased)
+	end
+end
+
+function ServerStatistics:SecurityLevelReached(playerOrId: any, level: number)
+	if level >= 2 then
+		self:OnboardingStep(playerOrId, OnboardingSteps.ReachedSecurity2)
 	end
 end
 
