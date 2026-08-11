@@ -57,6 +57,20 @@ function MainView.new()
 	mTopbarGui.ScreenInsets = Enum.ScreenInsets.TopbarSafeInsets
 	mTopbarGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	mTopbarGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+	-- Shared label for the topbar buttons: bold, properly centered (the old
+	-- Code font sat visibly off-center vertically)
+	local function topbarButtonLabel(text)
+		return e("TextLabel", {
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSansBold,
+			TextSize = 18,
+			TextColor3 = Color3.new(0, 0, 0),
+			TextXAlignment = Enum.TextXAlignment.Center,
+			TextYAlignment = Enum.TextYAlignment.Center,
+			Text = text,
+		})
+	end
 	local mTopbarRoot = StatefulRoot.create(mTopbarGui, function(props)
 		-- One flex row: the node-name title sizes to its content on the left,
 		-- Start Databattle / Done Turn float centered between the two fill
@@ -112,8 +126,8 @@ function MainView.new()
 					AutomaticSize = Enum.AutomaticSize.X,
 					Size = UDim2.new(0, 0, 0, 36),
 					BackgroundColor3 = Color3.new(0.701961, 0, 0),
-					Font = Enum.Font.Code,
-					TextSize = 20,
+					Font = Enum.Font.SourceSansBold,
+					TextSize = 19,
 					TextColor3 = Color3.new(1, 1, 1),
 					Text = "Start Databattle",
 					[React.Event.MouseButton1Click] = function()
@@ -135,16 +149,7 @@ function MainView.new()
 					Size = UDim2.new(0, 90, 0, 36),
 					OnClick = props.onLeaveClick,
 				}, {
-					TextLabel = e("TextLabel", {
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						Position = UDim2.new(0.5, 0, 0.5, 0),
-						Size = UDim2.new(1, 0, 1, 0),
-						BackgroundTransparency = 1,
-						Font = Enum.Font.Code,
-						TextSize = 20,
-						TextColor3 = Color3.new(0, 0, 0),
-						Text = "Leave",
-					}),
+					TextLabel = topbarButtonLabel("Leave"),
 				})
 				else nil,
 			UndoButton = if props.undoVisible
@@ -154,16 +159,7 @@ function MainView.new()
 					Size = UDim2.new(0, 90, 0, 36),
 					OnClick = props.onUndoClick,
 				}, {
-					TextLabel = e("TextLabel", {
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						Position = UDim2.new(0.5, 0, 0.5, 0),
-						Size = UDim2.new(1, 0, 1, 0),
-						BackgroundTransparency = 1,
-						Font = Enum.Font.Code,
-						TextSize = 20,
-						TextColor3 = Color3.new(0, 0, 0),
-						Text = "Undo",
-					}),
+					TextLabel = topbarButtonLabel("Undo"),
 				})
 				else nil,
 			DoneTurnButton = if props.doneTurnVisible
@@ -173,16 +169,7 @@ function MainView.new()
 					Size = UDim2.new(0, 130, 0, 36),
 					OnClick = props.onDoneTurnClick,
 				}, {
-					TextLabel = e("TextLabel", {
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						Position = UDim2.new(0.5, 0, 0.5, 0),
-						Size = UDim2.new(1, 0, 1, 0),
-						BackgroundTransparency = 1,
-						Font = Enum.Font.Code,
-						TextSize = 20,
-						TextColor3 = Color3.new(0, 0, 0),
-						Text = "Done Turn",
-					}),
+					TextLabel = topbarButtonLabel("Done Turn"),
 				})
 				else nil,
 			SpacerRight = e("Frame", {
@@ -247,16 +234,7 @@ function MainView.new()
 				Size = UDim2.new(0, 110, 0, 36),
 				OnClick = props.onMenuClick,
 			}, {
-				TextLabel = e("TextLabel", {
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.new(0.5, 0, 0.5, 0),
-					Size = UDim2.new(1, 0, 1, 0),
-					BackgroundTransparency = 1,
-					Font = Enum.Font.Code,
-					TextSize = 20,
-					TextColor3 = Color3.new(0, 0, 0),
-					Text = "Menu",
-				}),
+				TextLabel = topbarButtonLabel("Menu"),
 			}),
 		})
 	end, {
