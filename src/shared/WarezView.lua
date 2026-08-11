@@ -48,8 +48,6 @@ type WarezState = {
 	onDone: () -> (),
 }
 
-local kMutedOpen = '<font color="#606060">'
-
 local function programEntry(data: ProgramEntryData, selected: boolean, owned: number, onSelect: (id: string) -> (), layoutOrder: number)
 	local textColor = if selected then kTextWhite else kTextBlack
 	return e("ImageButton", {
@@ -133,7 +131,7 @@ local function commandSummary(command: any): string
 	if command.SizeReq and command.SizeReq > 0 then
 		effect = effect .. ", needs size " .. command.SizeReq
 	end
-	return string.format("<b>%s</b> %s— %s</font>", command.Name, kMutedOpen, effect)
+	return string.format("<b>%s</b> — %s", command.Name, effect)
 end
 
 local function detailPanel(selectedId: string?)
@@ -156,8 +154,8 @@ local function detailPanel(selectedId: string?)
 	for _, command in def.CommandList do
 		table.insert(attackLines, commandSummary(command))
 	end
-	local attacksY = 82
-	local attacksHeight = math.max(1, #attackLines) * 18
+	local attacksY = 88
+	local attacksHeight = math.max(1, #attackLines) * 20
 	local flavorY = attacksY + attacksHeight + 8
 
 	return {
@@ -180,23 +178,22 @@ local function detailPanel(selectedId: string?)
 		}),
 		StatsText = e("TextLabel", {
 			Position = UDim2.new(0, 56, 0, 32),
-			Size = UDim2.new(1, -64, 0, 40),
+			Size = UDim2.new(1, -64, 0, 48),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
-			TextSize = 17,
+			TextSize = 20,
 			RichText = true,
 			TextColor3 = kTextBlack,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
-			Text = string.format("%sMove:</font> <b>%d</b>\n%sMax Size:</font> <b>%d</b>",
-				kMutedOpen, def.Move, kMutedOpen, def.MaxSize),
+			Text = string.format("Move: <b>%d</b>\nMax Size: <b>%d</b>", def.Move, def.MaxSize),
 		}),
 		Attacks = e("TextLabel", {
 			Position = UDim2.new(0, 8, 0, attacksY),
 			Size = UDim2.new(1, -16, 0, attacksHeight),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
-			TextSize = 15,
+			TextSize = 16,
 			RichText = true,
 			TextColor3 = kTextBlack,
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -208,8 +205,8 @@ local function detailPanel(selectedId: string?)
 			Size = UDim2.new(1, -16, 1, -flavorY - 8),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
-			TextSize = 15,
-			TextColor3 = Color3.new(0.25, 0.25, 0.25),
+			TextSize = 18,
+			TextColor3 = kTextBlack,
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			TextYAlignment = Enum.TextYAlignment.Top,
