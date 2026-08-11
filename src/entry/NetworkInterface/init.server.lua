@@ -25,10 +25,11 @@ Remotes.BeatTutorial.OnServerEvent:connect(function(player)
 	
 	-- Process
 	local result = playerData:ProcessBeatTutorial()
-	
+
 	-- If we successfully processed it, save
 	if result then
-		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)		
+		ServerStatistics:PlayerBeatTutorial(player)
+		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)
 	end
 end)
 
@@ -59,10 +60,12 @@ Remotes.ProcessReplay.OnServerEvent:connect(function(player, replayStr)
 	-- Stat tracking
 	if result.Valid then
 		if not result.EarlyQuit then
-			ServerStatistics:PlayerPlayedLevel(result.NodeId, result.Won)
+			ServerStatistics:PlayerPlayedLevel(player, result.NodeId, result.Won)
+		else
+			ServerStatistics:PlayerQuitLevelEarly(player, result.NodeId)
 		end
 	else
-		ServerStatistics:PlayerCheated(player.UserId)
+		ServerStatistics:PlayerCheated(player)
 	end
 	
 	-- Let the client know we finished processing it
@@ -91,12 +94,10 @@ Remotes.SkipLevel.OnServerEvent:connect(function(player, nodeId)
 
 	-- Process
 	local result = playerData:SkipLevel(nodeId)
-	
-	-- Skip
-	ServerStatistics:PlayerSkippedLevel(nodeId)
-	
+
 	-- Save the player data
 	if result then
+		ServerStatistics:PlayerSkippedLevel(player, nodeId)
 		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)
 	end
 end)
@@ -123,12 +124,10 @@ Remotes.PurchaseUnit.OnServerEvent:connect(function(player, warezId, programId)
 		return
 	end
 	
-	-- Process the purchase
+	-- Process the purchase (economy analytics are logged inside, where the
+	-- price and resulting balance are known)
 	local result = playerData:ProcessPurchase(warezId, programId)
 
-	-- Stat tracking
-	ServerStatistics:PlayerBoughtUnit(programId)
-	
 	-- Save the player data
 	if result then
 		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)
@@ -149,7 +148,7 @@ Remotes.Load.OnServerInvoke = function(player)
 		end
 		
 		-- Record the stat
-		ServerStatistics:PlayerJoined(player.UserId, playerData:IsNewPlayer())
+		ServerStatistics:PlayerJoined(player, playerData:IsNewPlayer())
 		
 		-- Return it
 		return playerData:Serialize(--[[forClient=]]true)
@@ -162,10 +161,10 @@ end
 game.Players.PlayerRemoving:connect(function(player)
 	local playerData = PlayerDataCache[player]
 	if playerData then
-		ServerStatistics:PlayerLeft(player.UserId, playerData:HasBeatenTutorial())
+		ServerStatistics:PlayerLeft(player, playerData:HasBeatenTutorial())
 		PlayerDataCache[player] = nil
 	else
-		ServerStatistics:PlayerBounced(player.UserId)
+		ServerStatistics:PlayerBounced(player)
 	end
 end)
 
@@ -221,7 +220,7 @@ function MarketplaceService.ProcessReceipt(info)
 	local saved = DataStoreService:SavePlayerDataAsync(playerId, playerData)
 
 	-- Save stat
-	ServerStatistics:PlayerBoughtSkips(amount)
+	ServerStatistics:PlayerBoughtSkips(player, amount)
 
 	-- Only tell Roblox the purchase is done once it's durably recorded; on a
 	-- failed save the receipt retries later and HasProcessedPurchase dedupes

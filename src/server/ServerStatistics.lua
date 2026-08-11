@@ -1,42 +1,207 @@
 --!strict
--- Analytics seam. These hooks used to forward to Google Universal Analytics
--- (removed after Google shut UA down); the call sites in NetworkInterface and
--- DataStoreService are kept so a future analytics backend can be wired up
--- here without touching the game flow.
+-- Server analytics, backed by Roblox AnalyticsService.
+--
+-- What gets logged:
+-- - Progression (path "Databattles"): one Start immediately followed by
+--   Complete (win) or Fail (loss) per submitted replay; level = the node's
+--   security level, levelName = the node id. Logged post-hoc at submission
+--   time since the server only sees finished battles.
+-- - Onboarding funnel: step 1 "Joined" (first session) -> step 2
+--   "TutorialBeaten".
+-- - Economy (currency "Credits"): battle and story rewards as Gameplay-type
+--   sources, warez script purchases as Shop-type sinks (sku = script id),
+--   always with the resulting balance.
+-- - Custom events: EarlyQuit, LevelSkipped, SkipsPurchased, InvalidReplay,
+--   PlayerBounced, PlayerDataLoadFailed.
+--
+-- Every call resolves ids to live Player instances (AnalyticsService requires
+-- them) and is pcall-wrapped: analytics must never break gameplay.
+
+local AnalyticsService = game:GetService("AnalyticsService")
+local Players = game:GetService("Players")
+
+local Netmap = require(game.ReplicatedStorage.Netmap)
+
+local kCurrency = "Credits"
+local kProgressionPath = "Databattles"
 
 local ServerStatistics = {}
 
-function ServerStatistics:PlayerCheated(userId: number)
+local function resolve(playerOrId: any): Player?
+	if typeof(playerOrId) == "Instance" then
+		return playerOrId :: Player
+	end
+	return Players:GetPlayerByUserId(playerOrId)
 end
 
-function ServerStatistics:PlayerJoined(userId: number, isNewPlayer: boolean)
+local function try(what: string, f: () -> ())
+	local st, err = pcall(f)
+	if not st then
+		warn("ServerStatistics | " .. what .. " failed: " .. tostring(err))
+	end
 end
 
-function ServerStatistics:PlayerPlayedLevel(nodeId: string, didWin: boolean)
+local function context(value: string): { [string]: any }
+	return { [Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = value }
 end
 
-function ServerStatistics:PlayerSkippedLevel(nodeId: string)
+local function nodeLevel(nodeId: string): number
+	local node = Netmap.ById[nodeId]
+	return (node and node.Level) or 0
 end
 
-function ServerStatistics:PlayerBoughtSkips(amount: number)
+--------------------------------------------------------------------------------
+-- Onboarding
+--------------------------------------------------------------------------------
+
+function ServerStatistics:PlayerJoined(playerOrId: any, isNewPlayer: boolean)
+	local player = resolve(playerOrId)
+	if player and isNewPlayer then
+		try("Onboarding Joined", function()
+			AnalyticsService:LogOnboardingFunnelStepEvent(player, 1, "Joined")
+		end)
+	end
 end
 
-function ServerStatistics:PlayerBoughtUnit(unitId: string)
+function ServerStatistics:PlayerBeatTutorial(playerOrId: any)
+	local player = resolve(playerOrId)
+	if player then
+		try("Onboarding TutorialBeaten", function()
+			AnalyticsService:LogOnboardingFunnelStepEvent(player, 2, "TutorialBeaten")
+		end)
+	end
 end
 
-function ServerStatistics:PlayerLeft(userId: number, completedTutorial: boolean)
+--------------------------------------------------------------------------------
+-- Progression
+--------------------------------------------------------------------------------
+
+function ServerStatistics:PlayerPlayedLevel(playerOrId: any, nodeId: string, didWin: boolean)
+	local player = resolve(playerOrId)
+	if not player then
+		return
+	end
+	local level = nodeLevel(nodeId)
+	try("Progression", function()
+		-- The server only sees completed battles, so the Start/end pair is
+		-- logged together; attempt and completion rates stay meaningful
+		AnalyticsService:LogProgressionStartEvent(player, kProgressionPath, level, nodeId)
+		if didWin then
+			AnalyticsService:LogProgressionCompleteEvent(player, kProgressionPath, level, nodeId)
+		else
+			AnalyticsService:LogProgressionFailEvent(player, kProgressionPath, level, nodeId)
+		end
+	end)
+end
+
+function ServerStatistics:PlayerQuitLevelEarly(playerOrId: any, nodeId: string)
+	local player = resolve(playerOrId)
+	if player then
+		try("EarlyQuit", function()
+			AnalyticsService:LogCustomEvent(player, "EarlyQuit", 1, context(nodeId))
+		end)
+	end
+end
+
+function ServerStatistics:PlayerSkippedLevel(playerOrId: any, nodeId: string)
+	local player = resolve(playerOrId)
+	if player then
+		try("LevelSkipped", function()
+			AnalyticsService:LogCustomEvent(player, "LevelSkipped", 1, context(nodeId))
+		end)
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Economy (credits)
+--------------------------------------------------------------------------------
+
+-- reason: short label like "BattleReward" / "StoryReward"
+function ServerStatistics:CreditsEarned(playerOrId: any, amount: number, endingBalance: number, reason: string)
+	local player = resolve(playerOrId)
+	if player and amount > 0 then
+		try("CreditsEarned", function()
+			AnalyticsService:LogEconomyEvent(
+				player,
+				Enum.AnalyticsEconomyFlowType.Source,
+				kCurrency,
+				amount,
+				endingBalance,
+				Enum.AnalyticsEconomyTransactionType.Gameplay.Name,
+				nil,
+				context(reason))
+		end)
+	end
+end
+
+function ServerStatistics:UnitPurchased(playerOrId: any, unitId: string, price: number, endingBalance: number)
+	local player = resolve(playerOrId)
+	if player then
+		try("UnitPurchased", function()
+			AnalyticsService:LogEconomyEvent(
+				player,
+				Enum.AnalyticsEconomyFlowType.Sink,
+				kCurrency,
+				price,
+				endingBalance,
+				Enum.AnalyticsEconomyTransactionType.Shop.Name,
+				unitId)
+		end)
+	end
+end
+
+function ServerStatistics:PlayerBoughtSkips(playerOrId: any, amount: number)
+	-- The Robux transaction itself is tracked by Roblox natively; this tracks
+	-- how many skips enter circulation
+	local player = resolve(playerOrId)
+	if player then
+		try("SkipsPurchased", function()
+			AnalyticsService:LogCustomEvent(player, "SkipsPurchased", amount)
+		end)
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Health / abuse signals
+--------------------------------------------------------------------------------
+
+function ServerStatistics:PlayerCheated(playerOrId: any)
+	local player = resolve(playerOrId)
+	if player then
+		try("InvalidReplay", function()
+			AnalyticsService:LogCustomEvent(player, "InvalidReplay", 1)
+		end)
+	end
+end
+
+function ServerStatistics:PlayerLeft(playerOrId: any, completedTutorial: boolean)
+	-- Session length / retention are tracked by Roblox natively; nothing to do
 end
 
 -- When a player leaves before they even finish loading
-function ServerStatistics:PlayerBounced(userId: number)
+function ServerStatistics:PlayerBounced(playerOrId: any)
+	local player = resolve(playerOrId)
+	if player then
+		try("PlayerBounced", function()
+			AnalyticsService:LogCustomEvent(player, "PlayerBounced", 1)
+		end)
+	end
 end
 
 -- Loading failed for a player
-function ServerStatistics:PlayerLoadFailed(userId: number)
+function ServerStatistics:PlayerLoadFailed(playerOrId: any)
+	local player = resolve(playerOrId)
+	if player then
+		try("PlayerDataLoadFailed", function()
+			AnalyticsService:LogCustomEvent(player, "PlayerDataLoadFailed", 1)
+		end)
+	end
 end
 
--- Loading failed for a node's stats
+-- Loading failed for a node's stats (no player context: AnalyticsService
+-- custom events are player-scoped, so this stays log-only)
 function ServerStatistics:NodeStatsLoadFailed(err: string)
+	warn("ServerStatistics | Node stats load failed: " .. tostring(err))
 end
 
 return ServerStatistics

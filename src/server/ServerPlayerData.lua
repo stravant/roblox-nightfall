@@ -1,6 +1,7 @@
 local Copy = require(game.ReplicatedStorage.Copy)
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local Netmap = require(game.ReplicatedStorage.Netmap)
+local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
 local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
 local GameState = require(game.ReplicatedStorage.GameState)
 local Places = require(game.ReplicatedStorage.Places)
@@ -153,6 +154,7 @@ function ServerPlayerData.new(playerId, serialized)
 				addUnit(f.Id)
 			elseif f.Type == 'getCredits' then
 				mCredits = mCredits + f.Amount
+				ServerStatistics:CreditsEarned(playerId, f.Amount, mCredits, "StoryReward")
 			elseif f.Type == 'beginNightfall' then
 				mSecurityLevel = 5
 				-- TODO:
@@ -230,7 +232,8 @@ function ServerPlayerData.new(playerId, serialized)
 				print("ServerPlayerData: Won replay")
 				-- Give them the credits
 				mCredits = mCredits + result.Credits
-				
+				ServerStatistics:CreditsEarned(playerId, result.Credits, mCredits, "BattleReward")
+
 				-- Mark the node as beaten
 				setNodeBeaten(result.NodeId)
 			else
@@ -267,6 +270,7 @@ function ServerPlayerData.new(playerId, serialized)
 		-- Success, actualy buy the program
 		mCredits = mCredits - price
 		addUnit(programId)
+		ServerStatistics:UnitPurchased(playerId, programId, price, mCredits)
 		return true
 	end
 	
