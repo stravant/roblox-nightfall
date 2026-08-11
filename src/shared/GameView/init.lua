@@ -50,8 +50,50 @@ local GameView = {}
 local function GameViewChrome(props)
 	-- All the battle action buttons (Start Databattle / Done Turn / Undo)
 	-- live in the topbar gui via the topbar interface; the chrome here is
-	-- just the end-of-game overlay.
+	-- the setup-phase mission box and the end-of-game overlay.
 	return e(React.Fragment, nil, {
+		-- The node's mission text, shown while placing scripts
+		MissionBox = if props.missionText and props.missionVisible
+			then e("Frame", {
+				AnchorPoint = Vector2.new(1, 1),
+				Position = UDim2.new(1, -12, 1, -12),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				Size = UDim2.new(0, 300, 0, 0),
+				BackgroundColor3 = Color3.new(0, 0, 0),
+				BackgroundTransparency = 0.45,
+				BorderSizePixel = 0,
+				ZIndex = 3,
+			}, {
+				UIPadding = e("UIPadding", {
+					PaddingTop = UDim.new(0, 8),
+					PaddingBottom = UDim.new(0, 8),
+					PaddingLeft = UDim.new(0, 10),
+					PaddingRight = UDim.new(0, 10),
+				}),
+				Title = e("TextLabel", {
+					Size = UDim2.new(1, 0, 0, 18),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.SourceSansBold,
+					TextSize = 16,
+					TextColor3 = Color3.new(1, 1, 1),
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Text = "Mission",
+				}),
+				Body = e("TextLabel", {
+					Position = UDim2.new(0, 0, 0, 20),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					Size = UDim2.new(1, 0, 0, 0),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.SourceSans,
+					TextSize = 16,
+					TextColor3 = Color3.new(1, 1, 1),
+					TextWrapped = true,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextYAlignment = Enum.TextYAlignment.Top,
+					Text = props.missionText,
+				}),
+			})
+			else nil,
 		EndGameOverlay = e("ImageButton", {
 			Active = true,
 			AutoButtonColor = false,
@@ -278,6 +320,8 @@ function GameView.new(gameState, controller, menu, topbar)
 
 	-- Portaled: mGui also holds the imperative Board/Info/PlaceBackground
 	mRoot = StatefulRoot.createPortaled(mGui, GameViewChrome, {
+		missionText = nil,
+		missionVisible = true,
 		endGameOverlayVisible = false,
 		endGameWon = nil,
 		submittingText = "(Submitting play...)",
@@ -291,6 +335,11 @@ function GameView.new(gameState, controller, menu, topbar)
 	})
 
 	updateMenuContext()
+
+	-- The node's mission text, shown in the setup-phase mission box
+	function this:SetMissionText(text)
+		root().setState({ missionText = text or StatefulRoot.None })
+	end
 
 	-- Undo lives in the topbar; its handler needs this view's selection state
 	mTopbar:SetOnUndo(function()
@@ -1054,6 +1103,8 @@ function GameView.new(gameState, controller, menu, topbar)
 		mTopbar:SetStartVisible(false)
 		mTopbar:SetLeaveVisible(false)
 		mTopbar:SetDoneTurnVisible(mAutoSelectionEnabled)
+		-- Setup is over: the mission box leaves with it
+		root().setState({ missionVisible = false })
 		mUnitInfoView:SetProgramListVisible(false)
 		if mAutoSelectionEnabled then
 			-- TODO: Show / hide in menu

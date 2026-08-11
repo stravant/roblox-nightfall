@@ -390,6 +390,7 @@ function MainView.new()
 		end)
 		mTopbarBattleInterface:SetCreditsVisible(false)
 		setBattleTitle(Netmap.GetNodeDisplayName(nodeId))
+		gameView:SetMissionText(Netmap.ById[nodeId].Mission)
 		
 		-- Restore the main state when the game is over
 		local gameCompletedConnection;
