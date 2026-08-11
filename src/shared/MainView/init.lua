@@ -551,7 +551,10 @@ function MainView.new()
 	local NotificationBoxTween = TweenInfo.new(1.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out, 0, true)
 	function this:ShowNotification(text)
 		local box = makeNotificationBox(text)
-		box.Parent = mNetmapView:GetGui()
+		-- Sibling of (and above) the modal views like the warez shop, so the
+		-- notification isn't dimmed by their backdrops
+		box.ZIndex = 10
+		box.Parent = mGui
 		local TweenService = game:GetService('TweenService')
 		local inAnim = TweenService:Create(box, NotificationBoxTween, {
 			Position = UDim2.new(1, -24, 1, -10);

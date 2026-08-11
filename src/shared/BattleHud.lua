@@ -655,9 +655,9 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	function this:TutorialHighlightCommand(commandId: string)
 		local button = findCommandButton(commandId)
 		if button then
-			-- At the button's right edge pointing left at it: unambiguous
+			-- Tip at the button's left edge, body over the button: unambiguous
 			-- about which button in the stack is meant
-			mTutorialArrow:Show(button, -90, UDim2.new(1, 20, 0.5, 0))
+			mTutorialArrow:Show(button, -90, UDim2.new(0, 0, 0.5, 0))
 		end
 	end
 
