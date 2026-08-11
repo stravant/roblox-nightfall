@@ -782,6 +782,37 @@ function GameView.new(gameState, controller, menu, topbar)
 		end
 	end)
 
+	-- Where a program drop should land. A direct hit on an upload zone always
+	-- wins; otherwise fall back to the nearest zone whose DOUBLED hit box
+	-- (half a tile beyond each edge) contains the drop point — zones are
+	-- small and sometimes adjacent, so exact hits must take priority.
+	local function uploadZoneDropTarget(screenPos)
+		local x, y = mBattleBoard:GridAtScreen(screenPos)
+		if x and y and isUploadZone(x, y) then
+			return x, y
+		end
+		local gx, gy = mBattleBoard:GridPointAtScreen(screenPos)
+		local best, bestDist = nil, math.huge
+		for _, zone in pairs(mUploadZones) do
+			-- The tutorial restricts uploads to one zone: only snap to it
+			if not mOnlyAllowUpload or (mOnlyAllowUpload.x == zone.x and mOnlyAllowUpload.y == zone.y) then
+				local dx = math.abs(gx - zone.x)
+				local dy = math.abs(gy - zone.y)
+				if dx <= 1 and dy <= 1 then
+					local d = dx * dx + dy * dy
+					if d < bestDist then
+						bestDist = d
+						best = zone
+					end
+				end
+			end
+		end
+		if best then
+			return best.x, best.y
+		end
+		return x, y
+	end
+
 	-- Shared drag session: a ghost icon follows the pointer; releasing over an
 	-- upload zone uploads the program there, anywhere else leaves it in the
 	-- inventory. Used both for dragging out of the Programs window and for
@@ -825,7 +856,7 @@ function GameView.new(gameState, controller, menu, topbar)
 				-- menu with a second touch)
 				return
 			end
-			local x, y = mBattleBoard:GridAtScreen(Vector2.new(input.Position.X, input.Position.Y))
+			local x, y = uploadZoneDropTarget(Vector2.new(input.Position.X, input.Position.Y))
 			if x and y and tryUploadProgram(id, x, y) then
 				SoundManager:Play('SelectUnit')
 				mUnitInfoView:SetSelectedUnitDefinition(id)

@@ -124,6 +124,16 @@ function BattleBoard3D.new(backgroundImage: string)
 		return worldToGrid(mCamera:HitAtScreen(screenPos))
 	end
 
+	-- Continuous grid coordinates (integer N = the center of tile N) for an
+	-- InputObject.Position. Unclamped: may land outside the board — used for
+	-- proximity hit tests like the enlarged upload-zone drop targets.
+	function this:GridPointAtScreen(screenPos: Vector2): (number, number)
+		local worldHit = mCamera:HitAtScreen(screenPos)
+		local gridX = (worldHit.X - (kCenter.X - boardStudsX / 2)) / kTileStuds + 0.5
+		local gridY = (worldHit.Z - (kCenter.Z - boardStudsZ / 2)) / kTileStuds + 0.5
+		return gridX, gridY
+	end
+
 	-- Claim presses on specific grid squares before the camera pan/tap logic
 	-- sees them. fn(gridX, gridY, screenPos) -> true to claim the gesture.
 	function this:SetPressCapture(fn: (number, number, Vector2) -> boolean)
