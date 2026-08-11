@@ -196,6 +196,9 @@ function GameView.new(gameState, controller, menu, topbar)
 	local RunService = game:GetService("RunService")
 	local mDestroyed = false
 	local mDraggingProgram = false
+	-- An allied unit's move animation is playing (selection allowed, but the
+	-- move/attack UI defers until it finishes)
+	local mUnitMoveInProgress = false
 	local mPulseCn = nil
 
 	-- Coordinates that are the only square allowed to be clicked...
@@ -432,7 +435,14 @@ function GameView.new(gameState, controller, menu, topbar)
 		mTopbar:SetUndoVisible(gameState:CanUndo())
 
 		if not unit.Done and gameState:IsGameStarted() then
-			if unit.MoveLeft > 0 then
+			if mUnitMoveInProgress then
+				-- Another unit's move is still animating: allow the selection
+				-- (info pane, flash) but defer the move/attack UI until it
+				-- completes — doAnimatedMove re-renders the selection then.
+				-- Clearing the actionable squares also stops clicks from
+				-- acting on the stale previous selection's squares.
+				mActionableSquares = nil
+			elseif unit.MoveLeft > 0 then
 				local headX, headY = unit.Tail[1].x, unit.Tail[1].y
 				local tentativeCommandId = getUsableCommand(unit)
 				local points, attackFrom = gameState:GetMovementAndCommandRange(unit, tentativeCommandId)
@@ -563,14 +573,34 @@ function GameView.new(gameState, controller, menu, topbar)
 		return true
 	end
 
+	-- Animated move wrapper: while the move plays out the player may select
+	-- other units (their move/attack UI is deferred — see setSelectionUnit);
+	-- when the move completes, re-render whatever is selected with full UI
+	local function doAnimatedMove(unit, x, y)
+		mUnitMoveInProgress = true
+		local ok, err = pcall(function()
+			controller:UnitMove(unit, x, y)
+		end)
+		mUnitMoveInProgress = false
+		if not ok then
+			error(err, 0)
+		end
+		if mSelection and mSelectionType == 'unit' then
+			setSelectionUnit(mSelection)
+		end
+	end
+
 	-- Do an action
 	local function doAction(x, y)
+		-- The unit this action is for: the player may change mSelection while
+		-- the move animation below is still playing
+		local unit = mSelection
 		-- Move, or if an action is selected, attack
 		if mSelectedCommand then
 			-- Action
 			if mActionableSquares[x][y] then
-				mLastUsedCommandId[mSelection.Definition.Id] = mSelectedCommand
-				controller:UnitExecute(mSelection, mSelectedCommand, x, y)
+				mLastUsedCommandId[unit.Definition.Id] = mSelectedCommand
+				controller:UnitExecute(unit, mSelectedCommand, x, y)
 				mActionableSquares = nil
 				doAutoSelectNextUnit()
 			end
@@ -578,29 +608,37 @@ function GameView.new(gameState, controller, menu, topbar)
 			-- Move
 			local action = mActionableSquares[x][y]
 			if action == 'move' then
-				controller:UnitMove(mSelection, x, y)
+				doAnimatedMove(unit, x, y)
 				-- We may win as a result of moving and collecting the access codes
 				if gameState:HasWon() then
 					return
 				end
-				if mSelection.MoveLeft == 0 and hasNoAttackTargets(mSelection) then
+				if mSelection ~= unit then
+					-- The player moved on to another unit mid-animation:
+					-- leave their selection alone
+					return
+				end
+				if unit.MoveLeft == 0 and hasNoAttackTargets(unit) then
 					doAutoSelectNextUnit()
 				end
 			else
 				-- Attack, but need to move first
-				controller:UnitMove(mSelection, action.x, action.y)
+				doAnimatedMove(unit, action.x, action.y)
 				-- The move can win the game (collecting the last codes),
 				-- ending the battle and clearing the selection under us
-				if gameState:HasWon() or not mSelection then
+				if gameState:HasWon() then
 					return
 				end
 				gameState:DelayFunc('AttackIntent')
-				if gameState:HasWon() or not mSelection then
+				if gameState:HasWon() then
 					return
 				end
-				local commandId = getUsableCommand(mSelection)
+				local commandId = getUsableCommand(unit)
 				if commandId then
-					controller:UnitExecute(mSelection, commandId, x, y)
+					controller:UnitExecute(unit, commandId, x, y)
+				end
+				if mSelection ~= unit then
+					return
 				end
 				mActionableSquares = nil
 				doAutoSelectNextUnit()
