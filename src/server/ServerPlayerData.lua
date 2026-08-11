@@ -215,7 +215,15 @@ function ServerPlayerData.new(playerId, serialized)
 	end
 	
 	function this:ProcessReplay(replayString)
-		local result = ReplayChecker:Check(replayString, GameState.ServerDelayFunc)
+		-- The replay string is client-provided: a malformed one must read as
+		-- invalid, not throw out of the remote handler
+		local st, result = pcall(function()
+			return ReplayChecker:Check(replayString, GameState.ServerDelayFunc)
+		end)
+		if not st then
+			warn("ServerPlayerData | Replay from "..playerId.." threw while checking: "..tostring(result))
+			return { Valid = false }
+		end
 		if result.Valid then
 			-- Potentially process triggers for the node
 			if result.Won then
@@ -240,9 +248,10 @@ function ServerPlayerData.new(playerId, serialized)
 	end
 	
 	function this:ProcessPurchase(warezId, programId)
+		-- Both ids are client-provided
 		local node = Netmap.ById[warezId]
-		if not node.Warez then
-			warn("ServerPlayerData | "..playerId.." tried to purchase from non-Warez node "..warezId)
+		if not node or not node.Warez then
+			warn("ServerPlayerData | "..playerId.." tried to purchase from non-Warez node "..tostring(warezId))
 			return false
 		end
 		local price = node.Warez[programId]
@@ -258,6 +267,7 @@ function ServerPlayerData.new(playerId, serialized)
 		-- Success, actualy buy the program
 		mCredits = mCredits - price
 		addUnit(programId)
+		return true
 	end
 	
 	function this:HasProcessedPurchase(purchaseId)
@@ -283,6 +293,11 @@ function ServerPlayerData.new(playerId, serialized)
 	end
 	
 	function this:SkipLevel(nodeId)
+		-- Client-provided id: don't let a bad one throw in getNodeStatus
+		if not Netmap.ById[nodeId] then
+			warn("ServerPlayerData | "..playerId.." tried to skip unknown node "..tostring(nodeId))
+			return false
+		end
 		local found = false
 		for _, usedSkip in pairs(mSkipsUsed) do
 			if usedSkip == nodeId then
