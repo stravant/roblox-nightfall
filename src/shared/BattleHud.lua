@@ -23,6 +23,7 @@ local kWindowImage = "rbxassetid://1378189463"
 local kWindowSliceCenter = Rect.new(16, 24, 16, 24)
 local kWindowImageRectSize = Vector2.new(32, 48)
 local kInsetImage = "rbxassetid://1378143823"
+local kGutterImage = "rbxassetid://1372920646"
 
 -- Programs list scrolls once it holds more than this many rows
 local kMaxVisibleProgramRows = 4
@@ -234,7 +235,7 @@ local function BattleHudContent(props: HudState)
 		rowItems[row.Id] = e("ImageButton", {
 			Active = true,
 			AutoButtonColor = hasAny,
-			Size = UDim2.new(1, -8, 0, 24),
+			Size = UDim2.new(1, -18, 0, 24),
 			BackgroundColor3 = Color3.new(1, 1, 1),
 			BackgroundTransparency = if hasAny then 0 else 0.5,
 			BorderSizePixel = 0,
@@ -306,19 +307,36 @@ local function BattleHudContent(props: HudState)
 			Text = "Drag to Place",
 			LayoutOrder = 0,
 		}),
-		-- ScrollingEnabled is intentionally NOT declared here: it's toggled
-		-- imperatively while a program is dragged out of the list
-		ProgramScroll = e("ScrollingFrame", {
+		-- Win95 listbox look: white scroll area with an always-visible
+		-- scrollbar gutter on the right so it reads as scrollable
+		ListArea = e("Frame", {
 			LayoutOrder = 1,
 			Size = UDim2.new(1, 0, 0, listHeight),
-			BackgroundTransparency = 1,
+			BackgroundColor3 = Color3.new(1, 1, 1),
 			BorderSizePixel = 0,
-			CanvasSize = UDim2.new(0, 0, 0, 0),
-			AutomaticCanvasSize = Enum.AutomaticSize.Y,
-			ScrollingDirection = Enum.ScrollingDirection.Y,
-			ScrollBarThickness = 6,
-			ScrollBarImageColor3 = Color3.new(0, 0, 0),
-		}, rowItems),
+		}, {
+			ScrollGutter = e("ImageLabel", {
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, 0, 0, 0),
+				Size = UDim2.new(0, 16, 1, 0),
+				BackgroundTransparency = 1,
+				Image = kGutterImage,
+				ScaleType = Enum.ScaleType.Tile,
+				TileSize = UDim2.new(0, 16, 0, 16),
+			}),
+			-- ScrollingEnabled is intentionally NOT declared here: it's
+			-- toggled imperatively while a script is dragged out of the list
+			ProgramScroll = e("ScrollingFrame", {
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				CanvasSize = UDim2.new(0, 0, 0, 0),
+				AutomaticCanvasSize = Enum.AutomaticSize.Y,
+				ScrollingDirection = Enum.ScrollingDirection.Y,
+				ScrollBarThickness = 16,
+				ScrollBarImageColor3 = Color3.fromRGB(192, 192, 192),
+			}, rowItems),
+		}),
 	}
 
 	local pane = props.pane
@@ -395,7 +413,7 @@ local function BattleHudContent(props: HudState)
 			})
 			else nil,
 		ProgramsWindow = if props.programsVisible
-			then windowChrome("Programs", {
+			then windowChrome("Scripts", {
 				Name = "ProgramsWindow",
 				Size = UDim2.new(0, 160, 0, listHeight + 74),
 				LayoutOrder = 0,

@@ -208,7 +208,7 @@ node{
 		Parts = {
 			main = part("Are you the newbie? I saw you beat the test run.", "No sweat.", 'a');
 			a = part("Fellow smart agent on patrol. I was just executing some elite hacks in security level two. Where are you headed next?", "Just hacking through level one.", 'b');
-			b = part("Cool. You'll definitely want to grab some better programs. Have you checked out the warez node? I'll show you where it is. Later.", "Later.", 'end');	
+			b = part("Cool. You'll definitely want to grab some better scripts. Have you checked out the warez node? I'll show you where it is. Later.", "Later.", 'end');	
 		};
 		Function = functionRevealNode('wz1');
 	};
@@ -239,7 +239,7 @@ node{
 		User = 'superphreak';
 		Parts = {
 			main = part("Hey. Not bad ___ ___ so far ___ you're almost ____ ready for level two ____ access.", "Thanks.", 'a');
-			a = part("Hmm __ something __ ____ wierd's going on. I think I __ breaking up. __ look, you've got ___ get the access codes. We've put __ program there ___ help ___ out.", "What's wrong?", 'b');
+			a = part("Hmm __ something __ ____ wierd's going on. I think I __ breaking up. __ look, you've got ___ get the access codes. We've put __ script there ___ help ___ out.", "What's wrong?", 'b');
 			b = part("You ___ can find ____ ____ ___ _ ____ ___", "Aeacus? Hello?", 'c');
 			c = part("____ ___ ___  ___ __ > EOF", "Done", 'end');
 		};
@@ -258,11 +258,11 @@ node{
 		Parts = {
 			main = part("__ __ __ __ Hold on __ __ TRying to connect ___", "Aeacus?", 'a');
 			a = part("Yeah, I'm back. I see you got the access codes. I'll think I have time to uprade your status and show you a new warez node before I get cut off again.", "Why did you get cut off before?", 'b');
-			b = part("Someone's been screwing around with Smart. Some kind of corrupt program got loose in our network and I got cut off. For a second, I thought it was 12AM out here.", "12AM?", 'c');
+			b = part("Someone's been screwing around with Smart. Some kind of corrupt script got loose in our network and I got cut off. For a second, I thought it was 12AM out here.", "12AM?", 'c');
 			c = part("12AM = midnight. That's what we call a total network blackout. No access for anybody. It happened once a while ago during the worldwide power crisis. You wouldn't believe how bad it got before the network game back online.", "Got it.", 'd');
 			d = part("Anyways, someone directly sabotaged smart and it's crippling our agents. But it's not affecting you because we haven't put your info into the smart system yet.", "Who's responsible for this?", 'e');
 			e = part("I'm not sure yet, I'm going to keep looking into it. But with all of us popping in and out, I guess that leaves you as the only functional agent.", "Great.", 'f');
-			f = part("I ran a trace on the problem that led back to the lucky monkey eastern distribution site. Somebody must have sent the corrupt program from there.", "Okay.", 'g');
+			f = part("I ran a trace on the problem that led back to the lucky monkey eastern distribution site. Somebody must have sent the corrupt script from there.", "Okay.", 'g');
 			g = part("I guess you should see if you can pick up the local records. I'll get back to you when I can.", "Ready for Security Upgrade", 'end');
 		};
 		Function = functionUpgradeSecurity(2);
@@ -289,7 +289,7 @@ node{
 	Links = {'ph29'};
 	PlaceId = 'L21';
 	Name = "Eastern Distribution Site";
-	Mission = "This node contains logs related to the Pharmhaus and Celular Automa corrupted programs. Retrieve the logs.";
+	Mission = "This node contains logs related to the Pharmhaus and Celular Automa corrupted scripts. Retrieve the logs.";
 	Conversation = conversation{
 		User = 'superphreak';
 		Parts = {
@@ -328,7 +328,7 @@ node{
 		User = 'superphreak';
 		Parts = {
 			main = part("Wow. Good thing you checked out this node. This whole area's a mess.", "What do you mean?", 'a');
-			a = part("From what I can tell, the problem with program corruption is escalating.", "Who's doing it?", 'b', "What do we do?", 'b');
+			a = part("From what I can tell, the problem with script corruption is escalating.", "Who's doing it?", 'b', "What do we do?", 'b');
 			b = part("I'm not sure, but there's got to be some useful information in those logs you picked up. Since I can't seem to stay on the net for five minutes, I'll keep analyzing those logs.", "What about me?", 'c');
 			c = part("Work your way across these nodes. Somebody's hiding something from us. See if you can find out what it is. Welcome to the big time, newbie. Send me those logs so I can get starcted. Ready to recieve data.", "Send Log Data", 'end');
 		};
@@ -382,7 +382,7 @@ node{
 		User = 'superphreak';
 		Parts = {
 			main = part("___ __ __ _ ___ Man, it's hard to stay connected. Nice work so far.", "What did you find out so far?", 'a', "Thanks.", 'a');
-			a = part("I used a neural net sequence to cross reference all of the logs you've given me so gar. I was able to trace the programs back to the node that originally spawned them onto the net.", "Any idea who's behind it?", 'b');
+			a = part("I used a neural net sequence to cross reference all of the logs you've given me so gar. I was able to trace the scripts back to the node that originally spawned them onto the net.", "Any idea who's behind it?", 'b');
 			b = part("No idea. It's an unknown node in a high security level.", "So what should I do?", 'c');
 			c = part("You're doing an excelent job. Keep on Hacking and tell me what you find. I'll load the new node on your netmap now.", "Ready to receive net data", 'end');
 		};
@@ -438,7 +438,7 @@ node{
 		Parts = {
 			main = part("Hey newbie. Still working on getting smart on its feet. What are you up to?", "Do you know Minish?", 'a');
 			a = part("He's a good kid. By the way, that node up there is network city. And there are a couple more warez nodes hidden out on the net.", "Nice.", 'b');
-			b = part("And while you're looking at software, don't just load up on attack programs. You should check out some meta programs like metic and turbo. There may come a time when you need to boost up your hack to handle an _____ enemy. ___ oops gotta go.", "Done", 'end');
+			b = part("And while you're looking at software, don't just load up on attack scripts. You should check out some meta scripts like metic and turbo. There may come a time when you need to boost up your hack to handle an _____ enemy. ___ oops gotta go.", "Done", 'end');
 		};
 		Function = nil;
 	}
@@ -488,7 +488,7 @@ node{
 		Parts = {
 			main = part("Hey dude. It's me again.", "Hey Minish.", 'a', "What's up?", 'a');
 			a = part("Kewl Battle! Hey, I was lookin over some of the nodes you've been through and I found something funny. Whoever did the dack job through pharmhaus left somethin behind.", "Left what behind?", 'b');
-			b = part("Some kind of wierd program. I couldn't get a good luck at it cause it disappeared before I could catch it.", "Where was it from?", 'c');
+			b = part("Some kind of wierd script. I couldn't get a good luck at it cause it disappeared before I could catch it.", "Where was it from?", 'c');
 			c = part("I'm not sure. Maybe the same hacker that's been corrupting these nodes. I saw a link to something called nightfall. I'll keep checking the logs and see if I can find anything else.", "Thanks a lot.", 'end', "You do that.", 'end');
 		};
 		Function = nil;
@@ -506,7 +506,7 @@ node{
 		Parts = {
 			main = part("Nice work. You keep going at this rate, you may just be an elite agent yet. Welcome to level 3.", "Thanks. How's the smart system?", 'a');
 			a = part("Still a wreck. We're going off-line like every few minutes. It's all I can do to keep the communications.", "Hang in there.", 'b');
-			b = part("I'll do my best. With all these corrupt programs squirming around, I've got a feeling something big is going on.", "Like what?", 'c');
+			b = part("I'll do my best. With all these corrupt scripts squirming around, I've got a feeling something big is going on.", "Like what?", 'c');
 			c = part("Like something that's going to damage the whole net. Keep looking around. I'll upgrade you to security level three now.", "Ready to receive security upgrade", 'end');
 		};
 		Function = functionUpgradeSecurity(3);
@@ -524,10 +524,10 @@ node{
 		Parts = {
 			main = part("Still up out there?", "Hey Dignity.", 'a', "Still here.", 'a');
 			a = part("Of course I'm still online. Nothing this puny is going to take a hacker of my skills down. Anyway, I'e been digging around and I found something. Do you have time to check it out?", "I don't know, what is it?", 'b', "Sure.", 'b');
-			b = part("Smart has a special program that would really help with the crashing and all. To get it running I need a couple of files that are hidden in some corporate nodes around here, two nodes to be exact.", "What's the program?", 'c');
-			c = part("Network software, it's complicated. Anyway, the program is encrypted, so I'm going to need a lot of time to decipher it. Can you shut down security so I can get in there and concentrate on the real work?", "Sure thing.", 'd', "Let me think about it.", 'd');
+			b = part("Smart has a special script that would really help with the crashing and all. To get it running I need a couple of files that are hidden in some corporate nodes around here, two nodes to be exact.", "What's the script?", 'c');
+			c = part("Network software, it's complicated. Anyway, the script is encrypted, so I'm going to need a lot of time to decipher it. Can you shut down security so I can get in there and concentrate on the real work?", "Sure thing.", 'd', "Let me think about it.", 'd');
 			d = part("Okay. You can get to the nodes through this one. They're all level three, so you'll need to get the access code for that level first.", "Got it.", 'e');
-			e = part("I'll load the first node onto your map now. Hack that to access the nodes that contain the program. I'll catch up with you when you've taken care of the security. Later newbie.", "Later.", 'end');
+			e = part("I'll load the first node onto your map now. Hack that to access the nodes that contain the script. I'll catch up with you when you've taken care of the security. Later newbie.", "Later.", 'end');
 		};
 		Function = functionRevealNode('lm39');
 	}
@@ -623,12 +623,12 @@ node{
 	Links = {'dr37', 'lm39', 'dr38'};
 	PlaceId = 'L31';
 	Name = "Market Research";
-	Mission = "This node connects to the two nodes containing the program Dignity wanted. Disable the security to proceed to them.";
+	Mission = "This node connects to the two nodes containing the script Dignity wanted. Disable the security to proceed to them.";
 	Conversation = conversation{
 		User = 'wintermutant';
 		Parts = {
 			main = part("Hey partner! You really cleaned up those DR. D Nodes!", "Thanks Minish.", 'a', "What's up?", 'a');
-			a = part("I went sneaking around there after you left, and guess what? I found more traces of that wierd program.", "Any idea where it came from?", 'b', "Know what it's for?", 'b');
+			a = part("I went sneaking around there after you left, and guess what? I found more traces of that wierd script.", "Any idea where it came from?", 'b', "Know what it's for?", 'b');
 			b = part("Totally! The traces had the same nightfall signature, so I did this special kind of search I made up, and I found something.", "What did you find?", 'c');
 			c = part("A nice piece of software somebody made. It's stashed away deep in sector 4 in a luck monkey node, not that they know it's there of course.", "Did you find anything else?", 'd');
 			d = part("Not yet, but I'm gonna keep searching for the nightfall hacker and see what else I find + I'll put the monkey node up on your map. C U partner.", "Done", 'end');
@@ -642,11 +642,11 @@ node{
 	Links = {};
 	PlaceId = 'L37';
 	Name = "Flavor Evaluation Lab";
-	Mission = "Half of the program Dignity wants is here. Collect the keys to temporarily shut down the node's surveillance and allow Dignity access.";
+	Mission = "Half of the script Dignity wants is here. Collect the keys to temporarily shut down the node's surveillance and allow Dignity access.";
 	Conversation = conversation{
 		User = 'superphreak';
 		Parts = {
-			main = part("Hey, I can see which program disarray's getting. It has to do with rapid sumiltaneous network communication - Floodinga huge number of nodes at once.", "Why would he want to do that?", 'a');
+			main = part("Hey, I can see which script disarray's getting. It has to do with rapid sumiltaneous network communication - Floodinga huge number of nodes at once.", "Why would he want to do that?", 'a');
 			a = part("I don't know. What would disarray be doing that would affect the whole net? He'd still have to have hacked every node individually to be able to do anything.", "What's the next step?", 'b');
 			b = part("Keep following him, and watch what he says. I'll keep up my trace and get back to you when I have more. L8r.", "Done", 'end');
 		};
@@ -659,12 +659,12 @@ node{
 	Links = {};
 	PlaceId = 'L39';
 	Name = "Lucky Jungle Central";
-	Mission = "Half of the program Dignity wants is here. Collect the keys to temporarily shut down the node's surveillance and allow Dignity access.";
+	Mission = "Half of the script Dignity wants is here. Collect the keys to temporarily shut down the node's surveillance and allow Dignity access.";
 	Conversation = conversation{
 		User = 'disarray';
 		Parts = {
 			main = part("Terrific. Thanks for handling the security. I could've done it myself, but that saved me some time.", "No problem.", 'a');
-			a = part("Well, once the program is put together, everything will be set for smart, see you soon.", "Close", 'end');
+			a = part("Well, once the script is put together, everything will be set for smart, see you soon.", "Close", 'end');
 		};
 		Function = nil;
 	}
@@ -733,7 +733,7 @@ node{
 		User = 'superphreak';
 		Parts = {
 			main = part(" __ __ ___ It's __ harder and harder to __ __ but I've got important information __ __ ready?", "Go ahead.", 'a');
-			a = part("I've finished my trace on Dignity. Surprise surprise, he's the source __ __ __ corrupt programs and security screw-ups. Dignity's been infiltrating __ __ __ the web. I don't know why.", "What about the program he took?", 'b');
+			a = part("I've finished my trace on Dignity. Surprise surprise, he's the source __ __ __ corrupt scripts and security screw-ups. Dignity's been infiltrating __ __ __ the web. I don't know why.", "What about the script he took?", 'b');
 			b = part("__ __ A well-guarded communications hub. He's using the stolen script __ __ access to all the nodes on the net __ __ I just don't understand the point. Any ideas?", "Does Nightfall mean anything to you?", 'c');
 			c = part("Nightfall? What does that mean?", "Dignity's secret project?", 'd');
 			d = part("Nightfall... that's it! Dignity's __ _ use his Nightfall script to black out the net. Total midnight! __ __ __ crash the entire system! You have to stop him!!", "How?", 'e');
@@ -748,12 +748,12 @@ node{
 	Links = {};
 	PlaceId = 'L43';
 	Name = "Film Properties";
-	Mission = "Minish found an experimental piece of software here. Retrieve the script before the corrupted programs left to protect it disconnect you.";
+	Mission = "Minish found an experimental piece of software here. Retrieve the script before the corrupted scripts left to protect it disconnect you.";
 	Conversation = conversation{
 		User = 'wintermutant';
 		Parts = {
 			main = part("That battle was sooo kewl! You rock! And managed to retrieve that experimental software.", "How does it work?", 'a');
-			a = part("The program should be ready to use, just plug and play. Oh, one more thing. I've been scanning these nodes. Be sure to get some level four software and be ready for some nasty security. Go get'em partner.", "Ready to receive software", 'end');
+			a = part("The script should be ready to use, just plug and play. Oh, one more thing. I've been scanning these nodes. Be sure to get some level four software and be ready for some nasty security. Go get'em partner.", "Ready to receive software", 'end');
 		};
 		Function = functionGetProgram('wizard');
 	}
@@ -863,7 +863,7 @@ node{
 	Conversation = conversation{
 		User = 'superphreak';
 		Parts = {
-			main = part("Hey, I guess you found out __ __ get the access codes for disarray's node. Good work. I'm looking into how to stall the nightfall software. Gou go get the ___ codes and then de-activate the program. But first __ __ __ ___ what I know about this jerk.", "Tell me.", 'a');
+			main = part("Hey, I guess you found out __ __ get the access codes for disarray's node. Good work. I'm looking into how to stall the nightfall software. Gou go get the ___ codes and then de-activate the script. But first __ __ __ ___ what I know about this jerk.", "Tell me.", 'a');
 			a = part("I'm sure disarray __ boobytrapped the node that has his access codes. I don't know __ __ __ when you access that node.", "Okay.", 'b');
 			b = part("If you've got any unfinished missions, complete them to __ __ extra cash. ___ __ back to the L4 warez node and stock up on scripts.", "Got it.", 'c');
 			c = part("Dignity's tactics: I know that _______ __ coward and will use ranged scripts to keep you ___ __ distance. Be prepared to see lots of radar and sonar along with __________ _____ ___ fought. I also know he deletes memory cells as a defense, so be sure ___", "Thanks.", 'd');

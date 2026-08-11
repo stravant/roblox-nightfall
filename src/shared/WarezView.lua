@@ -144,7 +144,7 @@ local function detailPanel(selectedId: string?)
 				TextSize = 16,
 				TextColor3 = Color3.new(0.35, 0.35, 0.35),
 				TextWrapped = true,
-				Text = "Select a program",
+				Text = "Select a script",
 			}),
 		}
 	end

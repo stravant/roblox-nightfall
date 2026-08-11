@@ -367,7 +367,7 @@ function MainView.new()
 		local warezGui = WarezView.new(nodeId, Netmap.ById[nodeId].Warez)
 		local purchaseConnection = warezGui.MadePurchase:connect(function(id)
 			mNetmapView:UpdateCreditDisplay()
-			this:ShowNotification("Acquired program "..Scripts[id].Name, Scripts[id])
+			this:ShowNotification("Acquired script "..Scripts[id].Name, Scripts[id])
 		end)
 		local doneConnection;
 		doneConnection = warezGui.Done:connect(function()
@@ -479,7 +479,7 @@ function MainView.new()
 					this:ShowNotification("Upgraded security level to "..f.Level)
 				elseif f.Type == 'getProgram' then
 					LocalPlayerData:AddUnit(f.Id)
-					this:ShowNotification("Received program: "..Scripts[f.Id].Name, Scripts[f.Id])
+					this:ShowNotification("Received script: "..Scripts[f.Id].Name, Scripts[f.Id])
 				elseif f.Type == 'getCredits' then
 					LocalPlayerData:AddCredits(f.Amount)
 					mNetmapView:UpdateCreditDisplay()
