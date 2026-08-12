@@ -61,6 +61,15 @@ return function(t)
 	local marketplaceMock = {}
 	Services:SetMock("MarketplaceService", marketplaceMock)
 
+	-- Deterministic GUIDs (used by the winning-replay archive)
+	local guidCounter = 0
+	Services:SetMock("HttpService", {
+		GenerateGUID = function(_self, _wrap)
+			guidCounter += 1
+			return "guid-" .. guidCounter
+		end,
+	})
+
 	----------------------------------------------------------------------
 	-- Remote mocks (the network itself), emulating engine semantics:
 	-- - Arguments and return values are SERIALIZED across the boundary:
@@ -421,6 +430,13 @@ return function(t)
 		t.expect(countAnalytics("progressionComplete", player)).toBe(1)
 		t.expect(countAnalytics("economy", player) >= 1).toBeTruthy() -- battle reward
 
+		-- The first win archived the winning replay under the (mock) GUID —
+		-- read it back straight out of the mock datastore
+		task.wait(0.1) -- the archive write is fire-and-forget
+		local MockDataStore = require(game.ServerScriptService.MockDataStore)
+		local archived = MockDataStore:GetDataStore(DataStoreService.ReplaysStoreName):GetAsync("guid-1")
+		t.expect(archived).toBe(kL12WinningReplay)
+
 		-- A garbage replay is refused (and counted as a cheat signal)
 		remotes.ProcessReplay:FireServer_TEST(player, "L99;;;garbage")
 		local refusal = remotes.ProcessReplay.FiredToClients[#remotes.ProcessReplay.FiredToClients]
@@ -480,8 +496,24 @@ return function(t)
 		t.expect(records.World.turns ~= nil).toBeTruthy()
 		t.expect(records.Friend.turns ~= nil).toBeTruthy()
 		t.expect(records.Friend.turns.Name).toBe("Rival")
+		-- The world holder's name came through the (mock) name lookup API
+		t.expect(records.World.turns.Name:match("^User%d+$") ~= nil).toBeTruthy()
 
 		-- Bogus node ids are rejected
 		t.expect(remotes.GetNodeRecords:InvokeServer_TEST(player, "nope")).toBe(nil)
+	end)
+
+	t.test("leaving before loading counts as a bounce", function()
+		local ghost = makePlayer(4004, "Bouncer")
+		-- Never invokes Load: PlayerRemoving fires with no cached data
+		playerLeaves(ghost)
+		local sawBounce = false
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Player == ghost
+				and event.Args[1] == "PlayerBounced" then
+				sawBounce = true
+			end
+		end
+		t.expect(sawBounce).toBeTruthy()
 	end)
 end

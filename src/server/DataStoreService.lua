@@ -1,4 +1,4 @@
-local DataStore = game:GetService('DataStoreService')
+local Services = require(game.ReplicatedStorage.Services)
 
 local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
 local ServerPlayerData = require(game.ServerScriptService.ServerPlayerData)
@@ -6,15 +6,20 @@ local NodeStats = require(game.ReplicatedStorage.NodeStats)
 local MockDataStore = require(game.ServerScriptService.MockDataStore)
 local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
+local HttpService = Services:Get('HttpService')
+
+-- A Services mock (a table) wins outright; otherwise the debug flag picks
+-- between the in-memory mock and the real service
+local DataStore = Services:Get('DataStoreService')
+if typeof(DataStore) == "Instance" and DebugFlags:UseMockData() then
+	DataStore = MockDataStore
+end
+
 local DataStoreService = {}
 
 -- test12: player datastores rekeyed from numeric UserId to the serialized
 -- domain-scoped User identity (Player.User)
 local PRODUCTION_VERSION = 'test12'
-
-if DebugFlags:UseMockData() then
-	DataStore = MockDataStore
-end
 
 local PREFIX = PRODUCTION_VERSION
 local PLAYER_ORDERED_PREFIX = PREFIX..'_ordered'
@@ -23,6 +28,8 @@ local PLAYER_DATA_PREFIX = PREFIX..'_data'
 local NODE_STATS_DATASTORE = PREFIX..'_nodestats'
 
 local REPLAYS_DATASTORE = PREFIX..'_replays'
+-- Exposed for integration tests to inspect the (mock) replay store
+DataStoreService.ReplaysStoreName = REPLAYS_DATASTORE
 
 -- Datastores are keyed by the domain-scoped User identity (serialized to a
 -- string), not the raw numeric UserId
@@ -237,7 +244,7 @@ end
 -- Save a replay
 local mReplaysDatastore = DataStore:GetDataStore(REPLAYS_DATASTORE)
 function DataStoreService:SaveReplay(replayString)
-	local id = game:GetService('HttpService'):GenerateGUID(false)
+	local id = HttpService:GenerateGUID(false)
 	spawn(function()
 		local st, err = pcall(function()
 			mReplaysDatastore:SetAsync(id, replayString)
