@@ -92,7 +92,7 @@ function NetmapCamera.new()
 	setPosition(mCurrentPosition)
 	
 	local function handleWheel(delta)
-		if ModalManager:IsModal() then
+		if not mInstalled or ModalManager:IsModal() then
 			return
 		end
 		mZoomLevel -= delta * 80
@@ -119,11 +119,15 @@ function NetmapCamera.new()
 	local mPinching = false
 	local mPinchStartZoom = mZoomLevel
 	local mInertialVelocity = Vector3.new()
+	-- The camera only reacts to input while installed: its connections are
+	-- global, and un-gated they would silently pan the hidden netmap camera
+	-- during databattles (whose board drags share the same input events)
+	local mInstalled = false
 	-- In-flight FocusOn glide ({Start, Target, T, Duration}); cancelled by any
 	-- user pan/pinch
 	local mFocusTween = nil
 	local function button1Down()
-		if ModalManager:IsModal() or mPinching then
+		if not mInstalled or ModalManager:IsModal() or mPinching then
 			return
 		end
 		mFocusTween = nil
@@ -147,7 +151,7 @@ function NetmapCamera.new()
 		mIsPanning = false
 	end
 	local function mousePan()
-		if ModalManager:IsModal() or mPinching then
+		if not mInstalled or ModalManager:IsModal() or mPinching then
 			return
 		end
 		if mPanStartHit then
@@ -199,7 +203,7 @@ function NetmapCamera.new()
 		end
 	end)
 	UserInputService.TouchPinch:Connect(function(_touchPositions, scale, _velocity, state, gameProcessed)
-		if ModalManager:IsModal() then
+		if not mInstalled or ModalManager:IsModal() then
 			return
 		end
 		if state == Enum.UserInputState.Begin then
@@ -241,6 +245,15 @@ function NetmapCamera.new()
 	end
 	
 	function this:Install()
+		mInstalled = true
+		-- Discard any motion residue so the camera comes back EXACTLY where
+		-- it was: pending focus glides, fling inertia, half-finished gestures
+		mFocusTween = nil
+		mInertialVelocity = Vector3.new()
+		mPanStartHit = nil
+		mIsPanning = false
+		mDidPan = false
+		mPinching = false
 		-- Re-assert the camera state: the battle camera changes type/FOV/CFrame
 		-- while a databattle is up
 		mCamera.CameraType = Enum.CameraType.Scriptable
@@ -272,6 +285,7 @@ function NetmapCamera.new()
 	end
 	
 	function this:Uninstall()
+		mInstalled = false
 		RunService:UnbindFromRenderStep(BIND_NAME)
 	end
 	
