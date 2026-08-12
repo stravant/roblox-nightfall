@@ -235,7 +235,9 @@ return function(t)
 	local function countAnalytics(kind, player)
 		local n = 0
 		for _, event in pairs(analyticsLog) do
-			if event.Kind == kind and (player == nil or event.Player == player) then
+			-- Compare by UserId: rejoining creates a fresh player object
+			if event.Kind == kind
+				and (player == nil or (event.Player and event.Player.UserId == player.UserId)) then
 				n += 1
 			end
 		end
@@ -322,6 +324,56 @@ return function(t)
 	local kL12WinningReplay = generateWinningReplay()
 
 	----------------------------------------------------------------------
+
+	t.test("a new player joins and plays through the scripted tutorial", function()
+		local player = makePlayer(3003, "TutorialPlayer")
+
+		-- Join: the client bootstrap invokes Load
+		local clientData = remotes.Load:InvokeServer_TEST(player)
+		t.expect(clientData.IsFirstTimeUser).toBeTruthy()
+
+		-- Play the tutorial battle CLIENT-SIDE exactly as Tutorial.lua
+		-- scripts it, using the inventory the server just handed us. This
+		-- guards the tutorial map and the script's hard-coded coordinates
+		-- staying in sync: if either changes, this fails before a player
+		-- ever hits a stuck tutorial.
+		local gs = GameState.new(Places.tutorial, clientData.Units, GameState.ServerDelayFunc)
+		gs:UploadUnit(4, 5, Scripts.hack)
+		gs:UploadUnit(3, 3, Scripts.slingshot)
+		gs:StartGame()
+
+		-- Hack: two moves in, then the auto-selected Slice on the enemy
+		local hack = gs:GetUnit(4, 5)
+		gs:UnitMove(hack, 5, 5)
+		gs:UnitMove(hack, 6, 5)
+		gs:UnitExecute(hack, "slice", 7, 5)
+		t.expect(gs:HasWon()).toBeFalsy() -- not dead yet: slingshot finishes it
+
+		-- Slingshot: move up, then Stone at range
+		local slingshot = gs:GetUnit(3, 3)
+		gs:UnitMove(slingshot, 4, 3)
+		gs:UnitExecute(slingshot, "stone", 7, 3)
+
+		-- The tutorial polls HasWon right after this attack
+		t.expect(gs:HasWon()).toBeTruthy()
+		t.expect(gs:HasErrors()).toBeFalsy()
+
+		-- The client then reports the funnel milestones and BeatTutorial
+		remotes.FunnelStep:FireServer_TEST(player, OnboardingSteps.TutorialEntered)
+		remotes.FunnelStep:FireServer_TEST(player, OnboardingSteps.ScriptPlaced)
+		remotes.FunnelStep:FireServer_TEST(player, OnboardingSteps.BattleStarted)
+		remotes.FunnelStep:FireServer_TEST(player, OnboardingSteps.FirstAttack)
+		remotes.BeatTutorial:FireServer_TEST(player)
+
+		-- Rejoin: the completed tutorial persisted with its reward
+		playerLeaves(player)
+		player = makePlayer(3003, "TutorialPlayer")
+		local rejoined = remotes.Load:InvokeServer_TEST(player)
+		t.expect(rejoined.NodeStatus.hq.Beaten).toBeTruthy()
+		t.expect(rejoined.Credits).toBe(DebugFlags:GetInitialCredits() + Places.tutorial.CreditReward)
+		-- Joined + 4 detail steps + TutorialBeaten
+		t.expect(countAnalytics("onboarding", player) >= 5).toBeTruthy()
+	end)
 
 	t.test("full journey over the network: join, tutorial, rejoin, win, buy, skip", function()
 		local player = makePlayer(1001, "IntegrationTester")
