@@ -39,7 +39,7 @@ Remotes.BeatTutorial.OnServerEvent:connect(function(player)
 	-- If we successfully processed it, save
 	if result then
 		ServerStatistics:PlayerBeatTutorial(player)
-		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)
+		DataStoreService:SavePlayerDataAsync(player, playerData)
 	end
 end)
 
@@ -84,7 +84,7 @@ Remotes.ProcessReplay.OnServerEvent:connect(function(player, replayStr)
 	-- If we successfully processed it, save
 	if result.Valid then
 		print("Replay was good, saving player data")
-		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)		
+		DataStoreService:SavePlayerDataAsync(player, playerData)		
 	end
 end)
 
@@ -108,7 +108,7 @@ Remotes.SkipLevel.OnServerEvent:connect(function(player, nodeId)
 	-- Save the player data
 	if result then
 		ServerStatistics:PlayerSkippedLevel(player, nodeId)
-		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)
+		DataStoreService:SavePlayerDataAsync(player, playerData)
 	end
 end)
 
@@ -140,16 +140,16 @@ Remotes.PurchaseUnit.OnServerEvent:connect(function(player, warezId, programId)
 
 	-- Save the player data
 	if result then
-		DataStoreService:SavePlayerDataAsync(player.UserId, playerData)
+		DataStoreService:SavePlayerDataAsync(player, playerData)
 	end
 end)
 
 Remotes.Load.OnServerInvoke = function(player)
-	local success, playerData = DataStoreService:LoadPlayerDataAsync(player.UserId)
+	local success, playerData = DataStoreService:LoadPlayerDataAsync(player)
 	if success then
 		-- New player
 		if not playerData then
-			playerData = ServerPlayerData.new(player.UserId)
+			playerData = ServerPlayerData.new(player)
 		end
 		
 		-- If they're still in the game, cache the data
@@ -163,7 +163,7 @@ Remotes.Load.OnServerInvoke = function(player)
 		-- Return it
 		return playerData:Serialize(--[[forClient=]]true)
 	else
-		ServerStatistics:PlayerLoadFailed(player.UserId)
+		ServerStatistics:PlayerLoadFailed(player)
 		return nil
 	end	
 end
@@ -227,7 +227,7 @@ function MarketplaceService.ProcessReceipt(info)
 	Remotes.PurchaseSkip:FireClient(player, amount)
 
 	-- Save the changes
-	local saved = DataStoreService:SavePlayerDataAsync(playerId, playerData)
+	local saved = DataStoreService:SavePlayerDataAsync(player, playerData)
 
 	-- Save stat
 	ServerStatistics:PlayerBoughtSkips(player, amount)

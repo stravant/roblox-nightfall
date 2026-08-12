@@ -59,7 +59,13 @@ function NodeStats.new(data)
 		local name = mNameCache[id]
 		if not name then
 			local st, p = pcall(function()
-				return game.Players:GetNameFromUserIdAsync(id)
+				-- Records hold either a legacy numeric UserId or a serialized
+				-- domain-scoped User string; engine user-id APIs accept both
+				local lookup = id
+				if type(id) == "string" then
+					lookup = User.fromString(id)
+				end
+				return game.Players:GetNameFromUserIdAsync(lookup)
 			end)
 			if st then
 				name = p

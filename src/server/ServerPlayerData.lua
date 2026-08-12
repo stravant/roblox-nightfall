@@ -9,8 +9,13 @@ local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local ServerPlayerData = {}
 
-function ServerPlayerData.new(playerId, serialized)
+function ServerPlayerData.new(player, serialized)
 	local this = {}
+
+	-- Identity: the domain-scoped User string keys stats records; the label
+	-- is only for log output
+	local mUserKey = player.User:ToString()
+	local mPlayerLabel = player.Name .. " (" .. player.UserId .. ")"
 	
 	local mCredits;
 	local mSecurityLevel;
@@ -150,12 +155,12 @@ function ServerPlayerData.new(playerId, serialized)
 				getNodeStatus(f.Id).Seen = true
 			elseif f.Type == 'upgradeSecurity' then
 				mSecurityLevel = f.Level
-				ServerStatistics:SecurityLevelReached(playerId, f.Level)
+				ServerStatistics:SecurityLevelReached(player, f.Level)
 			elseif f.Type == 'getProgram' then
 				addUnit(f.Id)
 			elseif f.Type == 'getCredits' then
 				mCredits = mCredits + f.Amount
-				ServerStatistics:CreditsEarned(playerId, f.Amount, mCredits, "StoryReward")
+				ServerStatistics:CreditsEarned(player, f.Amount, mCredits, "StoryReward")
 			elseif f.Type == 'beginNightfall' then
 				mSecurityLevel = 5
 				-- TODO:
@@ -225,7 +230,7 @@ function ServerPlayerData.new(playerId, serialized)
 		local firstTime = (data.AttemptCount == 1)
 		DataStoreService:UpdateStatsForNode(
 			replayResult.NodeId,
-			playerId, 
+			mUserKey, 
 			firstTime, 
 			replayString, 
 			replayResult)
@@ -238,7 +243,7 @@ function ServerPlayerData.new(playerId, serialized)
 			return ReplayChecker:Check(replayString, GameState.ServerDelayFunc)
 		end)
 		if not st then
-			warn("ServerPlayerData | Replay from "..playerId.." threw while checking: "..tostring(result))
+			warn("ServerPlayerData | Replay from "..mPlayerLabel.." threw while checking: "..tostring(result))
 			return { Valid = false }
 		end
 		if result.Valid then
@@ -247,7 +252,7 @@ function ServerPlayerData.new(playerId, serialized)
 				print("ServerPlayerData: Won replay")
 				-- Give them the credits
 				mCredits = mCredits + result.Credits
-				ServerStatistics:CreditsEarned(playerId, result.Credits, mCredits, "BattleReward")
+				ServerStatistics:CreditsEarned(player, result.Credits, mCredits, "BattleReward")
 
 				-- Mark the node as beaten
 				setNodeBeaten(result.NodeId)
@@ -259,7 +264,7 @@ function ServerPlayerData.new(playerId, serialized)
 			-- for the player and the node overall			
 			processStats(replayString, result)
 		else
-			warn("ServerPlayerData | Got invalid replay from "..playerId)
+			warn("ServerPlayerData | Got invalid replay from "..mPlayerLabel)
 			print(replayString)
 		end
 		return result
@@ -269,23 +274,23 @@ function ServerPlayerData.new(playerId, serialized)
 		-- Both ids are client-provided
 		local node = Netmap.ById[warezId]
 		if not node or not node.Warez then
-			warn("ServerPlayerData | "..playerId.." tried to purchase from non-Warez node "..tostring(warezId))
+			warn("ServerPlayerData | "..mPlayerLabel.." tried to purchase from non-Warez node "..tostring(warezId))
 			return false
 		end
 		local price = node.Warez[programId]
 		if not price then
-			warn("ServerPlayerData | "..playerId.." tried to purchase "..programId.." from node "..warezId.." that doesn't have it.")
+			warn("ServerPlayerData | "..mPlayerLabel.." tried to purchase "..programId.." from node "..warezId.." that doesn't have it.")
 			return false
 		end
 		if mCredits < price then
-			warn("ServerPlayerData | "..playerId.." tried to purchase program "..programId.." for "..price.." when only having "..mCredits.." credits.")
+			warn("ServerPlayerData | "..mPlayerLabel.." tried to purchase program "..programId.." for "..price.." when only having "..mCredits.." credits.")
 			return false
 		end
 		
 		-- Success, actualy buy the program
 		mCredits = mCredits - price
 		addUnit(programId)
-		ServerStatistics:UnitPurchased(playerId, programId, price, mCredits)
+		ServerStatistics:UnitPurchased(player, programId, price, mCredits)
 		return true
 	end
 	
@@ -314,7 +319,7 @@ function ServerPlayerData.new(playerId, serialized)
 	function this:SkipLevel(nodeId)
 		-- Client-provided id: don't let a bad one throw in getNodeStatus
 		if not Netmap.ById[nodeId] then
-			warn("ServerPlayerData | "..playerId.." tried to skip unknown node "..tostring(nodeId))
+			warn("ServerPlayerData | "..mPlayerLabel.." tried to skip unknown node "..tostring(nodeId))
 			return false
 		end
 		local found = false
@@ -324,11 +329,11 @@ function ServerPlayerData.new(playerId, serialized)
 			end
 		end
 		if found then
-			warn("ServerPlayerData | "..playerId.." tried to skip node "..nodeId.." twice.")
+			warn("ServerPlayerData | "..mPlayerLabel.." tried to skip node "..nodeId.." twice.")
 			return false
 		end
 		if #mSkipsUsed >= mSkipsPurchased then
-			warn("ServerPlayerData | "..playerId.." tried to use a skip they don't have.")
+			warn("ServerPlayerData | "..mPlayerLabel.." tried to use a skip they don't have.")
 			return false
 		end
 		table.insert(mSkipsUsed, nodeId)

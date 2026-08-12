@@ -8,7 +8,9 @@ local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local DataStoreService = {}
 
-local PRODUCTION_VERSION = 'test11'
+-- test12: player datastores rekeyed from numeric UserId to the serialized
+-- domain-scoped User identity (Player.User)
+local PRODUCTION_VERSION = 'test12'
 
 if DebugFlags:UseMockData() then
 	DataStore = MockDataStore
@@ -22,40 +24,48 @@ local NODE_STATS_DATASTORE = PREFIX..'_nodestats'
 
 local REPLAYS_DATASTORE = PREFIX..'_replays'
 
+-- Datastores are keyed by the domain-scoped User identity (serialized to a
+-- string), not the raw numeric UserId
+local function playerKey(player)
+	return player.User:ToString()
+end
+
 -- Returns: (Success, [ServerPlayerData])
-function DataStoreService:LoadPlayerDataAsync(id)
+function DataStoreService:LoadPlayerDataAsync(player)
+	local key = playerKey(player)
 	local st, a, b = pcall(function()
-		local playerOrderedStore = DataStore:GetOrderedDataStore(PLAYER_ORDERED_PREFIX..'_'..id)
+		local playerOrderedStore = DataStore:GetOrderedDataStore(PLAYER_ORDERED_PREFIX..'_'..key)
 		local mostRecent = playerOrderedStore:GetSortedAsync(false, 1):GetCurrentPage()[1]
 		if mostRecent then
-			local playerNormalStore = DataStore:GetDataStore(PLAYER_DATA_PREFIX..'_'..id)
+			local playerNormalStore = DataStore:GetDataStore(PLAYER_DATA_PREFIX..'_'..key)
 			local data = playerNormalStore:GetAsync(''..mostRecent.value)
 			if data then
-				return true, ServerPlayerData.new(id, data)
+				return true, ServerPlayerData.new(player, data)
 			else
-				warn("DataStoreService | OrderedDataStore for "..id.." had time "..mostRecent.value.." but data was missing.")
+				warn("DataStoreService | OrderedDataStore for "..player.UserId.." had time "..mostRecent.value.." but data was missing.")
 				return false, nil
 			end
 		else
-			print("DataStoreService | Player "..id.." has no timestamp yet.")
+			print("DataStoreService | Player "..player.UserId.." has no timestamp yet.")
 			return true, nil
 		end
 	end)
 	if st then
 		return a, b
 	else
-		warn("DataStoreService | DataStore error `"..a.."` for player "..id)
+		warn("DataStoreService | DataStore error `"..tostring(a).."` for player "..player.UserId)
 		return false, nil
 	end
 end
 
 -- Returns: (Success)
-function DataStoreService:SavePlayerDataAsync(id, serverPlayerData)
+function DataStoreService:SavePlayerDataAsync(player, serverPlayerData)
+	local key = playerKey(player)
 	local data = serverPlayerData:Serialize()
 	local tm = os.time()
-	
+
 	-- Fire off the normal store save
-	local playerNormalStore = DataStore:GetDataStore(PLAYER_DATA_PREFIX..'_'..id)
+	local playerNormalStore = DataStore:GetDataStore(PLAYER_DATA_PREFIX..'_'..key)
 	local dataStoreCompleted = false
 	local dataStoreSucceeded = false
 	local dataStoreError = nil
@@ -72,20 +82,20 @@ function DataStoreService:SavePlayerDataAsync(id, serverPlayerData)
 	
 	-- Synchronously fire off the timestamp save
 	local st, err = pcall(function()
-		local playerOrderedStore = DataStore:GetOrderedDataStore(PLAYER_ORDERED_PREFIX..'_'..id)
+		local playerOrderedStore = DataStore:GetOrderedDataStore(PLAYER_ORDERED_PREFIX..'_'..key)
 		playerOrderedStore:SetAsync(''..tm, tm)
 	end)
 	if not st then
-		warn("DataStoreService | Failed to save player "..id.." timestamp because `"..err.."`.")
+		warn("DataStoreService | Failed to save player "..player.UserId.." timestamp because `"..tostring(err).."`.")
 		return false
 	end
-	
+
 	-- Successfully saved the timestamp, now wait until the data is saved
 	if not dataStoreCompleted then
 		dataStoreCompletedSignal.Event:wait()
 	end
 	if not dataStoreSucceeded then
-		warn("DataStoreService | Saved player "..id.." timestamp "..tm.." but fail to save data because `"..dataStoreError.."`.")
+		warn("DataStoreService | Saved player "..player.UserId.." timestamp "..tm.." but fail to save data because `"..tostring(dataStoreError).."`.")
 		return false
 	end
 	
