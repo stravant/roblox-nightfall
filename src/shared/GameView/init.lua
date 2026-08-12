@@ -298,6 +298,7 @@ function GameView.new(gameState, controller, menu, topbar)
 	end
 
 	local mDidWin = nil
+	local mWasSkipped = false
 	local mSkipText = "Skip Node"
 
 	-- Forward declarations used by chrome callbacks
@@ -351,7 +352,7 @@ function GameView.new(gameState, controller, menu, topbar)
 			trySkip()
 		end,
 		onOkay = function()
-			this.CloseGame:fire(mDidWin, gameState:GetReplay(), gameState:IsGameStarted())
+			this.CloseGame:fire(mDidWin, gameState:GetReplay(), gameState:IsGameStarted(), mWasSkipped)
 		end,
 	})
 
@@ -1074,6 +1075,7 @@ function GameView.new(gameState, controller, menu, topbar)
 		mTopbar:SetUndoVisible(false)
 		mUnitInfoView:Hide()
 		mDidWin = wonGame
+		mWasSkipped = skipLevel and true or false
 		if mAutoSelectionEnabled then
 			root().setState({ endGameOverlayVisible = true })
 			if skipLevel then

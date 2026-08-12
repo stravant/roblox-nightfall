@@ -127,10 +127,11 @@ return function(t)
 		end
 	end)
 
-	t.test("stats tab keeps the template's copy-pasted label name", function()
+	t.test("stats tab holds the summary and the bests list", function()
 		withView(function(view, gui)
 			local statsTab = gui.Menu.TabPanel.Tabs.Stats
-			t.expect(statsTab:FindFirstChild("SoundVolumeLabel")).toBeTruthy()
+			t.expect(statsTab:FindFirstChild("SummaryLabel")).toBeTruthy()
+			t.expect(statsTab:FindFirstChild("StatsScroll", true).ClassName).toBe("ScrollingFrame")
 		end)
 	end)
 

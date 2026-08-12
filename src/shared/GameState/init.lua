@@ -133,6 +133,11 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	
 	-- Have invalid actions been attempted? (Cheating detection)
 	local mInvalidActionCount = 0
+
+	-- Play statistics (mirrors what ReplayChecker computes server-side)
+	local mPlayTurnCount = 0
+	local mPlayMoveCount = 0
+	local mPlayUnitCount = 0
 	
 	-- Utility function for creating enemies and creating units 
 	-- when they are uploaded
@@ -195,6 +200,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			end
 		end
 		mReplay = mReplay.."E"
+		mPlayTurnCount = mPlayTurnCount + 1
 		-- Emptied, NOT nil'd: the game can end mid-turn (winning move), after
 		-- which stray actions from the same interaction still consult it
 		mThisTurnHistory = {}
@@ -244,8 +250,9 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	end
 	
 	local function moveUnitImpl(unit, targetSq)
-		-- Add to the history 
+		-- Add to the history
 		if not mIsEnemyTurn then
+			mPlayMoveCount = mPlayMoveCount + 1
 			local history = getThisTurnHistoryEntry(unit)
 			
 			-- Add the move to the moves list
@@ -814,6 +821,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			local unit = getBoard(upload).Unit
 			if unit then
 				mReplay = mReplay..unit.Definition.Id..","..upload.x..","..upload.y..";"
+				mPlayUnitCount = mPlayUnitCount + 1
 			end
 		end
 		mReplay = mReplay.."S;"
@@ -1223,6 +1231,15 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	
 	function this:GetReplay()
 		return mReplay
+	end
+
+	-- Client-side play statistics for the finished (or in-progress) battle
+	function this:GetPlayStats()
+		return {
+			Turns = mPlayTurnCount,
+			Moves = mPlayMoveCount,
+			Units = mPlayUnitCount,
+		}
 	end
 	
 	-----------------------------------------------------

@@ -394,7 +394,7 @@ function MainView.new()
 		
 		-- Restore the main state when the game is over
 		local gameCompletedConnection;
-		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart)
+		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart, skipped)
 			setBattleTitle(nil)
 			mTopbarBattleInterface:SetStartVisible(false)
 			mTopbarBattleInterface:SetLeaveVisible(false)
@@ -409,6 +409,16 @@ function MainView.new()
 			SoundManager:Play('MainBackgroundLoop')
 			gameView:Destroy()
 			
+			-- Record local play statistics (skips and debug wins record
+			-- nothing: only battles actually played through)
+			if didStart and not skipped then
+				if didWin then
+					LocalPlayerData:RecordNodeCompletion(nodeId, gameState:GetPlayStats())
+				else
+					LocalPlayerData:RecordNodeAttempt(nodeId)
+				end
+			end
+
 			-- Did we win?
 			if didWin then
 				this:ProcessWonBattle(nodeId, gameState:GetCreditsEarned())

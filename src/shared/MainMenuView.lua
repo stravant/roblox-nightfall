@@ -22,6 +22,8 @@ local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
 local WindowsSlider = require(game.ReplicatedStorage.Components.WindowsSlider)
 local WindowsTabView = require(game.ReplicatedStorage.Components.WindowsTabView)
+local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
+local Netmap = require(game.ReplicatedStorage.Netmap)
 
 local e = React.createElement
 
@@ -46,6 +48,8 @@ type MainMenuState = {
 	musicValue: number,
 	skipsAvailableText: string,
 	skipsUsedText: string,
+	statsSummary: string?,
+	statsRows: { string }?,
 	battleContext: BattleContext?,
 	menuSession: number,
 	onDone: () -> (),
@@ -161,6 +165,36 @@ local function appendTabs(tabs, more)
 end
 
 local function MainMenuContent(props: MainMenuState)
+	-- Ref shared between the stats list and its Win95 scrollbar
+	local statsScrollRef = React.useRef(nil)
+
+	-- One row per beaten node with its personal bests
+	local statsRowItems: { [string]: any } = {
+		UIListLayout = e("UIListLayout", {
+			FillDirection = Enum.FillDirection.Vertical,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			Padding = UDim.new(0, 1),
+		}),
+		UIPadding = e("UIPadding", {
+			PaddingTop = UDim.new(0, 2),
+			PaddingLeft = UDim.new(0, 4),
+			PaddingBottom = UDim.new(0, 2),
+		}),
+	}
+	for i, row in pairs(props.statsRows or {}) do
+		statsRowItems["Row" .. i] = e("TextLabel", {
+			LayoutOrder = i,
+			Size = UDim2.new(1, -20, 0, 18),
+			BackgroundTransparency = 1,
+			Font = Enum.Font.SourceSans,
+			TextSize = 15,
+			TextColor3 = Color3.new(0, 0, 0),
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Text = row,
+		})
+	end
+
 	-- During a databattle a "Databattle" tab (forfeit / skip) leads, and is the
 	-- default-selected tab
 	local tabs = {}
@@ -289,12 +323,38 @@ local function MainMenuContent(props: MainMenuState)
 					Name = "Stats",
 					Label = "Statistics",
 					Content = {
-						-- The template names this label SoundVolumeLabel
-						-- (copy-pasted from the Sound tab); kept verbatim.
-						SoundVolumeLabel = sectionLabel(
-							"Statistics about how you've done on the levels and how you've done compared to other players. Coming soon.",
-							UDim2.new(0, 10, 0, 5)
-						),
+						SummaryLabel = e("TextLabel", {
+							Position = UDim2.new(0, 10, 0, 4),
+							Size = UDim2.new(1, -20, 0, 20),
+							BackgroundTransparency = 1,
+							Font = Enum.Font.SourceSansBold,
+							TextSize = 16,
+							TextColor3 = Color3.new(0, 0, 0.5),
+							TextXAlignment = Enum.TextXAlignment.Left,
+							Text = props.statsSummary or "",
+						}),
+						-- Personal bests per beaten node, Win95 listbox style
+						ListArea = e("Frame", {
+							Position = UDim2.new(0, 10, 0, 28),
+							Size = UDim2.new(1, -20, 1, -34),
+							BackgroundColor3 = Color3.new(1, 1, 1),
+							BorderSizePixel = 0,
+						}, {
+							StatsScroll = e("ScrollingFrame", {
+								ref = statsScrollRef,
+								Size = UDim2.new(1, 0, 1, 0),
+								BackgroundTransparency = 1,
+								BorderSizePixel = 0,
+								CanvasSize = UDim2.new(0, 0, 0, 0),
+								AutomaticCanvasSize = Enum.AutomaticSize.Y,
+								ScrollingDirection = Enum.ScrollingDirection.Y,
+								ScrollBarThickness = 0,
+							}, statsRowItems),
+							Scrollbar = e(Win95Scrollbar, {
+								scrollRef = statsScrollRef,
+								lineScroll = 19,
+							}),
+						}),
 					},
 				},
 			}),
@@ -325,10 +385,36 @@ function MainMenuView.new(container: Instance)
 	-- during create) can setState; assigned right after StatefulRoot.create.
 	local mRoot: StatefulRoot.StatefulRoot? = nil
 
+	-- Refresh the statistics panel content from local player data
+	local function updateStats()
+		local ok, stats = pcall(function()
+			return LocalPlayerData:GetProgressStats()
+		end)
+		if not ok then
+			return -- player data not loaded yet
+		end
+		local rows = {}
+		for _, node in pairs(stats.Nodes) do
+			table.insert(rows, string.format("%s  —  %d turns, %d moves, %d scripts",
+				Netmap.GetNodeDisplayName(node.Id), node.BestTurns, node.BestMoves, node.BestUnits))
+		end
+		if #rows == 0 then
+			rows = { "No battles won yet." }
+		end
+		if mRoot then
+			mRoot.setState({
+				statsSummary = string.format("Nodes beaten: %d/%d    Wins: %d    Attempts: %d",
+					stats.BattleNodesBeaten, stats.BattleNodesTotal, stats.Wins, stats.Attempts),
+				statsRows = rows,
+			})
+		end
+	end
+
 	-- Show / hide the menu
 	local mSession = 0
 	function this:Show()
 		ModalManager:SetModal(true)
+		updateStats()
 		-- Remount the tab view so the default tab re-applies on each open
 		mSession += 1
 		if mRoot then
@@ -390,6 +476,8 @@ function MainMenuView.new(container: Instance)
 		-- Template placeholder text, replaced once player data is available
 		skipsAvailableText = "5 skips",
 		skipsUsedText = "5 skips",
+		statsSummary = "",
+		statsRows = {},
 		battleContext = nil,
 		menuSession = 0,
 		onDone = function()

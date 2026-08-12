@@ -140,6 +140,69 @@ function LocalPlayerData:HasLinkToNode(id)
 	end
 end
 
+-- Record a finished (started, non-skipped) battle attempt locally, mirroring
+-- what the server records from the replay, so the stats panel is fresh
+-- within the session. stats = GameState:GetPlayStats() when won.
+function LocalPlayerData:RecordNodeAttempt(id)
+	local info = mNodeInfo[id]
+	if info then
+		info.AttemptCount = (info.AttemptCount or 0) + 1
+	end
+end
+function LocalPlayerData:RecordNodeCompletion(id, stats)
+	local info = mNodeInfo[id]
+	if not info then
+		return
+	end
+	info.AttemptCount = (info.AttemptCount or 0) + 1
+	info.Wins = (info.Wins or 0) + 1
+	if not info.BestTurns or stats.Turns < info.BestTurns then
+		info.BestTurns = stats.Turns
+	end
+	if not info.BestMoves or stats.Moves < info.BestMoves then
+		info.BestMoves = stats.Moves
+	end
+	if not info.BestUnits or stats.Units < info.BestUnits then
+		info.BestUnits = stats.Units
+	end
+end
+
+-- Aggregated progression/battle statistics for the menu's stats panel
+function LocalPlayerData:GetProgressStats()
+	local stats = {
+		BattleNodesTotal = 0,
+		BattleNodesBeaten = 0,
+		Wins = 0,
+		Attempts = 0,
+		Nodes = {}, -- { Id, BestTurns, BestMoves, BestUnits } for won nodes
+	}
+	for id, node in pairs(Netmap.ById) do
+		if not node.Warez then
+			stats.BattleNodesTotal += 1
+			local info = mNodeInfo[id]
+			if info then
+				if info.Beaten then
+					stats.BattleNodesBeaten += 1
+				end
+				stats.Wins += info.Wins or 0
+				stats.Attempts += info.AttemptCount or 0
+				if info.BestTurns then
+					table.insert(stats.Nodes, {
+						Id = id,
+						BestTurns = info.BestTurns,
+						BestMoves = info.BestMoves,
+						BestUnits = info.BestUnits,
+					})
+				end
+			end
+		end
+	end
+	table.sort(stats.Nodes, function(a, b)
+		return a.Id < b.Id
+	end)
+	return stats
+end
+
 -- Add a program to the inventory
 function LocalPlayerData:AddUnit(id)
 	for _, dat in pairs(mUnitInventory) do

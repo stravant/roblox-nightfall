@@ -196,6 +196,20 @@ function ServerPlayerData.new(playerId, serialized)
 		-- Add an attempt to our player data
 		local data = getNodeStatus(replayResult.NodeId)
 		data.AttemptCount = data.AttemptCount + 1
+
+		-- Per-node personal records (persisted with the node status)
+		if replayResult.Won then
+			data.Wins = (data.Wins or 0) + 1
+			if not data.BestTurns or replayResult.TurnCount < data.BestTurns then
+				data.BestTurns = replayResult.TurnCount
+			end
+			if not data.BestMoves or replayResult.MoveCount < data.BestMoves then
+				data.BestMoves = replayResult.MoveCount
+			end
+			if not data.BestUnits or replayResult.UnitCount < data.BestUnits then
+				data.BestUnits = replayResult.UnitCount
+			end
+		end
 		
 		-- If this is a win, and we don't have a recorded replay for the node yet
 		-- then record it. We have to record a replay Id only because there isn't
