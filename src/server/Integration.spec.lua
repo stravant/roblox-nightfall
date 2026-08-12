@@ -62,8 +62,85 @@ return function(t)
 	Services:SetMock("MarketplaceService", marketplaceMock)
 
 	----------------------------------------------------------------------
-	-- Remote mocks (the network itself)
+	-- Remote mocks (the network itself), emulating engine semantics:
+	-- - Arguments and return values are SERIALIZED across the boundary:
+	--   tables deep-copied with metatables stripped, functions/threads
+	--   dropped to nil, and mixed-key / sparse / cyclic tables rejected —
+	--   so any unserializable payload the game tries to send fails here
+	--   like it would in production, and no table is ever shared by
+	--   reference across the "network".
+	-- - Server event handlers run fire-and-forget in their own threads and
+	--   their errors don't propagate to the firer (they warn, like the
+	--   engine). FireServer_TEST still waits for the handlers to finish so
+	--   tests read naturally.
 	----------------------------------------------------------------------
+
+	local function serializeValue(value, seen)
+		local vt = typeof(value)
+		if vt == "table" then
+			if seen[value] then
+				error("Mock remote: cannot serialize a cyclic table", 0)
+			end
+			seen[value] = true
+			local copy = {}
+			local hasString, hasNumber = false, false
+			local count = 0
+			for k, v in pairs(value) do
+				local kt = typeof(k)
+				if kt == "string" then
+					hasString = true
+				elseif kt == "number" then
+					hasNumber = true
+				else
+					error("Mock remote: unserializable table key of type " .. kt, 0)
+				end
+				copy[k] = serializeValue(v, seen)
+				count += 1
+			end
+			if hasString and hasNumber then
+				error("Mock remote: cannot serialize a mixed-key table", 0)
+			end
+			if hasNumber and #value ~= count then
+				error("Mock remote: cannot serialize a sparse array", 0)
+			end
+			seen[value] = nil
+			return copy -- metatable deliberately stripped
+		elseif vt == "function" or vt == "thread" then
+			return nil -- the engine drops these
+		else
+			-- Primitives, Instances (by reference) and Roblox datatypes pass
+			return value
+		end
+	end
+	local function serializeArgs(...)
+		local args = table.pack(...)
+		for i = 1, args.n do
+			args[i] = serializeValue(args[i], {})
+		end
+		return args
+	end
+
+	-- Run fn in its own thread (fire-and-forget semantics: errors warn, the
+	-- firer is unaffected) but wait for it to finish so tests stay linear
+	local function runHandler(fn, player, args)
+		local done = false
+		task.spawn(function()
+			local ok, err = pcall(function()
+				fn(player, table.unpack(args, 1, args.n))
+			end)
+			done = true
+			if not ok then
+				warn("Mock remote handler error: " .. tostring(err))
+			end
+		end)
+		local waited = 0
+		while not done do
+			waited += task.wait()
+			if waited > 5 then
+				error("Mock remote handler did not complete within 5 seconds")
+			end
+		end
+	end
 
 	local function mockRemoteEvent(name)
 		local handlers = {}
@@ -77,22 +154,29 @@ return function(t)
 				return { Disconnect = function() end }
 			end,
 		}
-		-- Simulates a client firing the remote (synchronous, like the server
-		-- receiving the packet)
+		-- Simulates a client firing the remote: args serialized once, every
+		-- handler runs in its own thread
 		function remote:FireServer_TEST(player, ...)
+			local args = serializeArgs(...)
 			for _, fn in pairs(handlers) do
-				fn(player, ...)
+				runHandler(fn, player, args)
 			end
 		end
 		function remote:FireClient(player, ...)
-			table.insert(self.FiredToClients, { Player = player, Args = { ... } })
+			-- Client-bound payloads must serialize too
+			table.insert(self.FiredToClients, { Player = player, Args = serializeArgs(...) })
 		end
 		return remote
 	end
 	local function mockRemoteFunction(name)
 		local remote = { Name = name, OnServerInvoke = nil }
+		-- Invokes block the calling client, so this stays synchronous; both
+		-- the arguments and the RETURN values cross the serialization
+		-- boundary (the client can never share a table with the server)
 		function remote:InvokeServer_TEST(player, ...)
-			return self.OnServerInvoke(player, ...)
+			local args = serializeArgs(...)
+			local results = serializeArgs(self.OnServerInvoke(player, table.unpack(args, 1, args.n)))
+			return table.unpack(results, 1, results.n)
 		end
 		return remote
 	end
@@ -249,6 +333,12 @@ return function(t)
 		t.expect(clientData.Credits).toBe(DebugFlags:GetInitialCredits())
 		t.expect(clientData.NodeStatus.hq.Accessible).toBeTruthy()
 		t.expect(countAnalytics("onboarding", player)).toBe(1) -- Joined
+
+		-- Serialization isolation: the client's copy crossed the boundary by
+		-- value, so mutating it cannot touch server state (the rejoin
+		-- assertions below would catch it)
+		clientData.Credits = 999999
+		clientData.NodeStatus.hq.Beaten = true
 
 		-- Mid-tutorial detail steps arrive over the funnel remote (a bogus
 		-- one is rejected by the whitelist)
