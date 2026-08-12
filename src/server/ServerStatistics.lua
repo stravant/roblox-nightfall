@@ -17,8 +17,10 @@
 -- Every call resolves ids to live Player instances (AnalyticsService requires
 -- them) and is pcall-wrapped: analytics must never break gameplay.
 
-local AnalyticsService = game:GetService("AnalyticsService")
-local Players = game:GetService("Players")
+local Services = require(game.ReplicatedStorage.Services)
+
+local AnalyticsService = Services:Get("AnalyticsService")
+local Players = Services:Get("Players")
 
 local Netmap = require(game.ReplicatedStorage.Netmap)
 local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
@@ -31,6 +33,10 @@ local ServerStatistics = {}
 local function resolve(playerOrId: any): Player?
 	if typeof(playerOrId) == "Instance" then
 		return playerOrId :: Player
+	end
+	if type(playerOrId) == "table" and playerOrId.UserId then
+		-- Mock Player object from an integration test
+		return playerOrId :: any
 	end
 	return Players:GetPlayerByUserId(playerOrId)
 end

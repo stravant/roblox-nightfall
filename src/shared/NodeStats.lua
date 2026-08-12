@@ -1,5 +1,6 @@
 --!strict
 local Copy = require(game.ReplicatedStorage.Copy)
+local Services = require(game.ReplicatedStorage.Services)
 
 local NodeStats = {}
 
@@ -65,7 +66,7 @@ function NodeStats.new(data)
 				if type(id) == "string" then
 					lookup = User.fromString(id)
 				end
-				return game.Players:GetNameFromUserIdAsync(lookup)
+				return Services:Get("Players"):GetNameFromUserIdAsync(lookup)
 			end)
 			if st then
 				name = p
