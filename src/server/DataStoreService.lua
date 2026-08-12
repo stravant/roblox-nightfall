@@ -163,6 +163,77 @@ function DataStoreService:UpdateStatsForNode(nodeId, playerId, firstTime, replay
 	end)
 end
 
+--------------------------------------------------------------------------------
+-- Per-node record leaderboards: one OrderedDataStore per node x stat holding
+-- each player's personal best (ascending: smallest = the record). Keyed by
+-- GLOBAL UserId (not the domain User string) deliberately: friend comparisons
+-- must address OFFLINE players, and GetFriendsAsync only yields global ids.
+--------------------------------------------------------------------------------
+
+local kRecordStats = { "turns", "moves", "units" }
+DataStoreService.RecordStats = kRecordStats
+
+local function recordStoreName(nodeId, stat)
+	return PREFIX .. "_rec_" .. stat .. "_" .. nodeId
+end
+
+-- Write improved personal bests (improved = {turns=?, moves=?, units=?},
+-- only the stats that got better). Fire-and-forget.
+function DataStoreService:UpdateNodeRecords(nodeId, userId, improved)
+	for _, stat in pairs(kRecordStats) do
+		local value = improved[stat]
+		if value then
+			spawn(function()
+				local st, err = pcall(function()
+					DataStore:GetOrderedDataStore(recordStoreName(nodeId, stat))
+						:SetAsync(tostring(userId), value)
+				end)
+				if not st then
+					warn("DataStoreService | Failed to record "..stat.." best for node "..nodeId..": "..tostring(err))
+				end
+			end)
+		end
+	end
+end
+
+-- World record for one node+stat: (value, userId) or nil. Session-cached.
+local mWorldRecordCache = {}
+function DataStoreService:GetWorldRecord(nodeId, stat)
+	local cacheKey = nodeId .. "_" .. stat
+	local cached = mWorldRecordCache[cacheKey]
+	if cached then
+		return cached.Value, cached.UserId
+	end
+	local st, value, userId = pcall(function()
+		local top = DataStore:GetOrderedDataStore(recordStoreName(nodeId, stat))
+			:GetSortedAsync(--[[ascending=]] true, 1):GetCurrentPage()[1]
+		if top then
+			return top.value, tonumber(top.key)
+		end
+		return nil, nil
+	end)
+	if not st then
+		warn("DataStoreService | Failed to read world record for "..nodeId.." "..stat)
+		return nil, nil
+	end
+	if value then
+		mWorldRecordCache[cacheKey] = { Value = value, UserId = userId }
+	end
+	return value, userId
+end
+
+-- One user's recorded best for a node+stat (nil if they never won it)
+function DataStoreService:GetUserRecord(nodeId, stat, userId)
+	local st, value = pcall(function()
+		return DataStore:GetOrderedDataStore(recordStoreName(nodeId, stat))
+			:GetAsync(tostring(userId))
+	end)
+	if st then
+		return value
+	end
+	return nil
+end
+
 -- Save a replay
 local mReplaysDatastore = DataStore:GetDataStore(REPLAYS_DATASTORE)
 function DataStoreService:SaveReplay(replayString)

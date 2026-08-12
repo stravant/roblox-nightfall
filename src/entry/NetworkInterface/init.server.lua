@@ -168,6 +168,102 @@ Remotes.Load.OnServerInvoke = function(player)
 	end	
 end
 
+--------------------------------------------------------------------------------
+-- Node record comparison (my best / best friend / world best)
+--------------------------------------------------------------------------------
+
+-- Cap on how many friends we check records for (each costs datastore reads)
+local kMaxFriendsChecked = 20
+
+-- Cached friends list per player: { {Id, Name}, ... }
+local FriendsCache = {}
+local function getFriends(player)
+	local cached = FriendsCache[player]
+	if cached then
+		return cached
+	end
+	local friends = {}
+	local st, err = pcall(function()
+		local pages = game.Players:GetFriendsAsync(player.User)
+		for _, item in pages:GetCurrentPage() do
+			if #friends >= kMaxFriendsChecked then
+				break
+			end
+			table.insert(friends, { Id = item.Id, Name = item.DisplayName or item.Username })
+		end
+	end)
+	if not st then
+		warn("NetworkInterface | Failed to fetch friends for "..player.UserId..": "..tostring(err))
+	end
+	FriendsCache[player] = friends
+	return friends
+end
+
+-- Cached username lookups for record holders
+local NameCache = {}
+local function nameForUserId(userId)
+	if not userId then
+		return nil
+	end
+	local name = NameCache[userId]
+	if not name then
+		local st, result = pcall(function()
+			return game.Players:GetNameFromUserIdAsync(userId)
+		end)
+		name = if st then result else "<unknown>"
+		NameCache[userId] = name
+	end
+	return name
+end
+
+-- Per-player cache of assembled node records (the friend sweep is the
+-- expensive part; one assembly per node per session is plenty)
+local NodeRecordsCache = {}
+Remotes.GetNodeRecords.OnServerInvoke = function(player, nodeId)
+	if type(nodeId) ~= "string" or not Netmap.ById[nodeId] then
+		return nil
+	end
+	NodeRecordsCache[player] = NodeRecordsCache[player] or {}
+	local cached = NodeRecordsCache[player][nodeId]
+	if cached then
+		return cached
+	end
+
+	local result = { World = {}, Friend = {} }
+
+	-- World records: the top of each ordered store
+	for _, stat in pairs(DataStoreService.RecordStats) do
+		local value, userId = DataStoreService:GetWorldRecord(nodeId, stat)
+		if value then
+			result.World[stat] = { Value = value, Name = nameForUserId(userId) }
+		end
+	end
+
+	-- Friend records: best over the (capped) friends list. Friends who never
+	-- won the node simply have no entry. The turns store doubles as the
+	-- "has played" check: winners always have all three stats recorded.
+	local friends = getFriends(player)
+	for _, friend in pairs(friends) do
+		local turns = DataStoreService:GetUserRecord(nodeId, "turns", friend.Id)
+		if turns then
+			local records = {
+				turns = turns,
+				moves = DataStoreService:GetUserRecord(nodeId, "moves", friend.Id),
+				units = DataStoreService:GetUserRecord(nodeId, "units", friend.Id),
+			}
+			for stat, value in pairs(records) do
+				local best = result.Friend[stat]
+				if not best or value < best.Value then
+					result.Friend[stat] = { Value = value, Name = friend.Name }
+				end
+			end
+		end
+	end
+
+	NodeRecordsCache[player][nodeId] = result
+	return result
+end
+
 game.Players.PlayerRemoving:connect(function(player)
 	local playerData = PlayerDataCache[player]
 	if playerData then
@@ -176,6 +272,8 @@ game.Players.PlayerRemoving:connect(function(player)
 	else
 		ServerStatistics:PlayerBounced(player)
 	end
+	FriendsCache[player] = nil
+	NodeRecordsCache[player] = nil
 end)
 
 game:BindToClose(function()

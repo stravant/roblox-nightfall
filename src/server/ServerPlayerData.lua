@@ -202,17 +202,25 @@ function ServerPlayerData.new(player, serialized)
 		local data = getNodeStatus(replayResult.NodeId)
 		data.AttemptCount = data.AttemptCount + 1
 
-		-- Per-node personal records (persisted with the node status)
+		-- Per-node personal records (persisted with the node status), and the
+		-- set of stats that improved for the record leaderboards
 		if replayResult.Won then
 			data.Wins = (data.Wins or 0) + 1
+			local improved = {}
 			if not data.BestTurns or replayResult.TurnCount < data.BestTurns then
 				data.BestTurns = replayResult.TurnCount
+				improved.turns = replayResult.TurnCount
 			end
 			if not data.BestMoves or replayResult.MoveCount < data.BestMoves then
 				data.BestMoves = replayResult.MoveCount
+				improved.moves = replayResult.MoveCount
 			end
 			if not data.BestUnits or replayResult.UnitCount < data.BestUnits then
 				data.BestUnits = replayResult.UnitCount
+				improved.units = replayResult.UnitCount
+			end
+			if next(improved) then
+				DataStoreService:UpdateNodeRecords(replayResult.NodeId, player.UserId, improved)
 			end
 		end
 		

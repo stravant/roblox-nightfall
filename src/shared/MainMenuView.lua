@@ -49,7 +49,10 @@ type MainMenuState = {
 	skipsAvailableText: string,
 	skipsUsedText: string,
 	statsSummary: string?,
-	statsRows: { string }?,
+	statsCompareText: string?,
+	statsSelectedId: string?,
+	statsRows: { { Id: string, Text: string } }?,
+	onStatsNodeClick: ((id: string) -> ())?,
 	battleContext: BattleContext?,
 	menuSession: number,
 	onDone: () -> (),
@@ -168,7 +171,8 @@ local function MainMenuContent(props: MainMenuState)
 	-- Ref shared between the stats list and its Win95 scrollbar
 	local statsScrollRef = React.useRef(nil)
 
-	-- One row per beaten node with its personal bests
+	-- One row per beaten node with its personal bests; clicking a row loads
+	-- the my-best / friend-best / world-best comparison
 	local statsRowItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
@@ -182,16 +186,24 @@ local function MainMenuContent(props: MainMenuState)
 		}),
 	}
 	for i, row in pairs(props.statsRows or {}) do
-		statsRowItems["Row" .. i] = e("TextLabel", {
+		local selected = row.Id ~= nil and row.Id == props.statsSelectedId
+		statsRowItems["Row" .. i] = e("TextButton", {
 			LayoutOrder = i,
 			Size = UDim2.new(1, -20, 0, 18),
-			BackgroundTransparency = 1,
+			BackgroundColor3 = if selected then Color3.new(0, 0, 0.5) else Color3.new(1, 1, 1),
+			BackgroundTransparency = if selected then 0 else 1,
+			BorderSizePixel = 0,
 			Font = Enum.Font.SourceSans,
 			TextSize = 15,
-			TextColor3 = Color3.new(0, 0, 0),
+			TextColor3 = if selected then Color3.new(1, 1, 1) else Color3.new(0, 0, 0),
 			TextTruncate = Enum.TextTruncate.AtEnd,
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = row,
+			Text = row.Text,
+			[React.Event.MouseButton1Click] = function()
+				if row.Id and props.onStatsNodeClick then
+					props.onStatsNodeClick(row.Id)
+				end
+			end,
 		})
 	end
 
@@ -333,10 +345,22 @@ local function MainMenuContent(props: MainMenuState)
 							TextXAlignment = Enum.TextXAlignment.Left,
 							Text = props.statsSummary or "",
 						}),
+						-- The my/friend/world comparison for the clicked node
+						CompareText = e("TextLabel", {
+							Position = UDim2.new(0, 10, 0, 24),
+							Size = UDim2.new(1, -20, 0, 58),
+							BackgroundTransparency = 1,
+							Font = Enum.Font.Code,
+							TextSize = 13,
+							TextColor3 = Color3.new(0, 0, 0),
+							TextXAlignment = Enum.TextXAlignment.Left,
+							TextYAlignment = Enum.TextYAlignment.Top,
+							Text = props.statsCompareText or "",
+						}),
 						-- Personal bests per beaten node, Win95 listbox style
 						ListArea = e("Frame", {
-							Position = UDim2.new(0, 10, 0, 28),
-							Size = UDim2.new(1, -20, 1, -34),
+							Position = UDim2.new(0, 10, 0, 86),
+							Size = UDim2.new(1, -20, 1, -92),
 							BackgroundColor3 = Color3.new(1, 1, 1),
 							BorderSizePixel = 0,
 						}, {
@@ -385,6 +409,82 @@ function MainMenuView.new(container: Instance)
 	-- during create) can setState; assigned right after StatefulRoot.create.
 	local mRoot: StatefulRoot.StatefulRoot? = nil
 
+	-- Statistics panel: summary + per-node rows, and the my/friend/world
+	-- comparison for a clicked row (records fetched from the server's
+	-- per-node ordered stores; friends via GetFriendsAsync)
+	local mStatsNodes = {} -- id -> { BestTurns, BestMoves, BestUnits }
+	local mSelectedStatsNode = nil
+
+	local kStatOrder = { "turns", "moves", "units" }
+	local kStatLetter = { turns = "T", moves = "M", units = "S" }
+	local function formatRecordLine(rec)
+		if not rec or not next(rec) then
+			return "no record yet"
+		end
+		local parts = {}
+		local singleName = nil
+		local mixedNames = false
+		for _, stat in pairs(kStatOrder) do
+			local entry = rec[stat]
+			if entry then
+				if singleName == nil then
+					singleName = entry.Name
+				elseif entry.Name ~= singleName then
+					mixedNames = true
+				end
+			end
+		end
+		for _, stat in pairs(kStatOrder) do
+			local entry = rec[stat]
+			if entry then
+				local part = entry.Value .. kStatLetter[stat]
+				if mixedNames and entry.Name then
+					part = part .. " (" .. entry.Name .. ")"
+				end
+				table.insert(parts, part)
+			end
+		end
+		local line = table.concat(parts, " · ")
+		if not mixedNames and singleName then
+			line = line .. "  (" .. singleName .. ")"
+		end
+		return line
+	end
+
+	local function setCompareText(nodeId, friendLine, worldLine)
+		local mine = mStatsNodes[nodeId]
+		local youLine = if mine
+			then string.format("%dT · %dM · %dS", mine.BestTurns, mine.BestMoves, mine.BestUnits)
+			else "no win yet"
+		if mRoot then
+			mRoot.setState({
+				statsSelectedId = nodeId,
+				statsCompareText = Netmap.GetNodeDisplayName(nodeId) .. "\n"
+					.. "You:    " .. youLine .. "\n"
+					.. "Friend: " .. friendLine .. "\n"
+					.. "World:  " .. worldLine,
+			})
+		end
+	end
+
+	local function selectStatsNode(nodeId)
+		mSelectedStatsNode = nodeId
+		setCompareText(nodeId, "fetching...", "fetching...")
+		task.spawn(function()
+			local ok, records = pcall(function()
+				return game.ReplicatedStorage.Remotes.GetNodeRecords:InvokeServer(nodeId)
+			end)
+			if mSelectedStatsNode ~= nodeId then
+				return -- a different node was picked while fetching
+			end
+			if ok and records then
+				setCompareText(nodeId, formatRecordLine(records.Friend), formatRecordLine(records.World))
+			else
+				setCompareText(nodeId, "unavailable", "unavailable")
+			end
+		end)
+	end
+
 	-- Refresh the statistics panel content from local player data
 	local function updateStats()
 		local ok, stats = pcall(function()
@@ -394,20 +494,30 @@ function MainMenuView.new(container: Instance)
 			return -- player data not loaded yet
 		end
 		local rows = {}
+		mStatsNodes = {}
 		for _, node in pairs(stats.Nodes) do
-			table.insert(rows, string.format("%s  —  %d turns, %d moves, %d scripts",
-				Netmap.GetNodeDisplayName(node.Id), node.BestTurns, node.BestMoves, node.BestUnits))
+			mStatsNodes[node.Id] = node
+			table.insert(rows, {
+				Id = node.Id,
+				Text = string.format("%s  —  %d turns, %d moves, %d scripts",
+					Netmap.GetNodeDisplayName(node.Id), node.BestTurns, node.BestMoves, node.BestUnits),
+			})
 		end
 		if #rows == 0 then
-			rows = { "No battles won yet." }
+			rows = { { Text = "No battles won yet." } }
 		end
 		if mRoot then
 			mRoot.setState({
 				statsSummary = string.format("Nodes beaten: %d/%d    Wins: %d    Attempts: %d",
 					stats.BattleNodesBeaten, stats.BattleNodesTotal, stats.Wins, stats.Attempts),
 				statsRows = rows,
+				statsCompareText = if #rows > 0 and rows[1].Id
+					then "Click a node to compare with friends and the world."
+					else "",
+				statsSelectedId = StatefulRoot.None,
 			})
 		end
+		mSelectedStatsNode = nil
 	end
 
 	-- Show / hide the menu
@@ -477,7 +587,12 @@ function MainMenuView.new(container: Instance)
 		skipsAvailableText = "5 skips",
 		skipsUsedText = "5 skips",
 		statsSummary = "",
+		statsCompareText = "",
+		statsSelectedId = nil,
 		statsRows = {},
+		onStatsNodeClick = function(id: string)
+			selectStatsNode(id)
+		end,
 		battleContext = nil,
 		menuSession = 0,
 		onDone = function()

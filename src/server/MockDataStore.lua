@@ -47,6 +47,10 @@ function MockDataStore:GetOrderedDataStore(name: string?)
 	local data: { [string]: number } = {}
 	local DataStore = {}
 
+	function DataStore:GetAsync(k)
+		return data[k]
+	end
+
 	function DataStore:GetSortedAsync(ascending, pageSize)
 		local entries = {}
 		for k, v in pairs(data) do
