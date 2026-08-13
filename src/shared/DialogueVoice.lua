@@ -11,6 +11,7 @@
 -- silently like it always did.
 
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
+local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
 local RunService = game:GetService("RunService")
 
@@ -72,6 +73,9 @@ end
 -- Speak a dialogue line as the given character. Unvoiced speakers and empty
 -- lines just cancel any speech still playing.
 function DialogueVoice:Speak(userName: string, text: string)
+	if not DebugFlags:EnableDialogueVoices() then
+		return
+	end
 	if not RunService:IsRunning() then
 		return -- edit mode (the test place): never touch the TTS service
 	end

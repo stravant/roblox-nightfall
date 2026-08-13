@@ -30,6 +30,12 @@ function DebugFlags:ShowDebugCheckpoints(): boolean
 	return self:ShowDebugUI()
 end
 
+-- Speak dialogue lines with text-to-speech voices (off until the narration
+-- quality is up to scratch)
+function DebugFlags:EnableDialogueVoices(): boolean
+	return false
+end
+
 -- Starting credits for fresh player data
 function DebugFlags:GetInitialCredits(): number
 	return 500
