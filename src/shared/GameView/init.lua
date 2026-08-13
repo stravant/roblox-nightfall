@@ -494,6 +494,11 @@ function GameView.new(gameState, controller, menu, topbar)
 		mSelection = unit
 		mSelectedCommand = nil
 		mSelectionType = 'unit'
+		-- Always drop the previous selection's actionable squares here: the
+		-- rebuild below only runs for friendly, live selections, and stale
+		-- entries would let a tap act with the wrong unit/command pairing
+		-- (e.g. indexing a boolean 'true' left by a command selection)
+		mActionableSquares = nil
 		if unit.MoveLeft > 0 and not unit.Enemy and #unit.Tail == unit.MaxSize and unit.MaxSize > 1 then
 			mUnitsView:SetFlashUnit(unit)
 		else
