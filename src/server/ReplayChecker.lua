@@ -110,6 +110,10 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		UnitCount = 0;
 		NodeId = nil;
 		EarlyQuit = false;
+		-- Badge/analysis signals
+		UnitsLost = 0; -- friendly units that didn't survive
+		UsedSuicideCommand = false; -- Kamikazee / Self-Destruct fired
+		UsedCommandTypes = {}; -- set of command Type strings used
 	}
 	
 	-- Get the place
@@ -204,6 +208,14 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 					warn("ReplayChecker | Out of bounds target for command "..unitMove.CommandData.X..", "..unitMove.CommandData.Y)
 					return result
 				end
+				-- Track what kinds of commands the play used (badge signals)
+				local commandDef = unit.Definition.Commands[unitMove.CommandData.Id]
+				if commandDef then
+					result.UsedCommandTypes[commandDef.Type] = true
+					if commandDef.Cost >= unit.Definition.MaxSize then
+						result.UsedSuicideCommand = true
+					end
+				end
 				gameState:UnitExecute(unit, unitMove.CommandData.Id, unitMove.CommandData.X, unitMove.CommandData.Y)
 			end
 		end
@@ -214,6 +226,15 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		end
 	end
 	
+	-- How many of the uploaded units made it to the end
+	local survivors = 0
+	for unit in pairs(gameState:GetUnits()) do
+		if not unit.Enemy then
+			survivors = survivors + 1
+		end
+	end
+	result.UnitsLost = math.max(0, result.UnitCount - survivors)
+
 	if gameState:HasErrors() then
 		warn("ReplayChecker | Play had internal errors")
 		-- nothing to do, default result is for having errors
@@ -221,7 +242,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		result.Valid = true
 		result.Won = true
 		result.Credits = gameState:GetCreditsEarned()
-	else 
+	else
 		-- They need not have HasLost() in order to have lost, they may have conceded the battle
 		-- HasLost vs conceded is mostly for statistics tracking.
 		result.Valid = true

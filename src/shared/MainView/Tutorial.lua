@@ -2,7 +2,7 @@
 --
 -- Design: get the player acting immediately and stay out of their way.
 -- - One callout box on the netmap, then a non-blocking corner dialogue tells
---   them which node to jack into.
+--   them which node to plug into.
 -- - During the databattle the dialogue never blocks: each box explains the
 --   next action (with a tutorial arrow pointing at it) and advances when the
 --   player performs it, not when they dismiss a prompt.
@@ -65,7 +65,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	tutorialDialogue:SetVisible(true)
 	tutorialDialogue:GetGui().Parent = container
 
-	tutorialDialogue:SetText("Jack into the smart HQ node.")
+	tutorialDialogue:SetText("Plug into the smart HQ node.")
 	netmapView:FocusOnNode('hq')
 	netmapView:TutorialPointAtNode('hq')
 	while netmapView.NodeSelected:wait() ~= 'hq' do

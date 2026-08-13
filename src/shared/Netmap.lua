@@ -159,7 +159,7 @@ Netmap.TutorialCallout = conversation{
 Netmap.PostTutorialConversation = conversation{
 	User = 'superphreak';
 	Parts = {
-		main = part("Way to go, you won your first databattle! This is the netmap: click a node to jack in and battle for control of it. Buy new scripts at warez nodes to grow stronger. You're on your own now, good luck!", "Got it.", 'end');
+		main = part("Way to go, you won your first databattle! This is the netmap: click a node to plug in and battle for control of it. Buy new scripts at warez nodes to grow stronger. You're on your own now, good luck!", "Got it.", 'end');
 	}
 }
 

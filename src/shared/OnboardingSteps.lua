@@ -10,7 +10,7 @@
 
 local OnboardingSteps = {
 	Joined = 1, -- first-session load
-	TutorialEntered = 2, -- [client] jacked into the HQ node
+	TutorialEntered = 2, -- [client] plugged into the HQ node
 	ScriptPlaced = 3, -- [client] first script dragged onto an upload zone
 	BattleStarted = 4, -- [client] pressed Start Databattle
 	FirstAttack = 5, -- [client] landed the tutorial's first attack

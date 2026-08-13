@@ -2,6 +2,8 @@ local Copy = require(game.ReplicatedStorage.Copy)
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local Netmap = require(game.ReplicatedStorage.Netmap)
 local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
+local BadgeAwarder = require(game.ServerScriptService.BadgeAwarder)
+local Badges = require(game.ReplicatedStorage.Badges)
 local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
 local GameState = require(game.ReplicatedStorage.GameState)
 local Places = require(game.ReplicatedStorage.Places)
@@ -142,8 +144,9 @@ function ServerPlayerData.new(player, serialized)
 			end
 		end
 		mCredits = mCredits + Places.tutorial.CreditReward
+		BadgeAwarder:Award(player, "PluggedIn")
 		return true
-	end	
+	end
 	
 	local function processTriggers(nodeId)
 		local nodeDef = Netmap.ById[nodeId]
@@ -156,6 +159,9 @@ function ServerPlayerData.new(player, serialized)
 			elseif f.Type == 'upgradeSecurity' then
 				mSecurityLevel = f.Level
 				ServerStatistics:SecurityLevelReached(player, f.Level)
+				if f.Level >= 2 and f.Level <= 5 then
+					BadgeAwarder:Award(player, "SecurityClearance" .. f.Level)
+				end
 			elseif f.Type == 'getProgram' then
 				addUnit(f.Id)
 			elseif f.Type == 'getCredits' then
@@ -190,7 +196,22 @@ function ServerPlayerData.new(player, serialized)
 			end
 			
 			processTriggers(nodeId)
-		end		
+
+			-- Completion badges
+			if nodeId == 'end' then
+				BadgeAwarder:Award(player, "MidnightAverted")
+			end
+			local allBeaten = true
+			for id, def in pairs(Netmap.ById) do
+				if not def.Warez and not (mNodeStatus[id] and mNodeStatus[id].Beaten) then
+					allBeaten = false
+					break
+				end
+			end
+			if allBeaten then
+				BadgeAwarder:Award(player, "NodeSweeper")
+			end
+		end
 	end
 	
 	-- Add the stats for the replay to the stats tracking for the user,
@@ -220,7 +241,45 @@ function ServerPlayerData.new(player, serialized)
 				improved.units = replayResult.UnitCount
 			end
 			if next(improved) then
+				-- World-record check against the pre-write leaderboard values
+				local isWorldRecord = false
+				for stat, value in pairs(improved) do
+					local worldValue = DataStoreService:GetWorldRecord(replayResult.NodeId, stat)
+					if not worldValue or value < worldValue then
+						isWorldRecord = true
+					end
+				end
+				if isWorldRecord then
+					BadgeAwarder:Award(player, "WorldRecordHolder")
+				end
 				DataStoreService:UpdateNodeRecords(replayResult.NodeId, player.UserId, improved)
+			end
+
+			-- Skill and flavor badges for the winning play
+			if replayResult.TurnCount <= Badges.SpeedrunnerTurnLimit then
+				BadgeAwarder:Award(player, "Speedrunner")
+			end
+			if replayResult.UnitCount == 1 then
+				BadgeAwarder:Award(player, "Minimalist")
+			end
+			if replayResult.UnitsLost == 0 then
+				BadgeAwarder:Award(player, "FlawlessIntrusion")
+			end
+			if replayResult.UsedSuicideCommand then
+				BadgeAwarder:Award(player, "KaBoom")
+			end
+			local usedAny, onlyGrid = false, true
+			for commandType in pairs(replayResult.UsedCommandTypes or {}) do
+				usedAny = true
+				if commandType ~= 'zero' and commandType ~= 'one' then
+					onlyGrid = false
+				end
+			end
+			if usedAny and onlyGrid then
+				BadgeAwarder:Award(player, "BitByBit")
+			end
+			if data.AttemptCount >= Badges.PersistenceWinAttempts then
+				BadgeAwarder:Award(player, "PersistencePays")
 			end
 		end
 		
@@ -299,6 +358,28 @@ function ServerPlayerData.new(player, serialized)
 		mCredits = mCredits - price
 		addUnit(programId)
 		ServerStatistics:UnitPurchased(player, programId, price, mCredits)
+
+		-- Purchase badges
+		BadgeAwarder:Award(player, "ConsumerGrade")
+		local ownsEverything = true
+		for id, def in pairs(Scripts) do
+			if not def.Enemy then
+				local owned = false
+				for _, entry in pairs(mUnitInventory) do
+					if entry.Id == id then
+						owned = true
+						break
+					end
+				end
+				if not owned then
+					ownsEverything = false
+					break
+				end
+			end
+		end
+		if ownsEverything then
+			BadgeAwarder:Award(player, "FullyLoaded")
+		end
 		return true
 	end
 	

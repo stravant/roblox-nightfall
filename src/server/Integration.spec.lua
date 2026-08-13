@@ -70,6 +70,15 @@ return function(t)
 		end,
 	})
 
+	-- Badge awards land here
+	local badgeAwards = {} -- { {UserId, BadgeId} }
+	Services:SetMock("BadgeService", {
+		AwardBadge = function(_self, userId, badgeId)
+			table.insert(badgeAwards, { UserId = userId, BadgeId = badgeId })
+			return true
+		end,
+	})
+
 	----------------------------------------------------------------------
 	-- Remote mocks (the network itself), emulating engine semantics:
 	-- - Arguments and return values are SERIALIZED across the boundary:
@@ -215,6 +224,22 @@ return function(t)
 	local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
 	local DeveloperProduct = require(game.ReplicatedStorage.DeveloperProduct)
 	local Netmap = require(game.ReplicatedStorage.Netmap)
+	local Badges = require(game.ReplicatedStorage.Badges)
+
+	-- Configure a few manifest ids so awarding is observable (0 = disabled)
+	Badges.Ids.PluggedIn = 101
+	Badges.Ids.ConsumerGrade = 102
+	Badges.Ids.FlawlessIntrusion = 103
+	Badges.Ids.WorldRecordHolder = 104
+
+	local function badgeAwarded(userId, badgeId)
+		for _, award in pairs(badgeAwards) do
+			if award.UserId == userId and award.BadgeId == badgeId then
+				return true
+			end
+		end
+		return false
+	end
 
 	NetworkController.install(remotes)
 
@@ -382,6 +407,10 @@ return function(t)
 		t.expect(rejoined.Credits).toBe(DebugFlags:GetInitialCredits() + Places.tutorial.CreditReward)
 		-- Joined + 4 detail steps + TutorialBeaten
 		t.expect(countAnalytics("onboarding", player) >= 5).toBeTruthy()
+
+		-- Completing the tutorial awarded the Plugged In badge
+		task.wait() -- awards are fire-and-forget
+		t.expect(badgeAwarded(3003, Badges.Ids.PluggedIn)).toBeTruthy()
 	end)
 
 	t.test("full journey over the network: join, tutorial, rejoin, win, buy, skip", function()
@@ -476,6 +505,17 @@ return function(t)
 		local afterSkip = remotes.Load:InvokeServer_TEST(player)
 		t.expect(afterSkip.NodeStatus.lm22.Beaten).toBeTruthy()
 		t.expect(#afterSkip.SkipsUsed).toBe(1)
+
+		-- Badges earned along the way: the losless win was flawless AND the
+		-- first-ever record on the node; the purchase was their first
+		task.wait() -- awards are fire-and-forget
+		t.expect(badgeAwarded(1001, Badges.Ids.FlawlessIntrusion)).toBeTruthy()
+		t.expect(badgeAwarded(1001, Badges.Ids.WorldRecordHolder)).toBeTruthy()
+		t.expect(badgeAwarded(1001, Badges.Ids.ConsumerGrade)).toBeTruthy()
+		-- Unconfigured badges (id 0) never reach the service
+		for _, award in pairs(badgeAwards) do
+			t.expect(award.BadgeId ~= 0).toBeTruthy()
+		end
 	end)
 
 	t.test("node records: my best vs a friend's best over the network", function()
