@@ -6,7 +6,7 @@ local DebugFlags = {}
 
 -- Use MockDataStore instead of real datastores on the server
 function DebugFlags:UseMockData(): boolean
-	return true
+	return false
 end
 
 -- Whether the tutorial plays for players who haven't beaten it
@@ -21,7 +21,7 @@ end
 
 -- Master switch for ALL debug UI (checkpoint picker, debug win button, ...)
 function DebugFlags:ShowDebugUI(): boolean
-	return true
+	return false
 end
 
 -- Show the checkpoint picker on the title screen (jump straight to the first
