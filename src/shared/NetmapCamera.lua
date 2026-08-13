@@ -105,14 +105,39 @@ function NetmapCamera.new()
 		return mCamera:ViewportPointToRay(mouseAt.X, mouseAt.Y)
 	end
 	
-	local function getMouseHit()
-		local unitRay = getUnitRay()
+	local function rayHit(unitRay)
 		local scale = -unitRay.Origin.Y / unitRay.Direction.Y
-		local hitPoint = unitRay.Origin + unitRay.Direction * scale
-		return hitPoint
+		return unitRay.Origin + unitRay.Direction * scale
 	end
-	
+
+	local function getMouseHit()
+		return rayHit(getUnitRay())
+	end
+
+	-- For a touch, use ITS OWN reported position (gui space -> ScreenPointToRay):
+	-- GetMouseLocation reflects whichever finger last moved, so with two fingers
+	-- down it alternates between them and the pan anchor jumps by the finger
+	-- separation. The mouse keeps the GetMouseLocation path.
+	local function getInputHit(inputObject: InputObject?)
+		if inputObject and inputObject.UserInputType == Enum.UserInputType.Touch then
+			return rayHit(mCamera:ScreenPointToRay(inputObject.Position.X, inputObject.Position.Y))
+		else
+			return getMouseHit()
+		end
+	end
+
+	local function getInputScreenPos(inputObject: InputObject?): Vector2
+		if inputObject and inputObject.UserInputType == Enum.UserInputType.Touch then
+			return Vector2.new(inputObject.Position.X, inputObject.Position.Y)
+		else
+			return UserInputService:GetMouseLocation()
+		end
+	end
+
 	local mPanStartHit = nil
+	-- The touch that owns the current gesture: a second concurrent finger (the
+	-- start of a pinch) must not restart or drive the pan
+	local mDownInput: InputObject? = nil
 	local mDownScreenPos = Vector2.new()
 	local mDidPan = false
 	local mIsPanning = false
@@ -126,18 +151,23 @@ function NetmapCamera.new()
 	-- In-flight FocusOn glide ({Start, Target, T, Duration}); cancelled by any
 	-- user pan/pinch
 	local mFocusTween = nil
-	local function button1Down()
+	local function button1Down(inputObject: InputObject?)
 		if not mInstalled or ModalManager:IsModal() or mPinching then
 			return
 		end
+		if mIsPanning then
+			return -- extra touch during a gesture: never restart the pan
+		end
 		mFocusTween = nil
-		mPanStartHit = getMouseHit()
-		mDownScreenPos = UserInputService:GetMouseLocation()
+		mDownInput = inputObject
+		mPanStartHit = getInputHit(inputObject)
+		mDownScreenPos = getInputScreenPos(inputObject)
 		mDidPan = false
 		mIsPanning = true
 	end
 	local function button1Up()
 		mPanStartHit = nil
+		mDownInput = nil
 		if not mIgnoredFirstClick then
 			mIsPanning = false
 			mIgnoredFirstClick = true
@@ -150,23 +180,23 @@ function NetmapCamera.new()
 		end
 		mIsPanning = false
 	end
-	local function mousePan()
+	local function mousePan(inputObject: InputObject?)
 		if not mInstalled or ModalManager:IsModal() or mPinching then
 			return
 		end
 		if mPanStartHit then
 			if not mDidPan then
-				local mouseAt = UserInputService:GetMouseLocation()
-				if (mouseAt - mDownScreenPos).Magnitude < DRAG_THRESHOLD_PX then
+				local screenAt = getInputScreenPos(inputObject)
+				if (screenAt - mDownScreenPos).Magnitude < DRAG_THRESHOLD_PX then
 					return
 				end
 				mDidPan = true
 				-- Re-anchor at the point the drag actually began so the map
 				-- doesn't jump by the dead-zone distance
-				mPanStartHit = getMouseHit()
+				mPanStartHit = getInputHit(inputObject)
 				return
 			end
-			setPosition(mCurrentPosition - (getMouseHit() - mPanStartHit))
+			setPosition(mCurrentPosition - (getInputHit(inputObject) - mPanStartHit))
 		end
 	end
 	
@@ -185,11 +215,14 @@ function NetmapCamera.new()
 	
 	UserInputService.InputBegan:Connect(function(inputObject)
 		if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
-			button1Down()
+			button1Down(inputObject)
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(inputObject)
 		if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
+			if inputObject.UserInputType == Enum.UserInputType.Touch and inputObject ~= mDownInput then
+				return -- a non-owning finger lifting doesn't end the gesture
+			end
 			button1Up()
 		end
 	end)
@@ -197,9 +230,11 @@ function NetmapCamera.new()
 		if inputObject.UserInputType == Enum.UserInputType.MouseWheel then
 			handleWheel(inputObject.Position.Z)
 		elseif inputObject.UserInputType == Enum.UserInputType.MouseMovement then
-			mousePan()
+			mousePan(inputObject)
 		elseif inputObject.UserInputType == Enum.UserInputType.Touch then
-			mousePan()
+			if inputObject == mDownInput then
+				mousePan(inputObject)
+			end
 		end
 	end)
 	UserInputService.TouchPinch:Connect(function(_touchPositions, scale, _velocity, state, gameProcessed)
@@ -215,6 +250,7 @@ function NetmapCamera.new()
 			mPinchStartZoom = mZoomLevel
 			-- The first finger already started a pan/click gesture: cancel it
 			mPanStartHit = nil
+			mDownInput = nil
 			mIsPanning = false
 			mDidPan = false
 			mInertialVelocity = Vector3.new()

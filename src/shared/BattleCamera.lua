@@ -75,8 +75,12 @@ function BattleCamera.new(config: Config)
 		return rayHit(mCamera:ViewportPointToRay(mouseAt.X, mouseAt.Y))
 	end
 
-	-- Drag state
+	-- Drag state. The drag is OWNED by the input object (touch) that started
+	-- it: a second concurrent touch (the start of a pinch) must not restart
+	-- the gesture with its own anchor, or the first finger's next move pans
+	-- the camera by the distance between the two fingers in one frame.
 	local mDown = false
+	local mDownInput: InputObject? = nil
 	local mDownScreenPos = Vector2.new()
 	local mDragging = false
 	local mDragStartHit = Vector3.new()
@@ -97,12 +101,16 @@ function BattleCamera.new(config: Config)
 		end
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
+			if mDown or mPinching then
+				return -- extra touch during a gesture: never restart the drag
+			end
 			local screenPos = Vector2.new(input.Position.X, input.Position.Y)
 			local hit = screenHit(screenPos)
 			if mPressCapture and mPressCapture(hit, screenPos) then
 				return -- gesture claimed; mDown stays false
 			end
 			mDown = true
+			mDownInput = input
 			mDragging = false
 			mDownScreenPos = screenPos
 			mDragStartHit = hit
@@ -124,6 +132,9 @@ function BattleCamera.new(config: Config)
 		if not mDown or mPinching then
 			return
 		end
+		if input.UserInputType == Enum.UserInputType.Touch and input ~= mDownInput then
+			return -- some other finger: only the owning touch drives the pan
+		end
 		local screenPos = Vector2.new(input.Position.X, input.Position.Y)
 		if not mDragging then
 			if (screenPos - mDownScreenPos).Magnitude < kDragThresholdPx then
@@ -141,10 +152,14 @@ function BattleCamera.new(config: Config)
 	table.insert(mConnections, UserInputService.InputEnded:Connect(function(input, _gameProcessed)
 		if input.UserInputType == Enum.UserInputType.MouseButton1
 			or input.UserInputType == Enum.UserInputType.Touch then
+			if input.UserInputType == Enum.UserInputType.Touch and input ~= mDownInput then
+				return -- a non-owning finger lifting doesn't end the gesture
+			end
 			if mDown and not mDragging and not mPinching then
 				this.Tapped:fire(screenHit(Vector2.new(input.Position.X, input.Position.Y)))
 			end
 			mDown = false
+			mDownInput = nil
 			mDragging = false
 		end
 	end))
@@ -156,6 +171,11 @@ function BattleCamera.new(config: Config)
 		if state == Enum.UserInputState.Begin then
 			mPinching = true
 			mPinchStartHeight = mHeight
+			-- Cancel any in-progress pan outright: resuming it after the
+			-- pinch would yank the camera to a stale pre-pinch anchor
+			mDown = false
+			mDownInput = nil
+			mDragging = false
 		elseif state == Enum.UserInputState.Change then
 			if mPinching then
 				setHeight(mPinchStartHeight / scale)
