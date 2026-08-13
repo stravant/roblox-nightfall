@@ -1,4 +1,3 @@
-local PhysicsService = game:GetService("PhysicsService")
 local UserInputService = game:GetService("UserInputService")
 
 local Signal = require(game.ReplicatedStorage.Signal)
@@ -39,7 +38,7 @@ for _, ch in pairs(NETMAP_NODE_MODELS:GetChildren()) do
 	ch.Base:Destroy()
 end
 
-local NOT_BEATEN_COLLISION_GROUP = PhysicsService:GetCollisionGroupId("NotBeatenGlow")
+local NOT_BEATEN_COLLISION_GROUP = "NotBeatenGlow"
 
 -- Node popup billboard size in pixels (the layout's authored size)
 local kPopupWidthPx = 132
@@ -549,7 +548,7 @@ function Netmap3DView.new(topbarCredits)
 	local mHoverDisplayAdornee = Instance.new("Part")
 	do
 		mHoverDisplayAdornee.Transparency = 1
-		mHoverDisplayAdornee.CollisionGroupId = NOT_BEATEN_COLLISION_GROUP
+		mHoverDisplayAdornee.CollisionGroup = NOT_BEATEN_COLLISION_GROUP
 		mHoverDisplayAdornee.Anchored = true
 		mHoverDisplayAdornee.Parent = workspace
 		mHoverDisplayAdornee.Name = "HoverDisplayAdornee"
