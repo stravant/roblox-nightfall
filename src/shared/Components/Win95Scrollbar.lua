@@ -58,14 +58,19 @@ local function Win95Scrollbar(props: Props)
 		end
 
 		local function updateThumb()
-			local trackH = track.AbsoluteSize.Y
+			-- Thumb geometry is expressed in SCALE units of the track: the
+			-- Absolute* readings include any ancestor UIScale, so writing them
+			-- back as offsets would get scaled a second time at render and
+			-- push the thumb out of the gutter (offsets and absolute pixels
+			-- only coincide at scale 1, which is why Studio looked fine).
+			local trackH = math.max(track.AbsoluteSize.Y, 1)
 			local contentH = math.max(scroll.AbsoluteCanvasSize.Y, 1)
-			local frac = math.clamp(scroll.AbsoluteWindowSize.Y / contentH, 0, 1)
-			local thumbH = math.clamp(math.floor(trackH * frac + 0.5), kMinThumb, math.max(trackH, kMinThumb))
+			local minFrac = math.min(kMinThumb / trackH, 1)
+			local frac = math.clamp(scroll.AbsoluteWindowSize.Y / contentH, minFrac, 1)
 			local m = maxScroll()
 			local scrollFrac = if m > 0 then math.clamp(scroll.CanvasPosition.Y / m, 0, 1) else 0
-			thumb.Size = UDim2.new(1, 0, 0, thumbH)
-			thumb.Position = UDim2.new(0, 0, 0, math.floor((trackH - thumbH) * scrollFrac + 0.5))
+			thumb.Size = UDim2.new(1, 0, frac, 0)
+			thumb.Position = UDim2.new(0, 0, (1 - frac) * scrollFrac, 0)
 		end
 
 		table.insert(cns, scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(updateThumb))
