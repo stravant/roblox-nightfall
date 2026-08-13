@@ -35,6 +35,26 @@ Badges.Ids = {
 	PersistencePays = 0, -- win a node after many failed attempts
 }
 
+-- The order badges are listed in UI (the Ids table is a hash)
+Badges.DisplayOrder = {
+	"PluggedIn",
+	"SecurityClearance2",
+	"SecurityClearance3",
+	"SecurityClearance4",
+	"SecurityClearance5",
+	"MidnightAverted",
+	"ConsumerGrade",
+	"FullyLoaded",
+	"NodeSweeper",
+	"FlawlessIntrusion",
+	"Speedrunner",
+	"Minimalist",
+	"WorldRecordHolder",
+	"KaBoom",
+	"BitByBit",
+	"PersistencePays",
+}
+
 -- Tuning
 Badges.SpeedrunnerTurnLimit = 3 -- Speedrunner: win in at most this many turns
 Badges.PersistenceWinAttempts = 6 -- PersistencePays: the winning attempt number (5 fails + the win)

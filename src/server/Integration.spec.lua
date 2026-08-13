@@ -70,12 +70,34 @@ return function(t)
 		end,
 	})
 
-	-- Badge awards land here
+	-- Badge awards land here; the query APIs answer from the same record (like
+	-- the real badge web APIs would) plus synthetic product info
 	local badgeAwards = {} -- { {UserId, BadgeId} }
 	Services:SetMock("BadgeService", {
 		AwardBadge = function(_self, userId, badgeId)
 			table.insert(badgeAwards, { UserId = userId, BadgeId = badgeId })
 			return true
+		end,
+		CheckUserBadgesAsync = function(_self, userId, badgeIds)
+			assert(#badgeIds <= 10, "CheckUserBadgesAsync takes at most 10 badge ids")
+			local owned = {}
+			for _, badgeId in pairs(badgeIds) do
+				for _, award in pairs(badgeAwards) do
+					if award.UserId == userId and award.BadgeId == badgeId then
+						table.insert(owned, badgeId)
+						break
+					end
+				end
+			end
+			return owned
+		end,
+		GetBadgeInfoAsync = function(_self, badgeId)
+			return {
+				Name = "Badge " .. badgeId,
+				Description = "Description " .. badgeId,
+				IconImageId = badgeId + 5000,
+				IsEnabled = true,
+			}
 		end,
 	})
 
@@ -209,6 +231,7 @@ return function(t)
 		FunnelStep = mockRemoteEvent("FunnelStep"),
 		ServerError = mockRemoteEvent("ServerError"),
 		GetNodeRecords = mockRemoteFunction("GetNodeRecords"),
+		GetBadges = mockRemoteFunction("GetBadges"),
 	}
 
 	----------------------------------------------------------------------
@@ -703,6 +726,39 @@ return function(t)
 		t.expect(badgeAwarded(7007, "ConsumerGrade")).toBeTruthy()
 		t.expect(badgeAwarded(7008, "FullyLoaded")).toBeFalsy()
 		t.expect(badgeAwarded(7008, "ConsumerGrade")).toBeTruthy()
+	end)
+
+	t.test("GetBadges lists earned badges with info from the badge APIs", function()
+		-- A fresh player owns none of the (all-configured) badges
+		local newcomer = makePlayer(6010, "Badgeless")
+		remotes.Load:InvokeServer_TEST(newcomer)
+		local result = remotes.GetBadges:InvokeServer_TEST(newcomer)
+		t.expect(result.Total).toBe(#Badges.DisplayOrder)
+		t.expect(#result.Earned).toBe(0)
+
+		-- A badge earned AFTER ownership was cached still shows up right away
+		-- (unioned in from the session award record)
+		remotes.BeatTutorial:FireServer_TEST(newcomer)
+		task.wait() -- the award call is fire-and-forget
+		result = remotes.GetBadges:InvokeServer_TEST(newcomer)
+		t.expect(#result.Earned).toBe(1)
+		local entry = result.Earned[1]
+		t.expect(entry.Key).toBe("PluggedIn")
+		t.expect(entry.Name).toBe("Badge " .. Badges.Ids.PluggedIn)
+		t.expect(entry.Description).toBe("Description " .. Badges.Ids.PluggedIn)
+		t.expect(entry.IconImageId).toBe(Badges.Ids.PluggedIn + 5000)
+
+		-- The skip-sweep player's badges come back in manifest display order
+		-- (a fresh player object, so ownership is fetched via the badge API)
+		local sweeper = makePlayer(5005, "Sweeper")
+		result = remotes.GetBadges:InvokeServer_TEST(sweeper)
+		local keys = {}
+		for _, badge in pairs(result.Earned) do
+			table.insert(keys, badge.Key)
+		end
+		t.expect(table.concat(keys, ",")).toBe(
+			"PluggedIn,SecurityClearance2,SecurityClearance3,SecurityClearance4,"
+			.. "SecurityClearance5,MidnightAverted,NodeSweeper")
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()

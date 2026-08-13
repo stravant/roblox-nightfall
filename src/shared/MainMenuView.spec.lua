@@ -54,12 +54,13 @@ return function(t)
 		end)
 	end)
 
-	t.test("shows the three tabs with the Sound tab selected", function()
+	t.test("shows the four tabs with the Sound tab selected", function()
 		withView(function(view, gui)
 			local tabPanel = gui.Menu.TabPanel
 			t.expect(tabPanel.TabStrip.Sound.Text.Text).toBe("Sound")
 			t.expect(tabPanel.TabStrip.Skips.Text.Text).toBe("Level Skips")
 			t.expect(tabPanel.TabStrip.Stats.Text.Text).toBe("Statistics")
+			t.expect(tabPanel.TabStrip.Badges.Text.Text).toBe("Badges")
 			-- Selected tab uses the raised image rect and sits on top
 			t.expect(tabPanel.TabStrip.Sound.ImageRectOffset).toBe(Vector2.new(22, 0))
 			t.expect(tabPanel.TabStrip.Sound.ZIndex).toBe(2)
@@ -67,6 +68,7 @@ return function(t)
 			t.expect(tabPanel.Tabs.Sound.Visible).toBeTruthy()
 			t.expect(tabPanel.Tabs.Skips.Visible).toBeFalsy()
 			t.expect(tabPanel.Tabs.Stats.Visible).toBeFalsy()
+			t.expect(tabPanel.Tabs.Badges.Visible).toBeFalsy()
 		end)
 	end)
 
@@ -132,6 +134,16 @@ return function(t)
 			local statsTab = gui.Menu.TabPanel.Tabs.Stats
 			t.expect(statsTab:FindFirstChild("SummaryLabel")).toBeTruthy()
 			t.expect(statsTab:FindFirstChild("StatsScroll", true).ClassName).toBe("ScrollingFrame")
+		end)
+	end)
+
+	t.test("badges tab holds the summary and the earned-badges list", function()
+		withView(function(view, gui)
+			local badgesTab = gui.Menu.TabPanel.Tabs.Badges
+			t.expect(badgesTab:FindFirstChild("SummaryLabel")).toBeTruthy()
+			t.expect(badgesTab:FindFirstChild("BadgesScroll", true).ClassName).toBe("ScrollingFrame")
+			-- No fetch has completed in the test place: the placeholder shows
+			t.expect(badgesTab:FindFirstChild("Placeholder", true).Text).toBe("Fetching badges...")
 		end)
 	end)
 

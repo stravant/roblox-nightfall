@@ -49,6 +49,19 @@ function BadgeAwarder:Award(player: any, badgeKey: string)
 	end)
 end
 
+-- The badge keys awarded to this player during this server's lifetime. Used
+-- to show freshly earned badges immediately even if the badge web API hasn't
+-- caught up with (or a player's ownership was cached before) the award.
+function BadgeAwarder:GetSessionAwards(player: any): { [string]: boolean }
+	local awards = {}
+	for key in pairs(Badges.Ids) do
+		if mAwardedThisSession[tostring(player.UserId) .. "_" .. key] then
+			awards[key] = true
+		end
+	end
+	return awards
+end
+
 -- The win-condition badges that depend only on the validated replay result
 -- (the world-record badge needs the leaderboards and stays with the caller).
 -- attemptCount includes the winning attempt.

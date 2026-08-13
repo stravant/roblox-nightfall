@@ -9,8 +9,12 @@ local Services = require(game.ReplicatedStorage.Services)
 local MarketplaceService = Services:Get('MarketplaceService')
 local PlayersService = Services:Get('Players')
 
+local BadgeService = Services:Get('BadgeService')
+
 local DataStoreService = require(game.ServerScriptService.DataStoreService)
 local ServerPlayerData = require(game.ServerScriptService.ServerPlayerData)
+local BadgeAwarder = require(game.ServerScriptService.BadgeAwarder)
+local Badges = require(game.ReplicatedStorage.Badges)
 local DeveloperProduct = require(game.ReplicatedStorage.DeveloperProduct)
 local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
 
@@ -268,6 +272,90 @@ function NetworkController.install(remotes)
 		return result
 	end
 
+	--------------------------------------------------------------------------------
+	-- Badge listing (no stored data: ownership and badge info come from the
+	-- badge web APIs, cached server-side)
+	--------------------------------------------------------------------------------
+
+	-- Badge name/description/icon per badge id, cached for the server's
+	-- lifetime (it's static product info). Failed fetches aren't cached so a
+	-- flaky call retries on the next request.
+	local BadgeInfoCache = {}
+	local function getBadgeInfo(badgeId)
+		local info = BadgeInfoCache[badgeId]
+		if not info then
+			local st, result = pcall(function()
+				return BadgeService:GetBadgeInfoAsync(badgeId)
+			end)
+			if not st then
+				warn("NetworkInterface | Failed to fetch badge info for "..badgeId..": "..tostring(result))
+				return nil
+			end
+			info = {
+				Name = result.Name,
+				Description = result.Description,
+				IconImageId = result.IconImageId,
+			}
+			BadgeInfoCache[badgeId] = info
+		end
+		return info
+	end
+
+	-- Ownership fetched once per player per session (chunked: the API takes at
+	-- most 10 badge ids per call); badges awarded after that are unioned in
+	-- from BadgeAwarder's session record, so the cache never goes stale.
+	local BadgeOwnershipCache = {}
+	local function getOwnedBadges(player)
+		local cached = BadgeOwnershipCache[player]
+		if cached then
+			return cached
+		end
+		local ids = {}
+		for _, badgeId in pairs(Badges.Ids) do
+			if badgeId ~= 0 then
+				table.insert(ids, badgeId)
+			end
+		end
+		local owned = {}
+		for i = 1, #ids, 10 do
+			local chunk = table.move(ids, i, math.min(i + 9, #ids), 1, {})
+			local st, result = pcall(function()
+				return BadgeService:CheckUserBadgesAsync(player.UserId, chunk)
+			end)
+			if st then
+				for _, badgeId in pairs(result) do
+					owned[badgeId] = true
+				end
+			else
+				warn("NetworkInterface | Failed to check badges for "..player.UserId..": "..tostring(result))
+			end
+		end
+		BadgeOwnershipCache[player] = owned
+		return owned
+	end
+
+	remotes.GetBadges.OnServerInvoke = function(player)
+		local owned = getOwnedBadges(player)
+		local sessionAwards = BadgeAwarder:GetSessionAwards(player)
+		local result = { Total = 0, Earned = {} }
+		for _, key in pairs(Badges.DisplayOrder) do
+			local badgeId = Badges.Ids[key]
+			if badgeId ~= 0 then
+				result.Total += 1
+				if owned[badgeId] or sessionAwards[key] then
+					local info = getBadgeInfo(badgeId)
+					table.insert(result.Earned, {
+						Key = key,
+						Name = if info then info.Name else key,
+						Description = if info then info.Description else "",
+						IconImageId = if info then info.IconImageId else 0,
+					})
+				end
+			end
+		end
+		return result
+	end
+
 	PlayersService.PlayerRemoving:connect(function(player)
 		local playerData = PlayerDataCache[player]
 		if playerData then
@@ -278,6 +366,7 @@ function NetworkController.install(remotes)
 		end
 		FriendsCache[player] = nil
 		NodeRecordsCache[player] = nil
+		BadgeOwnershipCache[player] = nil
 	end)
 
 	function MarketplaceService.ProcessReceipt(info)
