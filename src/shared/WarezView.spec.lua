@@ -71,7 +71,7 @@ return function(t)
 			t.expect(gui.MainBox.PurchaseButton.Visible).toBeTruthy()
 			t.expect(gui.MainBox.InsufficientCreditsText.Visible).toBeFalsy()
 			local detail = gui.MainBox.DetailInset
-			t.expect(detail.DetailName.Text).toBe("Hack")
+			t.expect(detail:FindFirstChild("DetailName", true).Text).toBe("Hack")
 			-- Stats and attacks are rich text
 			local statsText = detail:FindFirstChild("StatsText", true)
 			t.expect(statsText.Text:find("Move") ~= nil).toBeTruthy()

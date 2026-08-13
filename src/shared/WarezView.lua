@@ -158,7 +158,8 @@ local function detailPanel(selectedId: string?)
 
 	-- Stacked with a list layout so the attacks block can WRAP and auto-size
 	-- (some attack summaries are longer than the pane) with the description
-	-- flowing below it
+	-- flowing below it. Compact: the pane is shallow so the whole window
+	-- fits a phone screen.
 	return {
 		UIPadding = e("UIPadding", {
 			PaddingTop = UDim.new(0, 6),
@@ -169,49 +170,49 @@ local function detailPanel(selectedId: string?)
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 6),
+			Padding = UDim.new(0, 4),
 		}),
-		DetailName = e("TextLabel", {
+		-- One header row: icon with the name and core stats beside it
+		Header = e("Frame", {
 			LayoutOrder = 1,
-			Size = UDim2.new(1, 0, 0, 22),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSansBold,
-			TextSize = 18,
-			TextColor3 = kTextBlack,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = def.Name,
-		}),
-		StatsBlock = e("Frame", {
-			LayoutOrder = 2,
-			Size = UDim2.new(1, 0, 0, 42),
+			Size = UDim2.new(1, 0, 0, 36),
 			BackgroundTransparency = 1,
 		}, {
 			DetailIcon = e("ImageLabel", {
-				Size = UDim2.new(0, 40, 0, 40),
+				Size = UDim2.new(0, 36, 0, 36),
 				BackgroundColor3 = def.Color,
 				BorderColor3 = Color3.new(0, 0, 0),
 				Image = def.Image,
 			}),
+			DetailName = e("TextLabel", {
+				Position = UDim2.new(0, 44, 0, 0),
+				Size = UDim2.new(1, -44, 0, 18),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 18,
+				TextColor3 = kTextBlack,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = def.Name,
+			}),
 			StatsText = e("TextLabel", {
-				Position = UDim2.new(0, 48, 0, 0),
-				Size = UDim2.new(1, -48, 0, 42),
+				Position = UDim2.new(0, 44, 0, 18),
+				Size = UDim2.new(1, -44, 0, 18),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
-				TextSize = 20,
+				TextSize = 16,
 				RichText = true,
 				TextColor3 = kTextBlack,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextYAlignment = Enum.TextYAlignment.Top,
-				Text = string.format("Move: <b>%d</b>\nMax Size: <b>%d</b>", def.Move, def.MaxSize),
+				Text = string.format("Move: <b>%d</b>   Max Size: <b>%d</b>", def.Move, def.MaxSize),
 			}),
 		}),
 		Attacks = e("TextLabel", {
-			LayoutOrder = 3,
+			LayoutOrder = 2,
 			AutomaticSize = Enum.AutomaticSize.Y,
 			Size = UDim2.new(1, 0, 0, 0),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
-			TextSize = 16,
+			TextSize = 14,
 			RichText = true,
 			TextColor3 = kTextBlack,
 			TextWrapped = true,
@@ -220,12 +221,12 @@ local function detailPanel(selectedId: string?)
 			Text = table.concat(attackLines, "\n"),
 		}),
 		FlavorText = e("TextLabel", {
-			LayoutOrder = 4,
+			LayoutOrder = 3,
 			AutomaticSize = Enum.AutomaticSize.Y,
 			Size = UDim2.new(1, 0, 0, 0),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
-			TextSize = 18,
+			TextSize = 15,
 			TextColor3 = kTextBlack,
 			TextWrapped = true,
 			TextXAlignment = Enum.TextXAlignment.Left,
@@ -283,7 +284,9 @@ local function WarezContent(props: WarezState)
 		MainBox = e("ImageLabel", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
-			Size = UDim2.new(0, 470, 0, 300),
+			-- Short enough to fit a phone screen at 1x scale (a bit of extra
+			-- width buys back wrapping room in the shallower detail pane)
+			Size = UDim2.new(0, 540, 0, 210),
 			ZIndex = 2,
 			BackgroundTransparency = 1,
 			Image = kWindowImage,
@@ -349,6 +352,9 @@ local function WarezContent(props: WarezState)
 			DetailInset = e("ImageLabel", {
 				Position = UDim2.new(0, 222, 0, 26),
 				Size = UDim2.new(1, -228, 1, -72),
+				-- The shallow pane can't fit the longest description texts;
+				-- clip rather than paint over the buttons below
+				ClipsDescendants = true,
 				BackgroundTransparency = 1,
 				Image = kInsetImage,
 				ScaleType = Enum.ScaleType.Slice,
