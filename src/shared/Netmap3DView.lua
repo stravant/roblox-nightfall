@@ -38,8 +38,6 @@ for _, ch in pairs(NETMAP_NODE_MODELS:GetChildren()) do
 	ch.Base:Destroy()
 end
 
-local NOT_BEATEN_COLLISION_GROUP = "NotBeatenGlow"
-
 -- Node popup billboard size in pixels (the layout's authored size)
 local kPopupWidthPx = 132
 local kPopupHeightPx = kPopupWidthPx * 46 / 132
@@ -544,29 +542,6 @@ function Netmap3DView.new(topbarCredits)
 		end
 	end
 	
-	local mHoverDisplayGui = Instance.new("BillboardGui", mPlayerGui)
-	local mHoverDisplayAdornee = Instance.new("Part")
-	do
-		mHoverDisplayAdornee.Transparency = 1
-		mHoverDisplayAdornee.CollisionGroup = NOT_BEATEN_COLLISION_GROUP
-		mHoverDisplayAdornee.Anchored = true
-		mHoverDisplayAdornee.Parent = workspace
-		mHoverDisplayAdornee.Name = "HoverDisplayAdornee"
-		mHoverDisplayGui.Adornee = mHoverDisplayAdornee
-		mHoverDisplayGui.Enabled = false
-		mHoverDisplayGui.AlwaysOnTop = true
-		mHoverDisplayGui.Size = UDim2.new(0, 1, 0, 1)
-		local frame = Instance.new("TextLabel", mHoverDisplayGui)
-		frame.BackgroundTransparency = 1
-		frame.TextStrokeTransparency = 0
-		frame.Text = "[   ]"
-		frame.TextSize = 96
-		frame.TextScaled = true
-		frame.TextColor3 = Color3.new(0.603922, 0, 0)
-		local hoverSize = math.min(400, DeviceInfo.ScreenHeight * 0.3)
-		frame.Size = UDim2.new(0, hoverSize , 0, hoverSize)
-		frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	end
 	-- Hover highlight: outline on the hovered node's model (desktop only)
 	local mHoverHighlight = Instance.new("Highlight")
 	mHoverHighlight.FillTransparency = 1
@@ -618,8 +593,7 @@ function Netmap3DView.new(topbarCredits)
 		end
 		if not mGui.Visible then
 			-- During a databattle the netmap sits far below the board and the
-			-- hover raycast can still reach it; don't show the bracket
-			mHoverDisplayGui.Enabled = false
+			-- hover raycast can still reach it; don't show the highlight
 			mHoverHighlight.Enabled = false
 			return
 		end
@@ -629,8 +603,6 @@ function Netmap3DView.new(topbarCredits)
 			id = mPopupHoveredId
 		end
 		if not ModalManager:IsModal() and id then
-			mHoverDisplayGui.Enabled = true
-			mHoverDisplayAdornee.CFrame = mNodeView[id].CFrame * CFrame.new(0, 5.5, 0)
 			-- The highlight doubles as a "something to do here" hint: beaten
 			-- battle nodes don't get it, warez shops always do. Red for
 			-- infected nodes, white for warez shops.
@@ -645,7 +617,6 @@ function Netmap3DView.new(topbarCredits)
 				mHoverHighlight.Enabled = false
 			end
 		else
-			mHoverDisplayGui.Enabled = false
 			mHoverHighlight.Enabled = false
 		end
 	end
