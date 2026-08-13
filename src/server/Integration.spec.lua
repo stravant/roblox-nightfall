@@ -536,10 +536,11 @@ return function(t)
 		t.expect(afterSkip.NodeStatus.lm22.Beaten).toBeTruthy()
 		t.expect(#afterSkip.SkipsUsed).toBe(1)
 
-		-- Badges earned along the way: the losless win was flawless AND the
-		-- first-ever record on the node; the purchase was their first
+		-- Badges earned along the way: the lossless win set the first-ever
+		-- record on the node, and the purchase was their first. It was fought
+		-- at security level 1 though, where Flawless doesn't count.
 		task.wait() -- awards are fire-and-forget
-		t.expect(badgeAwarded(1001, "FlawlessIntrusion")).toBeTruthy()
+		t.expect(badgeAwarded(1001, "FlawlessIntrusion")).toBeFalsy()
 		t.expect(badgeAwarded(1001, "WorldRecordHolder")).toBeTruthy()
 		t.expect(badgeAwarded(1001, "ConsumerGrade")).toBeTruthy()
 		-- Unconfigured badges (id 0) never reach the service
@@ -677,21 +678,26 @@ return function(t)
 
 		-- Speedrunner boundary: exactly at the limit awards, one over doesn't
 		local atLimit = makePlayer(7001, "AtLimit")
-		BadgeAwarder:EvaluateWinBadges(atLimit, result({ TurnCount = Badges.SpeedrunnerTurnLimit }), 1)
+		BadgeAwarder:EvaluateWinBadges(atLimit, result({ TurnCount = Badges.SpeedrunnerTurnLimit }), 1, 2)
 		local overLimit = makePlayer(7002, "OverLimit")
-		BadgeAwarder:EvaluateWinBadges(overLimit, result({ TurnCount = Badges.SpeedrunnerTurnLimit + 1 }), 1)
+		BadgeAwarder:EvaluateWinBadges(overLimit, result({ TurnCount = Badges.SpeedrunnerTurnLimit + 1 }), 1, 2)
 
 		-- BitByBit: only grid commands qualify; mixing in damage doesn't
 		local gridOnly = makePlayer(7003, "GridOnly")
-		BadgeAwarder:EvaluateWinBadges(gridOnly, result({ UsedCommandTypes = { zero = true, one = true } }), 1)
+		BadgeAwarder:EvaluateWinBadges(gridOnly, result({ UsedCommandTypes = { zero = true, one = true } }), 1, 2)
 		local gridMixed = makePlayer(7004, "GridMixed")
-		BadgeAwarder:EvaluateWinBadges(gridMixed, result({ UsedCommandTypes = { zero = true, damage = true } }), 1)
+		BadgeAwarder:EvaluateWinBadges(gridMixed, result({ UsedCommandTypes = { zero = true, damage = true } }), 1, 2)
 
-		-- Flawless requires zero losses; Persistence needs the attempt count
+		-- Flawless requires zero losses AND a battle at security level 2+;
+		-- Persistence needs the attempt count
 		local flawless = makePlayer(7005, "Flawless")
-		BadgeAwarder:EvaluateWinBadges(flawless, result({ UnitsLost = 0 }), Badges.PersistenceWinAttempts - 1)
+		BadgeAwarder:EvaluateWinBadges(flawless, result({ UnitsLost = 0 }), Badges.PersistenceWinAttempts - 1,
+			Badges.FlawlessMinSecurityLevel)
+		local flawlessEarly = makePlayer(7009, "FlawlessEarly")
+		BadgeAwarder:EvaluateWinBadges(flawlessEarly, result({ UnitsLost = 0 }), 1,
+			Badges.FlawlessMinSecurityLevel - 1)
 		local persistent = makePlayer(7006, "Persistent")
-		BadgeAwarder:EvaluateWinBadges(persistent, result({}), Badges.PersistenceWinAttempts)
+		BadgeAwarder:EvaluateWinBadges(persistent, result({}), Badges.PersistenceWinAttempts, 2)
 
 		-- FullyLoaded: the complete purchasable catalog qualifies, one short
 		-- doesn't (ConsumerGrade fires either way)
@@ -720,6 +726,7 @@ return function(t)
 		t.expect(badgeAwarded(7003, "BitByBit")).toBeTruthy()
 		t.expect(badgeAwarded(7004, "BitByBit")).toBeFalsy()
 		t.expect(badgeAwarded(7005, "FlawlessIntrusion")).toBeTruthy()
+		t.expect(badgeAwarded(7009, "FlawlessIntrusion")).toBeFalsy()
 		t.expect(badgeAwarded(7005, "PersistencePays")).toBeFalsy()
 		t.expect(badgeAwarded(7006, "PersistencePays")).toBeTruthy()
 		t.expect(badgeAwarded(7007, "FullyLoaded")).toBeTruthy()

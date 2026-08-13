@@ -12,9 +12,9 @@ Badges.Ids = {
 	MidnightAverted = 398208957033352, -- beat Dignity's headquarters (the final node)
 
 	-- Core loop
-	ConsumerGrade = 0, -- first warez purchase
-	FullyLoaded = 0, -- own every purchasable script
-	NodeSweeper = 0, -- beat every battle node on the netmap
+	ConsumerGrade = 3151849355976100, -- first warez purchase
+	FullyLoaded = 1941657718797642, -- own every purchasable script
+	NodeSweeper = 230198718671557, -- beat every battle node on the netmap
 
 	-- Skill
 	FlawlessIntrusion = 0, -- win without losing a single script
@@ -50,6 +50,7 @@ Badges.DisplayOrder = {
 
 -- Tuning
 Badges.SpeedrunnerTurnLimit = 3 -- Speedrunner: win in at most this many turns
+Badges.FlawlessMinSecurityLevel = 2 -- FlawlessIntrusion: too easy below this level
 Badges.PersistenceWinAttempts = 6 -- PersistencePays: the winning attempt number (5 fails + the win)
 
 return Badges

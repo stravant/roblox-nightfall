@@ -218,7 +218,9 @@ function ServerPlayerData.new(player, serialized)
 	
 	-- Add the stats for the replay to the stats tracking for the user,
 	-- such as number of attempts and best attempt on the level
-	local function processStats(replayString, replayResult)
+	-- securityLevelAtBattle: the level BEFORE this win's triggers, so a win
+	-- that itself upgrades security still counts as played at the old level
+	local function processStats(replayString, replayResult, securityLevelAtBattle)
 		local DataStoreService = require(game.ServerScriptService.DataStoreService)
 		
 		-- Add an attempt to our player data
@@ -258,7 +260,7 @@ function ServerPlayerData.new(player, serialized)
 			end
 
 			-- Skill and flavor badges for the winning play
-			BadgeAwarder:EvaluateWinBadges(player, replayResult, data.AttemptCount)
+			BadgeAwarder:EvaluateWinBadges(player, replayResult, data.AttemptCount, securityLevelAtBattle)
 		end
 		
 		-- If this is a win, and we don't have a recorded replay for the node yet
@@ -292,6 +294,9 @@ function ServerPlayerData.new(player, serialized)
 			return { Valid = false }
 		end
 		if result.Valid then
+			-- The security level the battle was fought at (a winning node's
+			-- triggers below may raise it)
+			local securityLevelAtBattle = mSecurityLevel
 			-- Potentially process triggers for the node
 			if result.Won then
 				print("ServerPlayerData: Won replay")
@@ -306,8 +311,8 @@ function ServerPlayerData.new(player, serialized)
 			end
 			
 			-- Process aggregate statistics about plays on levels
-			-- for the player and the node overall			
-			processStats(replayString, result)
+			-- for the player and the node overall
+			processStats(replayString, result, securityLevelAtBattle)
 		else
 			warn("ServerPlayerData | Got invalid replay from "..mPlayerLabel)
 			print(replayString)

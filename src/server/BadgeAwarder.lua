@@ -64,15 +64,18 @@ end
 
 -- The win-condition badges that depend only on the validated replay result
 -- (the world-record badge needs the leaderboards and stays with the caller).
--- attemptCount includes the winning attempt.
-function BadgeAwarder:EvaluateWinBadges(player: any, replayResult: any, attemptCount: number)
+-- attemptCount includes the winning attempt; securityLevel is the level the
+-- battle was fought at (pre-trigger).
+function BadgeAwarder:EvaluateWinBadges(player: any, replayResult: any, attemptCount: number, securityLevel: number)
 	if replayResult.TurnCount <= Badges.SpeedrunnerTurnLimit then
 		self:Award(player, "Speedrunner")
 	end
 	if replayResult.UnitCount == 1 then
 		self:Award(player, "Minimalist")
 	end
-	if replayResult.UnitsLost == 0 then
+	-- Flawless is trivial on the early nodes, so it only counts once the
+	-- netmap starts fighting back
+	if replayResult.UnitsLost == 0 and securityLevel >= Badges.FlawlessMinSecurityLevel then
 		self:Award(player, "FlawlessIntrusion")
 	end
 	if replayResult.UsedSuicideCommand then
