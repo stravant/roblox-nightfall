@@ -17,15 +17,15 @@ Badges.Ids = {
 	NodeSweeper = 230198718671557, -- beat every battle node on the netmap
 
 	-- Skill
-	FlawlessIntrusion = 0, -- win without losing a single script
-	Speedrunner = 0, -- win a node in very few turns
-	Minimalist = 0, -- win a post-tutorial node with a single script
+	FlawlessIntrusion = 1414974788771631, -- win without losing a single script
+	Speedrunner = 562548415723946, -- win a node in very few turns
+	Minimalist = 662831199291353, -- win a post-tutorial node with a single script
 	WorldRecordHolder = 0, -- set a world best on any node leaderboard
 
 	-- Flavor / secret
-	KaBoom = 0, -- win a battle in which a suicide command fired
-	BitByBit = 0, -- win using only Bit-Man style grid commands
-	PersistencePays = 0, -- win a node after many failed attempts
+	KaBoom = 2520022461701687, -- win a battle in which a suicide command fired
+	BitByBit = 1133927120334893, -- win using only Bit-Man style grid commands
+	PersistencePays = 3123775208724163, -- win a node after many failed attempts
 }
 
 -- The order badges are listed in UI (the Ids table is a hash)
@@ -49,8 +49,8 @@ Badges.DisplayOrder = {
 }
 
 -- Tuning
-Badges.SpeedrunnerTurnLimit = 3 -- Speedrunner: win in at most this many turns
+Badges.SpeedrunnerTurnLimit = 2 -- Speedrunner: win in at most this many turns
 Badges.FlawlessMinSecurityLevel = 2 -- FlawlessIntrusion: too easy below this level
-Badges.PersistenceWinAttempts = 6 -- PersistencePays: the winning attempt number (5 fails + the win)
+Badges.PersistenceWinAttempts = 4 -- PersistencePays: the winning attempt number (3 fails + the win)
 
 return Badges
