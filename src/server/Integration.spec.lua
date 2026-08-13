@@ -70,6 +70,11 @@ return function(t)
 		end,
 	})
 
+	-- Datastores: explicitly route to the in-memory mock. (A Services mock
+	-- wins outright — the tests must not depend on DebugFlags:UseMockData,
+	-- which is false in the production configuration.)
+	Services:SetMock("DataStoreService", require(game.ServerScriptService.MockDataStore))
+
 	-- Badge awards land here; the query APIs answer from the same record (like
 	-- the real badge web APIs would) plus synthetic product info
 	local badgeAwards = {} -- { {UserId, BadgeId} }
