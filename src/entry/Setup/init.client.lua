@@ -88,7 +88,7 @@ if DebugFlags:ShowDebugCheckpoints() then
 	picker.Parent = TitleScreen
 end
 
-local function waitForTitleClick()
+local function waitForPreload()
 	if not TitleScreen.PreloadCompleted.Value then
 		TitleScreen.PreloadCompleted.Changed:wait()
 	end
@@ -96,15 +96,20 @@ end
 
 local mv
 if DebugFlags:ShowDebugCheckpoints() then
-	waitForTitleClick()
+	-- The auto-dismissing title screen is the picker's only window, so with
+	-- the picker up, hold the title screen open until a click
+	waitForPreload()
+	TitleScreen.Content.TitleImage.LoadingText.Text = "> DEBUG: pick a checkpoint, then click to start <"
+	TitleScreen.Content.ClickOverlay.MouseButton1Click:Wait()
 	if mCheckpointLevel > 1 then
 		LocalPlayerData:ApplyDebugCheckpoint(mCheckpointLevel)
 	end
 	mv = MainView.new()
 else
-	-- Normal flow: build the main view during the loading screen
+	-- Normal flow: build the main view during the loading screen and go
+	-- straight in once the preloads finish
 	mv = MainView.new()
-	waitForTitleClick()
+	waitForPreload()
 end
 
 -- Preload completed, show the main view

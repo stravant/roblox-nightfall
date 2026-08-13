@@ -71,24 +71,10 @@ local NiceToHavePreloadList = {
 spawn(function()
 	game:GetService('ContentProvider'):PreloadAsync(NiceToHavePreloadList)
 end)
-LoadingGui.Content.TitleImage.LoadingText.Text = "> Click to log onto the Netmap! <"
-local startTime = tick()
-spawn(function()
-	while LoadingGui.Parent do
-		local dt = tick() - startTime
-		if math.sin(dt*5) > -0.3 then
-			LoadingGui.Content.TitleImage.LoadingText.TextTransparency = 0
-		else
-			LoadingGui.Content.TitleImage.LoadingText.TextTransparency = 0.3
-		end
-		wait()
-	end
-end)
-local mainCn
-mainCn = LoadingGui.Content.ClickOverlay.MouseButton1Click:Connect(function()
-	mainCn:Disconnect()
-	LoadingGui.PreloadCompleted.Value = true
-end)
+-- Straight onto the netmap: no click-to-continue gate. (Setup holds the
+-- title screen open itself when the debug checkpoint picker is showing.)
+LoadingGui.Content.TitleImage.LoadingText.Text = "Connecting..."
+LoadingGui.PreloadCompleted.Value = true
 
 
 
