@@ -6,8 +6,20 @@
 
 local Services = require(game.ReplicatedStorage.Services)
 local Badges = require(game.ReplicatedStorage.Badges)
+local Netmap = require(game.ReplicatedStorage.Netmap)
 
 local BadgeService = Services:Get("BadgeService")
+
+-- Everything sold at any warez node: the FullyLoaded universe. (Some scripts
+-- are story-granted or starting gear; they don't gate the badge.)
+local kPurchasableScripts: { [string]: boolean } = {}
+for _, node in pairs(Netmap.ById) do
+	if node.Warez then
+		for unitId, _cost in pairs(node.Warez) do
+			kPurchasableScripts[unitId] = true
+		end
+	end
+end
 
 local BadgeAwarder = {}
 
@@ -35,6 +47,52 @@ function BadgeAwarder:Award(player: any, badgeKey: string)
 			warn("BadgeAwarder | Failed to award " .. badgeKey .. ": " .. tostring(err))
 		end
 	end)
+end
+
+-- The win-condition badges that depend only on the validated replay result
+-- (the world-record badge needs the leaderboards and stays with the caller).
+-- attemptCount includes the winning attempt.
+function BadgeAwarder:EvaluateWinBadges(player: any, replayResult: any, attemptCount: number)
+	if replayResult.TurnCount <= Badges.SpeedrunnerTurnLimit then
+		self:Award(player, "Speedrunner")
+	end
+	if replayResult.UnitCount == 1 then
+		self:Award(player, "Minimalist")
+	end
+	if replayResult.UnitsLost == 0 then
+		self:Award(player, "FlawlessIntrusion")
+	end
+	if replayResult.UsedSuicideCommand then
+		self:Award(player, "KaBoom")
+	end
+	local usedAny, onlyGrid = false, true
+	for commandType in pairs(replayResult.UsedCommandTypes or {}) do
+		usedAny = true
+		if commandType ~= 'zero' and commandType ~= 'one' then
+			onlyGrid = false
+		end
+	end
+	if usedAny and onlyGrid then
+		self:Award(player, "BitByBit")
+	end
+	if attemptCount >= Badges.PersistenceWinAttempts then
+		self:Award(player, "PersistencePays")
+	end
+end
+
+-- The purchase badges, from the player's inventory after a successful buy
+function BadgeAwarder:EvaluatePurchaseBadges(player: any, unitInventory: any)
+	self:Award(player, "ConsumerGrade")
+	local owned: { [string]: boolean } = {}
+	for _, entry in pairs(unitInventory) do
+		owned[entry.Id] = true
+	end
+	for unitId in pairs(kPurchasableScripts) do
+		if not owned[unitId] then
+			return
+		end
+	end
+	self:Award(player, "FullyLoaded")
 end
 
 return BadgeAwarder

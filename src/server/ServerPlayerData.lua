@@ -3,7 +3,6 @@ local Scripts = require(game.ReplicatedStorage.Scripts)
 local Netmap = require(game.ReplicatedStorage.Netmap)
 local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
 local BadgeAwarder = require(game.ServerScriptService.BadgeAwarder)
-local Badges = require(game.ReplicatedStorage.Badges)
 local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
 local GameState = require(game.ReplicatedStorage.GameState)
 local Places = require(game.ReplicatedStorage.Places)
@@ -168,7 +167,10 @@ function ServerPlayerData.new(player, serialized)
 				mCredits = mCredits + f.Amount
 				ServerStatistics:CreditsEarned(player, f.Amount, mCredits, "StoryReward")
 			elseif f.Type == 'beginNightfall' then
+				-- Nightfall's arrival is the level 5 "upgrade"
 				mSecurityLevel = 5
+				ServerStatistics:SecurityLevelReached(player, 5)
+				BadgeAwarder:Award(player, "SecurityClearance5")
 				-- TODO:
 			elseif f.Type == 'endNightfall' then
 				-- TODO:
@@ -256,31 +258,7 @@ function ServerPlayerData.new(player, serialized)
 			end
 
 			-- Skill and flavor badges for the winning play
-			if replayResult.TurnCount <= Badges.SpeedrunnerTurnLimit then
-				BadgeAwarder:Award(player, "Speedrunner")
-			end
-			if replayResult.UnitCount == 1 then
-				BadgeAwarder:Award(player, "Minimalist")
-			end
-			if replayResult.UnitsLost == 0 then
-				BadgeAwarder:Award(player, "FlawlessIntrusion")
-			end
-			if replayResult.UsedSuicideCommand then
-				BadgeAwarder:Award(player, "KaBoom")
-			end
-			local usedAny, onlyGrid = false, true
-			for commandType in pairs(replayResult.UsedCommandTypes or {}) do
-				usedAny = true
-				if commandType ~= 'zero' and commandType ~= 'one' then
-					onlyGrid = false
-				end
-			end
-			if usedAny and onlyGrid then
-				BadgeAwarder:Award(player, "BitByBit")
-			end
-			if data.AttemptCount >= Badges.PersistenceWinAttempts then
-				BadgeAwarder:Award(player, "PersistencePays")
-			end
+			BadgeAwarder:EvaluateWinBadges(player, replayResult, data.AttemptCount)
 		end
 		
 		-- If this is a win, and we don't have a recorded replay for the node yet
@@ -359,27 +337,8 @@ function ServerPlayerData.new(player, serialized)
 		addUnit(programId)
 		ServerStatistics:UnitPurchased(player, programId, price, mCredits)
 
-		-- Purchase badges
-		BadgeAwarder:Award(player, "ConsumerGrade")
-		local ownsEverything = true
-		for id, def in pairs(Scripts) do
-			if not def.Enemy then
-				local owned = false
-				for _, entry in pairs(mUnitInventory) do
-					if entry.Id == id then
-						owned = true
-						break
-					end
-				end
-				if not owned then
-					ownsEverything = false
-					break
-				end
-			end
-		end
-		if ownsEverything then
-			BadgeAwarder:Award(player, "FullyLoaded")
-		end
+		-- Purchase badges (ConsumerGrade + FullyLoaded vs the purchasable set)
+		BadgeAwarder:EvaluatePurchaseBadges(player, mUnitInventory)
 		return true
 	end
 	

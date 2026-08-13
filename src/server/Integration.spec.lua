@@ -225,14 +225,19 @@ return function(t)
 	local DeveloperProduct = require(game.ReplicatedStorage.DeveloperProduct)
 	local Netmap = require(game.ReplicatedStorage.Netmap)
 	local Badges = require(game.ReplicatedStorage.Badges)
+	local BadgeAwarder = require(game.ServerScriptService.BadgeAwarder)
 
-	-- Configure a few manifest ids so awarding is observable (0 = disabled)
-	Badges.Ids.PluggedIn = 101
-	Badges.Ids.ConsumerGrade = 102
-	Badges.Ids.FlawlessIntrusion = 103
-	Badges.Ids.WorldRecordHolder = 104
+	-- Configure EVERY manifest id so awarding is observable (0 = disabled)
+	do
+		local nextId = 100
+		for key in pairs(Badges.Ids) do
+			nextId += 1
+			Badges.Ids[key] = nextId
+		end
+	end
 
-	local function badgeAwarded(userId, badgeId)
+	local function badgeAwarded(userId, badgeKey)
+		local badgeId = Badges.Ids[badgeKey]
 		for _, award in pairs(badgeAwards) do
 			if award.UserId == userId and award.BadgeId == badgeId then
 				return true
@@ -280,7 +285,8 @@ return function(t)
 
 	-- Play L12 for real through the game logic and return the winning replay
 	-- string: proves the client simulation and ReplayChecker agree on rules
-	local function generateWinningReplay()
+	local function generateWinningReplay(uploadIds)
+		uploadIds = uploadIds or { "golemstone", "golemstone" }
 		local inventory = {}
 		for id, unit in pairs(Scripts) do
 			if not unit.Enemy then
@@ -289,8 +295,9 @@ return function(t)
 		end
 		local gs = GameState.new(Places.L12, inventory, GameState.ServerDelayFunc)
 		local zones = gs:GetUploadZones()
-		gs:UploadUnit(zones[1].x, zones[1].y, Scripts.golemstone)
-		gs:UploadUnit(zones[2].x, zones[2].y, Scripts.golemstone)
+		for i, unitId in pairs(uploadIds) do
+			gs:UploadUnit(zones[i].x, zones[i].y, Scripts[unitId])
+		end
 		gs:StartGame()
 		for _turn = 1, 60 do
 			if gs:HasWon() or gs:HasLost() then
@@ -410,7 +417,7 @@ return function(t)
 
 		-- Completing the tutorial awarded the Plugged In badge
 		task.wait() -- awards are fire-and-forget
-		t.expect(badgeAwarded(3003, Badges.Ids.PluggedIn)).toBeTruthy()
+		t.expect(badgeAwarded(3003, "PluggedIn")).toBeTruthy()
 	end)
 
 	t.test("full journey over the network: join, tutorial, rejoin, win, buy, skip", function()
@@ -509,9 +516,9 @@ return function(t)
 		-- Badges earned along the way: the losless win was flawless AND the
 		-- first-ever record on the node; the purchase was their first
 		task.wait() -- awards are fire-and-forget
-		t.expect(badgeAwarded(1001, Badges.Ids.FlawlessIntrusion)).toBeTruthy()
-		t.expect(badgeAwarded(1001, Badges.Ids.WorldRecordHolder)).toBeTruthy()
-		t.expect(badgeAwarded(1001, Badges.Ids.ConsumerGrade)).toBeTruthy()
+		t.expect(badgeAwarded(1001, "FlawlessIntrusion")).toBeTruthy()
+		t.expect(badgeAwarded(1001, "WorldRecordHolder")).toBeTruthy()
+		t.expect(badgeAwarded(1001, "ConsumerGrade")).toBeTruthy()
 		-- Unconfigured badges (id 0) never reach the service
 		for _, award in pairs(badgeAwards) do
 			t.expect(award.BadgeId ~= 0).toBeTruthy()
@@ -541,6 +548,161 @@ return function(t)
 
 		-- Bogus node ids are rejected
 		t.expect(remotes.GetNodeRecords:InvokeServer_TEST(player, "nope")).toBe(nil)
+	end)
+
+	t.test("skip-sweeping the netmap awards the progression badges", function()
+		local player = makePlayer(5005, "Sweeper")
+		remotes.Load:InvokeServer_TEST(player)
+		remotes.BeatTutorial:FireServer_TEST(player)
+
+		-- Count the battle nodes still to beat, buy enough skips (receipts),
+		-- and skip every one — firing every story trigger along the way
+		local toSkip = {}
+		for id, node in pairs(Netmap.ById) do
+			if not node.Warez and id ~= 'hq' then
+				table.insert(toSkip, id)
+			end
+		end
+		for i = 1, math.ceil(#toSkip / 5) do
+			t.expect(marketplaceMock.ProcessReceipt({
+				PlayerId = 5005,
+				PurchaseId = "sweep-" .. i,
+				ProductId = DeveloperProduct.Skip5,
+			})).toBe(Enum.ProductPurchaseDecision.PurchaseGranted)
+		end
+		for _, nodeId in pairs(toSkip) do
+			remotes.SkipLevel:FireServer_TEST(player, nodeId)
+		end
+
+		local final = remotes.Load:InvokeServer_TEST(player)
+		t.expect(#final.SkipsUsed).toBe(#toSkip)
+
+		task.wait() -- awards are fire-and-forget
+		t.expect(badgeAwarded(5005, "SecurityClearance2")).toBeTruthy()
+		t.expect(badgeAwarded(5005, "SecurityClearance3")).toBeTruthy()
+		t.expect(badgeAwarded(5005, "SecurityClearance4")).toBeTruthy()
+		t.expect(badgeAwarded(5005, "SecurityClearance5")).toBeTruthy()
+		t.expect(badgeAwarded(5005, "MidnightAverted")).toBeTruthy()
+		t.expect(badgeAwarded(5005, "NodeSweeper")).toBeTruthy()
+	end)
+
+	t.test("a solo win awards Minimalist (and Speedrunner within the limit)", function()
+		local player = makePlayer(6006, "SoloRunner")
+		remotes.Load:InvokeServer_TEST(player)
+		remotes.BeatTutorial:FireServer_TEST(player)
+
+		-- One golem, no losses expected; widen the speedrun limit so this
+		-- real win exercises the Speedrunner wiring too
+		local soloReplay = generateWinningReplay({ "golemstone" })
+		local savedLimit = Badges.SpeedrunnerTurnLimit
+		Badges.SpeedrunnerTurnLimit = 99
+		remotes.ProcessReplay:FireServer_TEST(player, soloReplay)
+		Badges.SpeedrunnerTurnLimit = savedLimit
+
+		task.wait()
+		t.expect(badgeAwarded(6006, "Minimalist")).toBeTruthy()
+		t.expect(badgeAwarded(6006, "Speedrunner")).toBeTruthy()
+	end)
+
+	t.test("a kamikaze win awards KaBoom", function()
+		local player = makePlayer(6007, "Bomber")
+		remotes.Load:InvokeServer_TEST(player)
+		remotes.BeatTutorial:FireServer_TEST(player)
+
+		-- The buzzbomb's strongest command is Kamikazee: the auto-player
+		-- fires it (losing the buzzbomb) and the golem finishes the level
+		local boomReplay = generateWinningReplay({ "buzzbomb", "golemstone" })
+		remotes.ProcessReplay:FireServer_TEST(player, boomReplay)
+
+		task.wait()
+		t.expect(badgeAwarded(6007, "KaBoom")).toBeTruthy()
+		-- The buzzbomb died, so this win was NOT flawless
+		t.expect(badgeAwarded(6007, "FlawlessIntrusion")).toBeFalsy()
+	end)
+
+	t.test("winning on the sixth attempt awards PersistencePays", function()
+		local player = makePlayer(6008, "Perseverer")
+		remotes.Load:InvokeServer_TEST(player)
+		remotes.BeatTutorial:FireServer_TEST(player)
+
+		-- Five early quits (a bare replay is a valid early-quit attempt)...
+		for _ = 1, 5 do
+			remotes.ProcessReplay:FireServer_TEST(player, "L12;")
+		end
+		t.expect(badgeAwarded(6008, "PersistencePays")).toBeFalsy()
+		-- ...then the win on attempt six
+		remotes.ProcessReplay:FireServer_TEST(player, kL12WinningReplay)
+
+		task.wait()
+		t.expect(badgeAwarded(6008, "PersistencePays")).toBeTruthy()
+	end)
+
+	t.test("win/purchase badge conditions (direct evaluation)", function()
+		local function result(overrides)
+			local base = {
+				TurnCount = 10,
+				UnitCount = 2,
+				UnitsLost = 1,
+				UsedSuicideCommand = false,
+				UsedCommandTypes = { damage = true },
+			}
+			for k, v in pairs(overrides) do
+				base[k] = v
+			end
+			return base
+		end
+
+		-- Speedrunner boundary: exactly at the limit awards, one over doesn't
+		local atLimit = makePlayer(7001, "AtLimit")
+		BadgeAwarder:EvaluateWinBadges(atLimit, result({ TurnCount = Badges.SpeedrunnerTurnLimit }), 1)
+		local overLimit = makePlayer(7002, "OverLimit")
+		BadgeAwarder:EvaluateWinBadges(overLimit, result({ TurnCount = Badges.SpeedrunnerTurnLimit + 1 }), 1)
+
+		-- BitByBit: only grid commands qualify; mixing in damage doesn't
+		local gridOnly = makePlayer(7003, "GridOnly")
+		BadgeAwarder:EvaluateWinBadges(gridOnly, result({ UsedCommandTypes = { zero = true, one = true } }), 1)
+		local gridMixed = makePlayer(7004, "GridMixed")
+		BadgeAwarder:EvaluateWinBadges(gridMixed, result({ UsedCommandTypes = { zero = true, damage = true } }), 1)
+
+		-- Flawless requires zero losses; Persistence needs the attempt count
+		local flawless = makePlayer(7005, "Flawless")
+		BadgeAwarder:EvaluateWinBadges(flawless, result({ UnitsLost = 0 }), Badges.PersistenceWinAttempts - 1)
+		local persistent = makePlayer(7006, "Persistent")
+		BadgeAwarder:EvaluateWinBadges(persistent, result({}), Badges.PersistenceWinAttempts)
+
+		-- FullyLoaded: the complete purchasable catalog qualifies, one short
+		-- doesn't (ConsumerGrade fires either way)
+		local purchasable = {}
+		for _, node in pairs(Netmap.ById) do
+			if node.Warez then
+				for unitId in pairs(node.Warez) do
+					purchasable[unitId] = true
+				end
+			end
+		end
+		local fullInventory = {}
+		for unitId in pairs(purchasable) do
+			table.insert(fullInventory, { Id = unitId, Count = 1 })
+		end
+		local collector = makePlayer(7007, "Collector")
+		BadgeAwarder:EvaluatePurchaseBadges(collector, fullInventory)
+		local almost = makePlayer(7008, "Almost")
+		local partialInventory = table.clone(fullInventory)
+		table.remove(partialInventory)
+		BadgeAwarder:EvaluatePurchaseBadges(almost, partialInventory)
+
+		task.wait() -- awards are fire-and-forget
+		t.expect(badgeAwarded(7001, "Speedrunner")).toBeTruthy()
+		t.expect(badgeAwarded(7002, "Speedrunner")).toBeFalsy()
+		t.expect(badgeAwarded(7003, "BitByBit")).toBeTruthy()
+		t.expect(badgeAwarded(7004, "BitByBit")).toBeFalsy()
+		t.expect(badgeAwarded(7005, "FlawlessIntrusion")).toBeTruthy()
+		t.expect(badgeAwarded(7005, "PersistencePays")).toBeFalsy()
+		t.expect(badgeAwarded(7006, "PersistencePays")).toBeTruthy()
+		t.expect(badgeAwarded(7007, "FullyLoaded")).toBeTruthy()
+		t.expect(badgeAwarded(7007, "ConsumerGrade")).toBeTruthy()
+		t.expect(badgeAwarded(7008, "FullyLoaded")).toBeFalsy()
+		t.expect(badgeAwarded(7008, "ConsumerGrade")).toBeTruthy()
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()
