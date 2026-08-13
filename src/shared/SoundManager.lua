@@ -97,6 +97,12 @@ function SoundManager:GetSound(name: string): Sound
 	return (mFolder :: any)[name]
 end
 
+-- The current effects volume (DialogueVoice scales its speech from this;
+-- AudioTextToSpeech can't join a SoundGroup)
+function SoundManager:GetSoundEffectVolume(): number
+	return mSoundEffectVolume
+end
+
 local mSliderCns: { [any]: any } = {}
 
 local function posToVolume(sliderValue: number): number

@@ -1,22 +1,15 @@
 --!strict
--- BADGE MANIFEST
---
--- >>> FILL THIS IN: create each badge in Creator Hub (your experience ->
--- >>> Engagement -> Badges) and paste its badge id here. <<<
---
--- A badge left at 0 is simply never awarded, so partial rollout is fine.
--- The award hooks live server-side in BadgeAwarder / ServerPlayerData.
 
 local Badges = {}
 
 Badges.Ids = {
 	-- Progression
-	PluggedIn = 0, -- completed the tutorial
-	SecurityClearance2 = 0, -- reached security level 2
-	SecurityClearance3 = 0, -- reached security level 3
-	SecurityClearance4 = 0, -- reached security level 4
-	SecurityClearance5 = 0, -- reached security level 5
-	MidnightAverted = 0, -- beat Dignity's headquarters (the final node)
+	PluggedIn = 2096139484827836, -- completed the tutorial
+	SecurityClearance2 = 851575149038434, -- reached security level 2 -- Pharmhaus
+	SecurityClearance3 = 3798393750720345, -- reached security level 3 -- LM
+	SecurityClearance4 = 3164300490270514, -- reached security level 4 -- Donut
+	SecurityClearance5 = 1395203055660421, -- reached security level 5 -- PED
+	MidnightAverted = 398208957033352, -- beat Dignity's headquarters (the final node)
 
 	-- Core loop
 	ConsumerGrade = 0, -- first warez purchase

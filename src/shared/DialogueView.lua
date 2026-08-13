@@ -6,6 +6,7 @@
 
 local Signal = require(game.ReplicatedStorage.Signal)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
+local DialogueVoice = require(game.ReplicatedStorage.DialogueVoice)
 local DeviceInfo = require(game.ReplicatedStorage.DeviceInfo)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
@@ -176,6 +177,7 @@ function DialogueView.new()
 	this.OptionSelected = Signal.new()
 
 	local mHasTwoButtons = false
+	local mUsername = ""
 
 	local mGui = Instance.new("Frame")
 	mGui.Name = "Dialogue"
@@ -215,9 +217,13 @@ function DialogueView.new()
 
 	function this:SetVisible(state: boolean)
 		mGui.Visible = state
+		if not state then
+			DialogueVoice:Stop()
+		end
 	end
 
 	function this:SetUser(name: string, image: string)
+		mUsername = name
 		mRoot.setState({
 			username = name,
 			avatarImage = image,
@@ -226,6 +232,9 @@ function DialogueView.new()
 
 	function this:SetText(text: string, choice1: string?, choice2: string?)
 		mHasTwoButtons = choice2 ~= nil
+		-- The dialogue text is always the character talking to us (the
+		-- player's side only exists as the response buttons, never spoken)
+		DialogueVoice:Speak(mUsername, text)
 		mRoot.setState({
 			text = text,
 			choice1 = choice1 or StatefulRoot.None,
@@ -258,6 +267,7 @@ function DialogueView.new()
 	end
 
 	function this:Destroy()
+		DialogueVoice:Stop()
 		mRoot.unmount()
 		mGui:Destroy()
 	end
