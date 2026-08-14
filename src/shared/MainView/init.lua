@@ -80,6 +80,13 @@ function MainView.new()
 			Size = UDim2.new(1, 0, 1, 0),
 			BackgroundTransparency = 1,
 		}, {
+			-- The row must never be taller than the topbar strip: with all
+			-- CoreGui disabled the live client can hand the TopbarSafeInsets
+			-- ScreenGui full-viewport bounds (Studio always reports the 58px
+			-- strip), and the centered flex row would float mid-screen
+			UISizeConstraint = e("UISizeConstraint", {
+				MaxSize = Vector2.new(math.huge, 58),
+			}),
 			UIPadding = e("UIPadding", {
 				PaddingLeft = UDim.new(0, 4),
 				PaddingRight = UDim.new(0, 4),
