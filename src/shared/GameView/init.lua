@@ -124,7 +124,7 @@ local function GameViewChrome(props)
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.new(0.5, 0, 0.6, 0),
 				Size = if props.endGameWon == false
-					then UDim2.new(0, 300, 0, 180)
+					then UDim2.new(0, 300, 0, 224)
 					else UDim2.new(0, 300, 0, 130),
 				ZIndex = 2,
 				BackgroundTransparency = 1,
@@ -170,6 +170,15 @@ local function GameViewChrome(props)
 					TextColor3 = Color3.new(0, 0.482353, 1),
 					TextYAlignment = Enum.TextYAlignment.Top,
 					Text = props.submittingText,
+				}),
+				RetryButton = e(WindowsButton, {
+					Name = "RetryButton",
+					AnchorPoint = Vector2.new(0, 1),
+					Position = UDim2.new(0, 16, 1, -100),
+					Size = UDim2.new(1, -32, 0, 36),
+					Visible = props.endGameWon == false,
+					Text = "Retry (same setup)",
+					OnClick = props.onRetry,
 				}),
 				SkipButton = e(WindowsButton, {
 					Name = "SkipButton",
@@ -355,6 +364,11 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		end,
 		onOkay = function()
 			this.CloseGame:fire(mDidWin, gameState:GetReplay(), gameState:IsGameStarted(), mWasSkipped)
+		end,
+		onRetry = function()
+			-- Same teardown as Continue, plus a request to re-enter the
+			-- battle with this run's setup pre-placed
+			this.CloseGame:fire(mDidWin, gameState:GetReplay(), gameState:IsGameStarted(), mWasSkipped, true)
 		end,
 	})
 
@@ -833,6 +847,8 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		updateMenuContext()
 		mTopbar:SetDoneTurnVisible(false)
 		mTopbar:SetLeaveVisible(false)
+		-- No Auto Place during the tutorial: placement is the lesson
+		mTopbar:SetAutoPlaceVisible(false)
 		-- The tutorial guides click-to-place but accepts drags: show the
 		-- hint prominently (it starts as "Drag to Place" and flips to
 		-- "Click to Place" once a zone is selected).
@@ -914,6 +930,71 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		-- Show the start game button now that we have at least one unit uploaded
 		mTopbar:SetStartVisible(true)
 		return true
+	end
+
+	-- Re-place a previous run's setup (the fail screen's Retry): units land
+	-- on their old zones but the battle is NOT started, so the player can
+	-- adjust before pressing Start Databattle
+	function this:ApplyInitialPlacement(placement)
+		for _, entry in pairs(placement) do
+			tryUploadProgram(entry.Id, entry.x, entry.y)
+		end
+	end
+
+	-- Auto Place: fill every empty upload zone, strongest roles first (same
+	-- ordering philosophy as auto-selection: damage dealers, then debuffers,
+	-- then support)
+	local function definitionAutoRank(def)
+		if #def.CommandList == 0 then
+			return 2
+		end
+		local rank = 3
+		for _, command in pairs(def.CommandList) do
+			if command.Type == 'damage' then
+				return 1
+			end
+			if not gameState:IsBeneficialCommand(command) then
+				rank = 2
+			end
+		end
+		return rank
+	end
+	local function doAutoPlace()
+		if gameState:IsGameStarted() then
+			return
+		end
+		local pool = {}
+		for _, info in pairs(gameState:GetAvailableUnits()) do
+			table.insert(pool, info.Id)
+		end
+		table.sort(pool, function(a, b)
+			local rankA, rankB = definitionAutoRank(Scripts[a]), definitionAutoRank(Scripts[b])
+			if rankA ~= rankB then
+				return rankA < rankB
+			end
+			return a < b -- deterministic within a rank
+		end)
+		for _, zone in pairs(mUploadZones) do
+			if not gameState:GetUnit(zone.x, zone.y) then
+				for _, id in pairs(pool) do
+					if mUnitInfoView:GetCount(id) > 0 and tryUploadProgram(id, zone.x, zone.y) then
+						break
+					end
+				end
+			end
+		end
+	end
+
+	-- The Auto Place topbar button shows until the first unit lands (however
+	-- it lands: manually, via Auto Place itself, or a Retry pre-placement)
+	if not gameState:IsGameStarted() then
+		mTopbar:SetOnAutoPlace(doAutoPlace)
+		mTopbar:SetAutoPlaceVisible(true)
+		local autoPlaceCn
+		autoPlaceCn = gameState.UnitAdded:connect(function()
+			mTopbar:SetAutoPlaceVisible(false)
+			autoPlaceCn:disconnect()
+		end)
 	end
 
 	-- Upload zone handling through the HUD (click a zone, then a program)

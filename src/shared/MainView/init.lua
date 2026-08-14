@@ -125,6 +125,16 @@ function MainView.new()
 					FlexMode = Enum.UIFlexMode.Fill,
 				}),
 			}),
+			AutoPlaceButton = if props.autoPlaceVisible
+				then e(WindowsButton, {
+					Name = "AutoPlaceButton",
+					LayoutOrder = 3,
+					Size = UDim2.new(0, 110, 0, 36),
+					OnClick = props.onAutoPlaceClick,
+				}, {
+					TextLabel = topbarButtonLabel("Auto Place"),
+				})
+				else nil,
 			StartGameButton = if props.startVisible
 				then e("TextButton", {
 					Name = "StartGameButton",
@@ -247,12 +257,14 @@ function MainView.new()
 	end, {
 		battleTitle = nil,
 		startVisible = false,
+		autoPlaceVisible = false,
 		leaveVisible = false,
 		doneTurnVisible = false,
 		undoVisible = false,
 		creditsText = nil,
 		creditsHidden = false,
 		onStartClick = nil,
+		onAutoPlaceClick = nil,
 		onLeaveClick = nil,
 		onDoneTurnClick = nil,
 		onUndoClick = nil,
@@ -270,6 +282,12 @@ function MainView.new()
 	end
 	function mTopbarBattleInterface:SetOnStart(callback)
 		mTopbarRoot.setState({ onStartClick = callback or StatefulRoot.None })
+	end
+	function mTopbarBattleInterface:SetAutoPlaceVisible(visible)
+		mTopbarRoot.setState({ autoPlaceVisible = visible })
+	end
+	function mTopbarBattleInterface:SetOnAutoPlace(callback)
+		mTopbarRoot.setState({ onAutoPlaceClick = callback or StatefulRoot.None })
 	end
 	function mTopbarBattleInterface:SetDoneTurnVisible(visible)
 		mTopbarRoot.setState({ doneTurnVisible = visible })
@@ -387,8 +405,9 @@ function MainView.new()
 		end
 	end
 	
-	-- Play a game at a place
-	function this:PlayGame(placeId, nodeId)
+	-- Play a game at a place. initialPlacement (from the fail screen's Retry):
+	-- a list of {x, y, Id} pre-placed on the upload zones without starting.
+	function this:PlayGame(placeId, nodeId, initialPlacement)
 		-- Onboarding funnel: entered a first real battle (server dedupes)
 		game.ReplicatedStorage.Remotes.FunnelStep:FireServer(OnboardingSteps.NodeChosen)
 		ModalManager:SetModal(true)
@@ -402,7 +421,20 @@ function MainView.new()
 		local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 		local gameController = GameController.new(gameState)
 		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface, entrySound)
+		if initialPlacement then
+			gameView:ApplyInitialPlacement(initialPlacement)
+		end
+		-- Snapshot the setup as the battle starts so a post-loss Retry can
+		-- re-place the exact same units
+		local startingPlacement = nil
 		mTopbarBattleInterface:SetOnStart(function()
+			startingPlacement = {}
+			for _, zone in pairs(gameState:GetUploadZones()) do
+				local unit = gameState:GetUnit(zone.x, zone.y)
+				if unit then
+					table.insert(startingPlacement, { x = zone.x, y = zone.y, Id = unit.Definition.Id })
+				end
+			end
 			gameController:StartGame()
 		end)
 		mTopbarBattleInterface:SetOnDoneTurn(function()
@@ -414,13 +446,15 @@ function MainView.new()
 		
 		-- Restore the main state when the game is over
 		local gameCompletedConnection;
-		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart, skipped)
+		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart, skipped, retryRequested)
 			setBattleTitle(nil)
 			mTopbarBattleInterface:SetStartVisible(false)
+			mTopbarBattleInterface:SetAutoPlaceVisible(false)
 			mTopbarBattleInterface:SetLeaveVisible(false)
 			mTopbarBattleInterface:SetDoneTurnVisible(false)
 			mTopbarBattleInterface:SetUndoVisible(false)
 			mTopbarBattleInterface:SetOnStart(nil)
+			mTopbarBattleInterface:SetOnAutoPlace(nil)
 			mTopbarBattleInterface:SetOnLeave(nil)
 			mTopbarBattleInterface:SetOnDoneTurn(nil)
 			mTopbarBattleInterface:SetOnUndo(nil)
@@ -448,6 +482,12 @@ function MainView.new()
 			end
 			gameCompletedConnection:Disconnect()
 			ModalManager:SetModal(false)
+
+			-- Fail screen Retry: straight back in with the same setup
+			-- pre-placed (but not started, so it can be adjusted)
+			if retryRequested and not didWin then
+				this:PlayGame(placeId, nodeId, startingPlacement)
+			end
 		end)
 		
 		gameView:getGui().Position = UDim2.new(0.5, 0, 0.5, 0)

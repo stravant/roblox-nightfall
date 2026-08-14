@@ -213,9 +213,11 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	topbar:SetStartVisible(false)
 	topbar:SetLeaveVisible(false)
 	topbar:SetUndoVisible(false)
+	topbar:SetAutoPlaceVisible(false)
 	topbar:SetOnStart(nil)
 	topbar:SetOnLeave(nil)
 	topbar:SetOnUndo(nil)
+	topbar:SetOnAutoPlace(nil)
 	topbar:SetCreditsVisible(true)
 	netmapView:GetGui().Visible = true
 	-- Land the camera on the node that was just beaten (no pointer arrow:

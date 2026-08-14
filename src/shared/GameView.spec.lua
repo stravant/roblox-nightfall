@@ -37,6 +37,12 @@ return function(t)
 		function fakeTopbar:SetStartVisible(visible)
 			self.startVisible = visible
 		end
+		function fakeTopbar:SetAutoPlaceVisible(visible)
+			self.autoPlaceVisible = visible
+		end
+		function fakeTopbar:SetOnAutoPlace(callback)
+			self.onAutoPlace = callback
+		end
 		function fakeTopbar:SetDoneTurnVisible(visible)
 			self.doneTurnVisible = visible
 		end
@@ -122,6 +128,44 @@ return function(t)
 			t.expect(topbar.startVisible).toBeFalsy()
 			t.expect(topbar.doneTurnVisible).toBeTruthy()
 			t.expect(#board.UploadZones:GetChildren()).toBe(0)
+		end)
+	end)
+
+	t.test("Auto Place fills every zone and hides once units land", function()
+		withView(function(view, gui, gameState, topbar)
+			t.expect(topbar.autoPlaceVisible).toBeTruthy()
+			topbar.onAutoPlace()
+			task.wait() -- game signals are BindableEvent-based (async)
+			ReactRoblox.act(function() end)
+			for _, zone in pairs(gameState:GetUploadZones()) do
+				t.expect(gameState:GetUnit(zone.x, zone.y) ~= nil).toBeTruthy()
+			end
+			t.expect(topbar.autoPlaceVisible).toBeFalsy()
+			-- Placement only: the battle was not started
+			t.expect(gameState:IsGameStarted()).toBeFalsy()
+			t.expect(topbar.startVisible).toBeTruthy()
+		end)
+	end)
+
+	t.test("ApplyInitialPlacement re-places a setup without starting", function()
+		withView(function(view, gui, gameState, topbar)
+			local zone = gameState:GetUploadZones()[1]
+			ReactRoblox.act(function()
+				view:ApplyInitialPlacement({ { x = zone.x, y = zone.y, Id = "hack" } })
+			end)
+			t.expect(gameState:GetUnit(zone.x, zone.y).Definition.Id).toBe("hack")
+			t.expect(gameState:IsGameStarted()).toBeFalsy()
+			t.expect(topbar.startVisible).toBeTruthy()
+		end)
+	end)
+
+	t.test("the fail overlay holds a Retry button (hidden until a loss)", function()
+		withView(function(view, gui)
+			local retry = gui.EndGameOverlay.Box.RetryButton
+			t.expect(retry.Text.Text).toBe("Retry (same setup)")
+			-- Like the Skip button, it only shows for a LOSS
+			t.expect(retry.Visible).toBeFalsy()
+			t.expect(gui.EndGameOverlay.Box.OkayButton.Text.Text).toBe("Continue")
 		end)
 	end)
 

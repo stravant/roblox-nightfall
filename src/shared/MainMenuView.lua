@@ -406,31 +406,6 @@ local function MainMenuContent(props: MainMenuState)
 					},
 				},
 				{
-					Name = "Skips",
-					Label = "Level Skips",
-					Content = {
-						SkipsAvailableLabel = sectionLabel("Level skips available", UDim2.new(0, 10, 0, 5)),
-						SkipsUsedLabel = sectionLabel("Level skips used", UDim2.new(0, 10, 0, 41)),
-						SkipsAvailable = skipsCountText(props.skipsAvailableText, UDim2.new(0.4, 0, 0, 5)),
-						SkipsUsed = skipsCountText(props.skipsUsedText, UDim2.new(0.4, 0, 0, 41)),
-						SkipImage = e("ImageLabel", {
-							AnchorPoint = Vector2.new(1, 0),
-							Position = UDim2.new(1, -5, 0, 5),
-							Size = UDim2.new(0, 72, 0, 72),
-							BackgroundTransparency = 1,
-							Image = kSkipImage,
-						}),
-						BuyButton = e(ColoredWindowsButton, {
-							AnchorPoint = Vector2.new(0.5, 0.5),
-							Position = UDim2.new(0.5, 0, 0.5, 41),
-							Size = UDim2.new(0, 180, 0, 36),
-							ImageColor3 = Color3.new(0, 0, 1),
-							Text = "BUY MORE LEVEL SKIPS",
-							OnClick = props.onBuy,
-						}),
-					},
-				},
-				{
 					Name = "Stats",
 					Label = "Statistics",
 					Content = {
@@ -510,6 +485,31 @@ local function MainMenuContent(props: MainMenuState)
 							props.badgeRows, props.badgesPlaceholder or "None yet.", false),
 						UnearnedArea = badgeListArea("Unearned", unearnedScrollRef, 0.5,
 							props.unearnedBadgeRows, props.badgesPlaceholder or "You got them all!", true),
+					},
+				},
+				{
+					Name = "Skips",
+					Label = "Level Skips",
+					Content = {
+						SkipsAvailableLabel = sectionLabel("Level skips available", UDim2.new(0, 10, 0, 5)),
+						SkipsUsedLabel = sectionLabel("Level skips used", UDim2.new(0, 10, 0, 41)),
+						SkipsAvailable = skipsCountText(props.skipsAvailableText, UDim2.new(0.4, 0, 0, 5)),
+						SkipsUsed = skipsCountText(props.skipsUsedText, UDim2.new(0.4, 0, 0, 41)),
+						SkipImage = e("ImageLabel", {
+							AnchorPoint = Vector2.new(1, 0),
+							Position = UDim2.new(1, -5, 0, 5),
+							Size = UDim2.new(0, 72, 0, 72),
+							BackgroundTransparency = 1,
+							Image = kSkipImage,
+						}),
+						BuyButton = e(ColoredWindowsButton, {
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							Position = UDim2.new(0.5, 0, 0.5, 41),
+							Size = UDim2.new(0, 180, 0, 36),
+							ImageColor3 = Color3.new(0, 0, 1),
+							Text = "BUY MORE LEVEL SKIPS",
+							OnClick = props.onBuy,
+						}),
 					},
 				},
 			}),
