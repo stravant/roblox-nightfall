@@ -292,12 +292,17 @@ function Netmap3DView.new(topbarCredits)
 		backing.Material = Enum.Material.SmoothPlastic
 		backing.Anchored = true
 		backing.CanCollide = false
-		backing.CanQuery = false
+		-- Queryable ON PURPOSE: the popup rect is part of the node's click
+		-- area (see the map entry below), so hover/click raycasts landing on
+		-- the parts of the popup that don't overlap the node geometry still
+		-- resolve to the node
+		backing.CanQuery = true
 		backing.CastShadow = false
 		backing.Size = Vector3.new(1, 1, 0.05)
 		-- Parked far away until the first updatePopupBackings pass places it
 		backing.CFrame = CFrame.new(0, -10000, 0)
 		backing.Parent = workspace
+		mNodeModelToNodeIdMap[backing] = nodeView.Id
 
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "NodePopup"
@@ -412,6 +417,7 @@ function Netmap3DView.new(topbarCredits)
 			if mPopupHoveredId == nodeView.Id then
 				mPopupHoveredId = nil
 			end
+			mNodeModelToNodeIdMap[nodeView.Popup.Backing] = nil
 			nodeView.Popup.Billboard:Destroy()
 			nodeView.Popup.Backing:Destroy()
 			nodeView.Popup.Adornee:Destroy()
