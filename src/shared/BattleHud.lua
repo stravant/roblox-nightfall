@@ -322,7 +322,7 @@ local function BattleHudContent(props: HudState)
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 17,
 				TextColor3 = Color3.new(0, 0, 0.5),
-				Text = "Drag to Place",
+				Text = "Click to Place",
 				LayoutOrder = 0,
 			})
 			else nil,
@@ -430,7 +430,7 @@ local function BattleHudContent(props: HudState)
 			else nil,
 		ProgramsWindow = if props.programsVisible
 			then windowChrome(
-				if props.dragHintProminent then "Scripts" else "Scripts - Drag to Place",
+				if props.dragHintProminent then "Scripts" else "Scripts - Click or Drag to Place",
 				{
 					Name = "ProgramsWindow",
 					Size = UDim2.new(0, 160, 0, listHeight + (if props.dragHintProminent then 58 else 36)),
@@ -678,7 +678,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		mRoot.setState({ programsVisible = state })
 	end
 
-	-- Tutorial: show the "Drag to Place" hint as its own prominent line
+	-- Tutorial: show the "Click to Place" hint as its own prominent line
 	function this:SetDragHintProminent(state: boolean)
 		mRoot.setState({ dragHintProminent = state })
 	end
@@ -725,6 +725,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	end
 
 	function this:TutorialHide()
+		mOnlySelectUnit = nil
 		mTutorialArrow:Hide()
 	end
 

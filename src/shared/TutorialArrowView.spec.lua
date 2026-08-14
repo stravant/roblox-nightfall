@@ -60,7 +60,7 @@ return function(t)
 			t.expect(arrow.ClassName).toBe("ImageLabel")
 			t.expect(arrow.Image).toBe("rbxassetid://1354410067")
 			t.expect(arrow.AnchorPoint).toBe(Vector2.new(0.5, 0))
-			t.expect(arrow.Size).toBe(UDim2.new(0, 32, 0, 32))
+			t.expect(arrow.Size).toBe(UDim2.new(0, 40, 0, 40))
 			-- Animated: only the invariant part of the position is asserted
 			t.expect(arrow.Position.X.Scale).toBe(0.5)
 			t.expect(arrow.Position.Y.Scale).toBe(0.5)

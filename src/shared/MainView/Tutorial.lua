@@ -116,22 +116,24 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	gameView:ClearSelection()
 	gameView:SetOnlyAllowClick(0, 0)
 
-	-- Upload phase (drag-drop; the gliding hand demo is the pointer, an
-	-- arrow on the upload zone on top of it is too much at once)
-	tutorialDialogue:SetText("This is a databattle: your scripts against the node's defenses. Drag the Hack script onto the upload spot.")
+	-- Upload phase: click the spot, then click the script. (This was a guided
+	-- drag-and-drop, but funnel data showed a big drop-off at this step — the
+	-- drag was too precise an ask this early. Dragging still works if the
+	-- player does it on their own.)
+	tutorialDialogue:SetText("This is a databattle: your scripts against the node's defenses. Click the highlighted upload spot.")
 	gameView:SetOnlyAllowUpload(4, 5)
+	waitForClick(4, 5)
+	tutorialDialogue:SetText("Now click the Hack script to place it there.")
 	gameView:ShowTutorialArrowProgramList('hack')
-	gameView:ShowDragDemo('hack', 4, 5)
 	gameState.UnitAdded:wait()
 	funnelStep(OnboardingSteps.ScriptPlaced)
-	gameView:ClearDragDemo()
 	gameView:ClearTutorialArrow()
-	tutorialDialogue:SetText("One more: drag Slingshot onto the next spot.")
+	tutorialDialogue:SetText("One more: click the next spot.")
 	gameView:SetOnlyAllowUpload(3, 3)
+	waitForClick(3, 3)
+	tutorialDialogue:SetText("And click Slingshot to place it.")
 	gameView:ShowTutorialArrowProgramList('slingshot')
-	gameView:ShowDragDemo('slingshot', 3, 3)
 	gameState.UnitAdded:wait()
-	gameView:ClearDragDemo()
 	gameView:ClearTutorialArrow()
 	gameView:SetOnlyAllowUpload(nil)
 	tutorialDialogue:SetText("Hit the start button when you're ready.")
