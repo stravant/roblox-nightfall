@@ -22,32 +22,32 @@ local function node(tb)
 	elseif tb.Id:sub(1,2) == 'lm' then
 		tb.Image = 'rbxassetid://1423258606' --rbxgameasset://Images/NodeLuckyMonkey64'
 		tb.BeatenImage = 'rbxassetid://1423259444' --rbxgameasset://Images/NodeLuckyMonkeyBeaten64'
-		tb.Sound = 'EnterLuckyMonkey'
+		tb.Sound = 'Entering_lm'
 		tb.Org = "Lucky Monkey Media"
 	elseif tb.Id:sub(1,2) == 'ph' then
 		tb.Image = 'rbxassetid://1423259023' --rbxgameasset://Images/NodePharmhaus64'
 		tb.BeatenImage = 'rbxassetid://1423259445' --rbxgameasset://Images/NodePharmhausBeaten64'
-		tb.Sound = 'EnterPharmhaus'
+		tb.Sound = 'Entering_ph'
 		tb.Org = "Pharmhaus"
 	elseif tb.Id:sub(1,2) == 'dr' then
 		tb.Image = 'rbxassetid://1423257835' --rbxgameasset://Images/NodeDrDonut64'
 		tb.BeatenImage = 'rbxassetid://1423257839' --rbxgameasset://Images/NodeDrDonutBeaten64'
-		tb.Sound = 'EnterDrDonut'
+		tb.Sound = 'Entering_dr'
 		tb.Org = "Dr. Donut"
 	elseif tb.Id:sub(1,2) == 'pd' then
 		tb.Image = 'rbxassetid://1423259034' --rbxgameasset://Images/NodePED64'
 		tb.BeatenImage = 'rbxassetid://1423259024' --rbxgameasset://Images/NodePEDBeaten64'
-		tb.Sound = 'EnterPED'
+		tb.Sound = 'Entering_pd'
 		tb.Org = "P.E.D. Consultants"
 	elseif tb.Id == 'end' then
 		tb.Image = 'rbxassetid://1423258610' --rbxgameasset://Images/NodeDisarray64'
 		tb.BeatenImage = 'rbxassetid://1423258607' --rbxgameasset://Images/NodeDisarrayBeaten64'
-		tb.Sound = 'EnterDisarray'
+		tb.Sound = 'Entering_end'
 		tb.Org = "Dignity"
 	elseif tb.Id:sub(1,2) == 'ca' then
 		tb.Image = 'rbxassetid://1423257836' --rbxgameasset://Images/NodeCelularAutoma64'
 		tb.BeatenImage = 'rbxassetid://1423257851' --rbxgameasset://Images/NodeCelularAutomaBeaten64'
-		tb.Sound = 'EnterCelularAutoma'
+		tb.Sound = 'Entering_ca'
 		tb.Org = "Celular Automa"
 	elseif tb.Id:sub(1,2) == 'wz' then
 		tb.Image = 'rbxassetid://1423257394' --rbxgameasset://Images/NodeWarez64'

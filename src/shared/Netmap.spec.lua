@@ -27,6 +27,25 @@ return function(t)
 		end
 	end)
 
+	t.test("every node's entry Sound exists in the SoundManager", function()
+		local SoundManager = require(game.ReplicatedStorage.SoundManager)
+		local checked = 0
+		for id, node in pairs(Netmap.ById) do
+			if node.Sound then
+				-- GetSound errors on an unknown name (this caught the
+				-- 'EnterLuckyMonkey' vs 'EnterLuckMonkey' mismatch)
+				local ok = pcall(function()
+					return SoundManager:GetSound(node.Sound)
+				end)
+				if not ok then
+					error("Node " .. id .. " references missing sound " .. tostring(node.Sound))
+				end
+				checked += 1
+			end
+		end
+		t.expect(checked > 0).toBeTruthy()
+	end)
+
 	t.test("every warez listing sells an existing script", function()
 		for id, node in pairs(Netmap.ById) do
 			if node.Warez then

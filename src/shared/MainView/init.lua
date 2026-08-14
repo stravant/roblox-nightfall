@@ -382,6 +382,8 @@ function MainView.new()
 		local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 		local gameController = GameController.new(gameState)
 		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface)
+		-- The node's entry track (nil for hq/warez nodes)
+		local entrySound = Netmap.ById[nodeId].Sound
 		mTopbarBattleInterface:SetOnStart(function()
 			gameController:StartGame()
 		end)
@@ -406,6 +408,9 @@ function MainView.new()
 			mTopbarBattleInterface:SetOnUndo(nil)
 			mTopbarBattleInterface:SetCreditsVisible(true)
 			mNetmapView:SetVisible(true)
+			if entrySound then
+				SoundManager:Stop(entrySound) -- may still be playing on a quick leave
+			end
 			SoundManager:Play('MainBackgroundLoop')
 			gameView:Destroy()
 			
@@ -431,6 +436,9 @@ function MainView.new()
 		gameView:getGui().Parent = mGui
 		mNetmapView:SetVisible(false)
 		SoundManager:Stop('MainBackgroundLoop')
+		if entrySound then
+			SoundManager:Play(entrySound)
+		end
 	end
 	
 	-- We won a battle, process the node revealing, and

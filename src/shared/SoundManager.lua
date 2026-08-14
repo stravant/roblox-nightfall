@@ -21,6 +21,12 @@ local kSounds: { SoundDef } = {
 	{ Name = "DataBattleLoop2", Id = "rbxassetid://1336204129", Group = "MusicGroup", Volume = 0.5 },
 	{ Name = "DataBattleLoop3", Id = "rbxassetid://1337579870", Group = "MusicGroup", Volume = 0.5 },
 	{ Name = "DataBattleLoop4", Id = "rbxassetid://1337580172", Group = "MusicGroup", Volume = 0.5 },
+	{ Name = "Entering_pd", Id = "rbxassetid://1413808367", Group = "MusicGroup", Volume = 0.5 },
+	{ Name = "Entering_lm", Id = "rbxassetid://1413403674", Group = "MusicGroup", Volume = 0.5 },
+	{ Name = "Entering_ph", Id = "rbxassetid://1413809028", Group = "MusicGroup", Volume = 0.5 },
+	{ Name = "Entering_dr", Id = "rbxassetid://1413808051", Group = "MusicGroup", Volume = 0.5 },
+	{ Name = "Entering_ca", Id = "rbxassetid://1413807128", Group = "MusicGroup", Volume = 0.5 },
+	{ Name = "Entering_end", Id = "rbxassetid://1413807621", Group = "MusicGroup", Volume = 0.5 },
 	{ Name = "MoveUnitBroken", Id = "rbxassetid://1337575761", Group = "SoundEffectGroup", Volume = 0.7 },
 	{ Name = "LoseBattle", Id = "rbxassetid://1337731028", Group = "SoundEffectGroup", Volume = 0.5 },
 	{ Name = "GrabCredit", Id = "rbxassetid://1347506109", Group = "SoundEffectGroup", Volume = 0.5 },
@@ -29,12 +35,6 @@ local kSounds: { SoundDef } = {
 	{ Name = "MainBackgroundLoop", Id = "rbxassetid://1347499378", Group = "MusicGroup", Volume = 0.5, Looped = true },
 	{ Name = "SelectNode", Id = "rbxassetid://1336184405", Group = "SoundEffectGroup", Volume = 0.5, Speed = 1.75 },
 	{ Name = "ErrorSound", Id = "rbxassetid://130840811", Group = "SoundEffectGroup", Volume = 0.5 },
-	{ Name = "EnterLuckMonkey", Id = "rbxassetid://1413403674", Group = "SoundEffectGroup", Volume = 0.5 },
-	{ Name = "EnterCelularAutoma", Id = "rbxassetid://1413807128", Group = "SoundEffectGroup", Volume = 0.5 },
-	{ Name = "EnterDisarray", Id = "rbxassetid://1413807621", Group = "SoundEffectGroup", Volume = 0.5 },
-	{ Name = "EnterDrDonut", Id = "rbxassetid://1413808051", Group = "SoundEffectGroup", Volume = 0.5 },
-	{ Name = "EnterPED", Id = "rbxassetid://1413808367", Group = "SoundEffectGroup", Volume = 0.5 },
-	{ Name = "EnterPharmhaus", Id = "rbxassetid://1413809028", Group = "SoundEffectGroup", Volume = 0.5 },
 }
 
 local function buildSoundFolder(): Folder
