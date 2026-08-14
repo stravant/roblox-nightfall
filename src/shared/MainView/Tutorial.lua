@@ -41,9 +41,10 @@ end
 -- beaten, which reveals the adjacent nodes the wrap-up box tells the player
 -- to click). `topbar` is MainView's topbar interface: the tutorial's battle
 -- needs the Start Databattle button (and its arrow target) like any other.
+-- Returns true if the tutorial actually ran to completion
 function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, topbar, onBattleWon)
 	if not DebugFlags:PlayTutorial() then
-		return
+		return false
 	end
 
 	mActive = true
@@ -237,6 +238,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	ModalManager:SetModal(false)
 
 	mActive = false
+	return true
 end
 
 return Tutorial

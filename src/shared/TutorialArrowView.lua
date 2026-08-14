@@ -41,7 +41,7 @@ local function TutorialArrowContent(props: ArrowState)
 				AnchorPoint = Vector2.new(0.5, 0),
 				-- Baseline of the imperative bob animation (see module comment)
 				Position = UDim2.new(0.5, 0, 0.5, 0),
-				Size = UDim2.new(0, 40, 0, 40),
+				Size = UDim2.new(0, 48, 0, 48),
 				BackgroundTransparency = 1,
 				Image = kArrowImage,
 			}),
