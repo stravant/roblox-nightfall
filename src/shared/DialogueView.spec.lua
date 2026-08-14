@@ -34,6 +34,22 @@ return function(t)
 		end)
 	end)
 
+	t.test("the chat box hides while it has no content", function()
+		withView(function(view, gui)
+			-- Nothing set yet: chrome stays hidden
+			t.expect(gui.ChatBox.Visible).toBeFalsy()
+			ReactRoblox.act(function()
+				view:SetText("Hello there")
+			end)
+			t.expect(gui.ChatBox.Visible).toBeTruthy()
+			-- Clearing the text (tutorial between-steps state) hides it again
+			ReactRoblox.act(function()
+				view:SetText("")
+			end)
+			t.expect(gui.ChatBox.Visible).toBeFalsy()
+		end)
+	end)
+
 	t.test("SetText with no choices hides both buttons and grows the inset", function()
 		withView(function(view, gui)
 			ReactRoblox.act(function()

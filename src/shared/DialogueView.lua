@@ -24,6 +24,7 @@ type DialogueState = {
 	username: string,
 	avatarImage: string,
 	text: string,
+	hasContent: boolean,
 	choice1: string?,
 	choice2: string?,
 	tutorial: boolean,
@@ -93,6 +94,9 @@ local function DialogueContent(props: DialogueState)
 			Visible = props.mouseCatcherVisible,
 		}),
 		ChatBox = e("ImageLabel", {
+			-- An empty box (no text, no choices) hides outright: the tutorial
+			-- clears its corner box between steps and at the battle's end
+			Visible = props.hasContent,
 			AnchorPoint = chatBoxAnchor,
 			Position = chatBoxPosition,
 			Size = chatBoxSize,
@@ -191,6 +195,7 @@ function DialogueView.new()
 		username = "",
 		avatarImage = "",
 		text = "",
+		hasContent = false,
 		choice1 = nil,
 		choice2 = nil,
 		tutorial = false,
@@ -237,6 +242,7 @@ function DialogueView.new()
 		DialogueVoice:Speak(mUsername, text)
 		mRoot.setState({
 			text = text,
+			hasContent = text ~= "" or choice1 ~= nil,
 			choice1 = choice1 or StatefulRoot.None,
 			choice2 = choice2 or StatefulRoot.None,
 		})
