@@ -15,9 +15,7 @@ function NetmapCamera.new()
 	
 	this.Clicked = Signal.new()
 	
-	local mIgnoredFirstClick = false
-	
-	local mCamera = workspace.CurrentCamera
+local mCamera = workspace.CurrentCamera
 	mCamera.CameraType = Enum.CameraType.Scriptable
 	mCamera.FieldOfView = 10
 	
@@ -168,11 +166,6 @@ function NetmapCamera.new()
 	local function button1Up()
 		mPanStartHit = nil
 		mDownInput = nil
-		if not mIgnoredFirstClick then
-			mIsPanning = false
-			mIgnoredFirstClick = true
-			return
-		end
 		if mDidPan then
 			mInertialVelocity = computeExtraVelocity()
 		elseif mIsPanning then
