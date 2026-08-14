@@ -10,8 +10,12 @@
 -- Note: the template named both end labels "Label"; React children need
 -- unique names, so they mount as LeftLabel/RightLabel (no code addressed
 -- them by path).
+--
+-- Input is a UIDragDetector on the slider area (Scriptable style, so it
+-- proposes no motion itself): unlike per-GuiObject Input events it CAPTURES
+-- the gesture, so the drag keeps tracking when the pointer wanders off the
+-- strip, and a press on the knob starts a drag instead of being sunk by it.
 
-local UserInputService = game:GetService("UserInputService")
 local React = require(game.ReplicatedStorage.Packages.React)
 
 local e = React.createElement
@@ -48,7 +52,6 @@ end
 
 local function WindowsSlider(props: Props)
 	local frameRef = React.useRef(nil :: Frame?)
-	local touchDragging = React.useRef(false)
 
 	-- Same mapping as the imperative original: pixel x across the slider
 	-- frame -> value in [-1, 1] (with 1.1 overshoot so the extremes are
@@ -88,36 +91,22 @@ local function WindowsSlider(props: Props)
 			Size = UDim2.new(1, 0, 1, 0),
 			BackgroundTransparency = 1,
 			Image = "",
-			[React.Event.InputBegan] = function(_rbx, input: InputObject)
-				if
-					input.UserInputType == Enum.UserInputType.MouseButton1
-					or input.UserInputType == Enum.UserInputType.Touch
-				then
-					touchDragging.current = true
-					handleInput(input.Position.X)
-				end
-			end,
-			[React.Event.InputChanged] = function(_rbx, input: InputObject)
-				if input.UserInputType == Enum.UserInputType.MouseMovement then
-					-- Matches the imperative original: mouse movement only
-					-- drags while the button is held down.
-					if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
-						handleInput(input.Position.X)
-					end
-				elseif input.UserInputType == Enum.UserInputType.Touch and touchDragging.current then
-					handleInput(input.Position.X)
-				end
-			end,
-			[React.Event.InputEnded] = function(_rbx, input: InputObject)
-				if
-					input.UserInputType == Enum.UserInputType.MouseButton1
-					or input.UserInputType == Enum.UserInputType.Touch
-				then
-					touchDragging.current = false
-				end
-			end,
 		}, {
-			Gutter = e("ImageButton", {
+			DragDetector = e("UIDragDetector", {
+				-- Scriptable with no drag style function registered: the
+				-- detector moves nothing, we only consume its positions
+				DragStyle = Enum.UIDragDetectorDragStyle.Scriptable,
+				[React.Event.DragStart] = function(_rbx, inputPosition: Vector2)
+					-- A bare click (no movement) also lands here: jump to it
+					handleInput(inputPosition.X)
+				end,
+				[React.Event.DragContinue] = function(_rbx, inputPosition: Vector2)
+					handleInput(inputPosition.X)
+				end,
+			}),
+			Gutter = e("ImageLabel", {
+				-- ImageLabel, NOT ImageButton: an Active object here would
+				-- sink presses before they reach the drag detector's parent
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.new(0.5, 0, 0.5, 0),
 				Size = UDim2.new(1, 0, 0, 4),
@@ -133,7 +122,9 @@ local function WindowsSlider(props: Props)
 				Position = UDim2.new((props.Value / 1.1 + 1) / 2, 0, 0.5, 0),
 				Size = UDim2.new(0, 32, 0, 32),
 				ZIndex = 2,
-				Active = true,
+				-- Not Active: grabbing the knob must start the area's drag,
+				-- not be swallowed by the knob image
+				Active = false,
 				BackgroundTransparency = 1,
 				Image = kSliderImage,
 				ImageRectSize = Vector2.new(32, 32),
