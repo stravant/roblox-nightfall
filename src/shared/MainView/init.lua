@@ -20,6 +20,7 @@ local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
 local e = React.createElement
 
 local UserInputService = game:GetService('UserInputService')
+local SocialService = game:GetService('SocialService')
 
 local Tutorial = require(script.Tutorial)
 
@@ -328,6 +329,44 @@ function MainView.new()
 	local mNetmapView = Netmap3DView.new(mTopbarCredits)
 	mNetmapView:GetGui().Position = UDim2.new(0.5, 0, 0.5, 0)
 	mNetmapView:GetGui().Parent = mGui
+
+	-- Give Feedback button, bottom-left of the netmap (hides with it). The
+	-- whole flow is Roblox's own feedback dialog; results land in Creator
+	-- Dashboard under Audience > Feedback. Ineligible players (rate limited
+	-- once per day, etc.) get the platform's own unavailability message.
+	-- NOTE: the prompt only works in a published place, not Studio playtests.
+	do
+		local feedbackHost = Instance.new("Frame")
+		feedbackHost.Name = "FeedbackButton"
+		feedbackHost.AnchorPoint = Vector2.new(0, 1)
+		feedbackHost.Position = UDim2.new(0, 10, 1, -10)
+		feedbackHost.Size = UDim2.new(0, 130, 0, 36)
+		feedbackHost.BackgroundTransparency = 1
+		local prompting = false
+		StatefulRoot.create(feedbackHost, function()
+			return e(WindowsButton, {
+				Name = "Button",
+				Size = UDim2.new(1, 0, 1, 0),
+				Text = "Give Feedback",
+				OnClick = function()
+					if prompting or ModalManager:IsModal() then
+						return
+					end
+					prompting = true
+					task.spawn(function()
+						local st, err = pcall(function()
+							SocialService:PromptFeedbackSubmissionAsync()
+						end)
+						if not st then
+							warn("MainView | Feedback prompt failed: " .. tostring(err))
+						end
+						prompting = false
+					end)
+				end,
+			})
+		end, {})
+		feedbackHost.Parent = mNetmapView:GetGui()
+	end
 	mNetmapView:SetVisible(true)
 
 	-- Give the netmap a unitInfoView
