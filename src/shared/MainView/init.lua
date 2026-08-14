@@ -416,8 +416,9 @@ function MainView.new()
 			error("Missing place "..placeId)
 		end
 		-- The node's entry track (nil for hq/warez nodes); the GameView holds
-		-- its battle music until the track finishes
-		local entrySound = Netmap.ById[nodeId].Sound
+		-- its battle music until the track finishes. A Retry re-entry
+		-- (initialPlacement set) skips the sting — they just heard it.
+		local entrySound = if initialPlacement then nil else Netmap.ById[nodeId].Sound
 		local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 		local gameController = GameController.new(gameState)
 		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface, entrySound)
