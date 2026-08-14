@@ -72,6 +72,8 @@ function MainView.new()
 			Text = text,
 		})
 	end
+	-- The feedback prompt yields until dismissed; one at a time
+	local mFeedbackPrompting = false
 	local mTopbarRoot = StatefulRoot.create(mTopbarGui, function(props)
 		-- One flex row: the node-name title sizes to its content on the left,
 		-- Start Databattle / Done Turn float centered between the two fill
@@ -246,9 +248,23 @@ function MainView.new()
 					}),
 				})
 				else nil,
+			-- Netmap only (rides the credits' hidden flag, like the credits):
+			-- opens Roblox's own feedback dialog, results in Creator
+			-- Dashboard under Audience > Feedback. Only works in the
+			-- published place, not Studio playtests.
+			FeedbackButton = if not props.creditsHidden
+				then e(WindowsButton, {
+					Name = "FeedbackButton",
+					LayoutOrder = 7,
+					Size = UDim2.new(0, 120, 0, 36),
+					OnClick = props.onFeedbackClick,
+				}, {
+					TextLabel = topbarButtonLabel("Give Feedback"),
+				})
+				else nil,
 			MenuButton = e(WindowsButton, {
 				Name = "MenuButton",
-				LayoutOrder = 7,
+				LayoutOrder = 8,
 				Size = UDim2.new(0, 110, 0, 36),
 				OnClick = props.onMenuClick,
 			}, {
@@ -271,6 +287,21 @@ function MainView.new()
 		onUndoClick = nil,
 		onMenuClick = function()
 			mMainMenu:Show()
+		end,
+		onFeedbackClick = function()
+			if mFeedbackPrompting or ModalManager:IsModal() then
+				return
+			end
+			mFeedbackPrompting = true
+			task.spawn(function()
+				local st, err = pcall(function()
+					SocialService:PromptFeedbackSubmissionAsync()
+				end)
+				if not st then
+					warn("MainView | Feedback prompt failed: " .. tostring(err))
+				end
+				mFeedbackPrompting = false
+			end)
 		end,
 	})
 	local function setBattleTitle(title)
@@ -329,44 +360,6 @@ function MainView.new()
 	local mNetmapView = Netmap3DView.new(mTopbarCredits)
 	mNetmapView:GetGui().Position = UDim2.new(0.5, 0, 0.5, 0)
 	mNetmapView:GetGui().Parent = mGui
-
-	-- Give Feedback button, bottom-left of the netmap (hides with it). The
-	-- whole flow is Roblox's own feedback dialog; results land in Creator
-	-- Dashboard under Audience > Feedback. Ineligible players (rate limited
-	-- once per day, etc.) get the platform's own unavailability message.
-	-- NOTE: the prompt only works in a published place, not Studio playtests.
-	do
-		local feedbackHost = Instance.new("Frame")
-		feedbackHost.Name = "FeedbackButton"
-		feedbackHost.AnchorPoint = Vector2.new(0, 1)
-		feedbackHost.Position = UDim2.new(0, 10, 1, -10)
-		feedbackHost.Size = UDim2.new(0, 130, 0, 36)
-		feedbackHost.BackgroundTransparency = 1
-		local prompting = false
-		StatefulRoot.create(feedbackHost, function()
-			return e(WindowsButton, {
-				Name = "Button",
-				Size = UDim2.new(1, 0, 1, 0),
-				Text = "Give Feedback",
-				OnClick = function()
-					if prompting or ModalManager:IsModal() then
-						return
-					end
-					prompting = true
-					task.spawn(function()
-						local st, err = pcall(function()
-							SocialService:PromptFeedbackSubmissionAsync()
-						end)
-						if not st then
-							warn("MainView | Feedback prompt failed: " .. tostring(err))
-						end
-						prompting = false
-					end)
-				end,
-			})
-		end, {})
-		feedbackHost.Parent = mNetmapView:GetGui()
-	end
 	mNetmapView:SetVisible(true)
 
 	-- Give the netmap a unitInfoView
