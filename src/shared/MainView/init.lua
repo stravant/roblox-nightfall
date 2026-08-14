@@ -386,11 +386,12 @@ function MainView.new()
 		if not placeData then
 			error("Missing place "..placeId)
 		end
+		-- The node's entry track (nil for hq/warez nodes); the GameView holds
+		-- its battle music until the track finishes
+		local entrySound = Netmap.ById[nodeId].Sound
 		local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 		local gameController = GameController.new(gameState)
-		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface)
-		-- The node's entry track (nil for hq/warez nodes)
-		local entrySound = Netmap.ById[nodeId].Sound
+		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface, entrySound)
 		mTopbarBattleInterface:SetOnStart(function()
 			gameController:StartGame()
 		end)

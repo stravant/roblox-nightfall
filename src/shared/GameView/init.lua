@@ -234,7 +234,9 @@ end
 -- default-selected "Databattle" tab (forfeit / skip). May be nil in tests.
 -- `topbar` drives the Start Databattle button in the topbar gui (may be nil
 -- in tests).
-function GameView.new(gameState, controller, menu, topbar)
+-- entrySoundName: optional SoundManager name of the node's entry sting; the
+-- battle music holds until it finishes and fades in over its final seconds
+function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	local this = {}
 
 	local mTopbar = topbar or {
@@ -377,9 +379,13 @@ function GameView.new(gameState, controller, menu, topbar)
 	end)
 	mTopbar:SetLeaveVisible(true)
 
-	-- Battle sound
+	-- Battle sound (held back until the node entry sting finishes, if any)
 	local mBattleSoundLooper = BattleSoundLooper.new()
-	mBattleSoundLooper:Play()
+	if entrySoundName then
+		mBattleSoundLooper:PlayAfter(SoundManager:GetSound(entrySoundName))
+	else
+		mBattleSoundLooper:Play()
+	end
 
 	-- The battle HUD (floating unit info window, programs window, command row)
 	local mUnitInfoView = BattleHud.new(mGui, gameState:GetAvailableUnits())
