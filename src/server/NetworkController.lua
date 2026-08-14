@@ -337,19 +337,22 @@ function NetworkController.install(remotes)
 	remotes.GetBadges.OnServerInvoke = function(player)
 		local owned = getOwnedBadges(player)
 		local sessionAwards = BadgeAwarder:GetSessionAwards(player)
-		local result = { Total = 0, Earned = {} }
+		local result = { Total = 0, Earned = {}, Unearned = {} }
 		for _, key in pairs(Badges.DisplayOrder) do
 			local badgeId = Badges.Ids[key]
 			if badgeId ~= 0 then
 				result.Total += 1
+				local info = getBadgeInfo(badgeId)
+				local entry = {
+					Key = key,
+					Name = if info then info.Name else key,
+					Description = if info then info.Description else "",
+					IconImageId = if info then info.IconImageId else 0,
+				}
 				if owned[badgeId] or sessionAwards[key] then
-					local info = getBadgeInfo(badgeId)
-					table.insert(result.Earned, {
-						Key = key,
-						Name = if info then info.Name else key,
-						Description = if info then info.Description else "",
-						IconImageId = if info then info.IconImageId else 0,
-					})
+					table.insert(result.Earned, entry)
+				else
+					table.insert(result.Unearned, entry)
 				end
 			end
 		end

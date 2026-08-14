@@ -76,7 +76,7 @@ local function programEntry(data: ProgramEntryData, selected: boolean, owned: nu
 		}),
 		Icon = e("ImageLabel", {
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 48, 0.5, 0),
+			Position = UDim2.new(0, 44, 0.5, 0),
 			Size = UDim2.new(0, 24, 0, 24),
 			BackgroundColor3 = data.Color,
 			BorderColor3 = Color3.new(0, 0, 0),
@@ -84,8 +84,8 @@ local function programEntry(data: ProgramEntryData, selected: boolean, owned: nu
 		}),
 		NameLabel = e("TextLabel", {
 			AnchorPoint = Vector2.new(0, 0.5),
-			Position = UDim2.new(0, 76, 0.5, 0),
-			Size = UDim2.new(1, -114, 0, 20),
+			Position = UDim2.new(0, 72, 0.5, 0),
+			Size = UDim2.new(1, -106, 0, 20),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
 			TextSize = 16,
@@ -284,9 +284,8 @@ local function WarezContent(props: WarezState)
 		MainBox = e("ImageLabel", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
-			-- Short enough to fit a phone screen at 1x scale (a bit of extra
-			-- width buys back wrapping room in the shallower detail pane)
-			Size = UDim2.new(0, 540, 0, 210),
+			-- Short and narrow enough to fit a phone screen at 1x scale
+			Size = UDim2.new(0, 380, 0, 210),
 			ZIndex = 2,
 			BackgroundTransparency = 1,
 			Image = kWindowImage,
@@ -309,16 +308,16 @@ local function WarezContent(props: WarezState)
 			-- inside the scroll frame: 4px scroll inset + row offsets)
 			ShopHeadings = e("Frame", {
 				Position = UDim2.new(0, 6, 0, 26),
-				Size = UDim2.new(0, 210, 0, 16),
+				Size = UDim2.new(0, 190, 0, 16),
 				BackgroundTransparency = 1,
 			}, {
 				HeadingCost = columnHeading("Cost", 6, 40, Enum.TextXAlignment.Right),
-				HeadingName = columnHeading("Name", 80, 80, Enum.TextXAlignment.Left),
-				HeadingOwned = columnHeading("Owned", 152, 48, Enum.TextXAlignment.Right),
+				HeadingName = columnHeading("Name", 76, 80, Enum.TextXAlignment.Left),
+				HeadingOwned = columnHeading("Owned", 132, 48, Enum.TextXAlignment.Right),
 			}),
 			ShopInset = e("ImageLabel", {
 				Position = UDim2.new(0, 6, 0, 44),
-				Size = UDim2.new(0, 210, 1, -90),
+				Size = UDim2.new(0, 190, 1, -90),
 				BackgroundTransparency = 1,
 				Image = kInsetImage,
 				ScaleType = Enum.ScaleType.Slice,
@@ -350,8 +349,8 @@ local function WarezContent(props: WarezState)
 				}),
 			}),
 			DetailInset = e("ImageLabel", {
-				Position = UDim2.new(0, 222, 0, 26),
-				Size = UDim2.new(1, -228, 1, -72),
+				Position = UDim2.new(0, 202, 0, 26),
+				Size = UDim2.new(1, -208, 1, -72),
 				-- The shallow pane can't fit the longest description texts;
 				-- clip rather than paint over the buttons below
 				ClipsDescendants = true,

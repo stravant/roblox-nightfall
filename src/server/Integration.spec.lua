@@ -747,6 +747,9 @@ return function(t)
 		local result = remotes.GetBadges:InvokeServer_TEST(newcomer)
 		t.expect(result.Total).toBe(#Badges.DisplayOrder)
 		t.expect(#result.Earned).toBe(0)
+		-- Everything is still to be earned, in display order
+		t.expect(#result.Unearned).toBe(#Badges.DisplayOrder)
+		t.expect(result.Unearned[1].Key).toBe("PluggedIn")
 
 		-- A badge earned AFTER ownership was cached still shows up right away
 		-- (unioned in from the session award record)
@@ -754,6 +757,11 @@ return function(t)
 		task.wait() -- the award call is fire-and-forget
 		result = remotes.GetBadges:InvokeServer_TEST(newcomer)
 		t.expect(#result.Earned).toBe(1)
+		-- The earned badge moved out of the unearned list
+		t.expect(#result.Unearned).toBe(#Badges.DisplayOrder - 1)
+		for _, badge in pairs(result.Unearned) do
+			t.expect(badge.Key ~= "PluggedIn").toBeTruthy()
+		end
 		local entry = result.Earned[1]
 		t.expect(entry.Key).toBe("PluggedIn")
 		t.expect(entry.Name).toBe("Badge " .. Badges.Ids.PluggedIn)

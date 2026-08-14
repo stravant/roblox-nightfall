@@ -137,13 +137,16 @@ return function(t)
 		end)
 	end)
 
-	t.test("badges tab holds the summary and the earned-badges list", function()
+	t.test("badges tab holds side-by-side earned and unearned lists", function()
 		withView(function(view, gui)
 			local badgesTab = gui.Menu.TabPanel.Tabs.Badges
-			t.expect(badgesTab:FindFirstChild("SummaryLabel")).toBeTruthy()
-			t.expect(badgesTab:FindFirstChild("BadgesScroll", true).ClassName).toBe("ScrollingFrame")
-			-- No fetch has completed in the test place: the placeholder shows
-			t.expect(badgesTab:FindFirstChild("Placeholder", true).Text).toBe("Fetching badges...")
+			t.expect(badgesTab:FindFirstChild("EarnedHeader").Text).toBe("Earned")
+			t.expect(badgesTab:FindFirstChild("UnearnedHeader").Text).toBe("Not Yet")
+			t.expect(badgesTab:FindFirstChild("EarnedScroll", true).ClassName).toBe("ScrollingFrame")
+			t.expect(badgesTab:FindFirstChild("UnearnedScroll", true).ClassName).toBe("ScrollingFrame")
+			-- No fetch has completed in the test place: the placeholders show
+			t.expect(badgesTab.EarnedArea:FindFirstChild("Placeholder", true).Text).toBe("Fetching badges...")
+			t.expect(badgesTab.UnearnedArea:FindFirstChild("Placeholder", true).Text).toBe("Fetching badges...")
 		end)
 	end)
 

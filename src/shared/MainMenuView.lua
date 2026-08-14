@@ -53,8 +53,10 @@ type MainMenuState = {
 	statsSelectedId: string?,
 	statsRows: { { Id: string, Text: string } }?,
 	onStatsNodeClick: ((id: string) -> ())?,
-	badgesSummary: string?,
+	badgesEarnedHeader: string?,
+	badgesUnearnedHeader: string?,
 	badgeRows: { { Name: string, Description: string, Icon: string } }?,
+	unearnedBadgeRows: { { Name: string, Description: string, Icon: string } }?,
 	badgesPlaceholder: string?,
 	battleContext: BattleContext?,
 	menuSession: number,
@@ -173,66 +175,97 @@ end
 local function MainMenuContent(props: MainMenuState)
 	-- Refs shared between each list and its Win95 scrollbar
 	local statsScrollRef = React.useRef(nil)
-	local badgesScrollRef = React.useRef(nil)
+	local earnedScrollRef = React.useRef(nil)
+	local unearnedScrollRef = React.useRef(nil)
 
-	-- One row per earned badge: icon plus name over description (badge info
-	-- fetched from the server, which queries the badge web APIs)
-	local badgeRowItems: { [string]: any } = {
-		UIListLayout = e("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 1),
-		}),
-		UIPadding = e("UIPadding", {
-			PaddingTop = UDim.new(0, 2),
-			PaddingLeft = UDim.new(0, 4),
-			PaddingBottom = UDim.new(0, 2),
-		}),
-	}
-	if #(props.badgeRows or {}) == 0 then
-		badgeRowItems.Placeholder = e("TextLabel", {
-			Size = UDim2.new(1, -20, 0, 18),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSans,
-			TextSize = 15,
-			TextColor3 = Color3.new(0, 0, 0),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = props.badgesPlaceholder or "",
-		})
-	end
-	for i, badge in pairs(props.badgeRows or {}) do
-		badgeRowItems["Badge" .. i] = e("Frame", {
-			LayoutOrder = i,
-			Size = UDim2.new(1, -20, 0, 34),
-			BackgroundTransparency = 1,
-		}, {
-			Icon = e("ImageLabel", {
-				Position = UDim2.new(0, 0, 0, 3),
-				Size = UDim2.new(0, 28, 0, 28),
-				BackgroundTransparency = 1,
-				Image = badge.Icon,
+	-- One row per badge: icon plus name over description (badge info fetched
+	-- from the server, which queries the badge web APIs). Unearned rows
+	-- render dimmed.
+	local function badgeRowItems(rows, placeholder: string, dimmed: boolean): { [string]: any }
+		local items: { [string]: any } = {
+			UIListLayout = e("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, 1),
 			}),
-			NameLabel = e("TextLabel", {
-				Position = UDim2.new(0, 36, 0, 2),
-				Size = UDim2.new(1, -36, 0, 15),
-				BackgroundTransparency = 1,
-				Font = Enum.Font.SourceSansBold,
-				TextSize = 15,
-				TextColor3 = Color3.new(0, 0, 0),
-				TextTruncate = Enum.TextTruncate.AtEnd,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Text = badge.Name,
+			UIPadding = e("UIPadding", {
+				PaddingTop = UDim.new(0, 2),
+				PaddingLeft = UDim.new(0, 4),
+				PaddingBottom = UDim.new(0, 2),
 			}),
-			DescriptionLabel = e("TextLabel", {
-				Position = UDim2.new(0, 36, 0, 17),
-				Size = UDim2.new(1, -36, 0, 13),
+		}
+		if #(rows or {}) == 0 then
+			items.Placeholder = e("TextLabel", {
+				Size = UDim2.new(1, -20, 0, 18),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
-				TextSize = 12,
+				TextSize = 14,
 				TextColor3 = Color3.new(0.35, 0.35, 0.35),
-				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Text = badge.Description,
+				Text = placeholder,
+			})
+		end
+		for i, badge in pairs(rows or {}) do
+			items["Badge" .. i] = e("Frame", {
+				LayoutOrder = i,
+				Size = UDim2.new(1, -18, 0, 34),
+				BackgroundTransparency = 1,
+			}, {
+				Icon = e("ImageLabel", {
+					Position = UDim2.new(0, 0, 0, 3),
+					Size = UDim2.new(0, 28, 0, 28),
+					BackgroundTransparency = 1,
+					ImageTransparency = if dimmed then 0.55 else 0,
+					Image = badge.Icon,
+				}),
+				NameLabel = e("TextLabel", {
+					Position = UDim2.new(0, 36, 0, 2),
+					Size = UDim2.new(1, -36, 0, 15),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.SourceSansBold,
+					TextSize = 15,
+					TextColor3 = if dimmed then Color3.new(0.45, 0.45, 0.45) else Color3.new(0, 0, 0),
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Text = badge.Name,
+				}),
+				DescriptionLabel = e("TextLabel", {
+					Position = UDim2.new(0, 36, 0, 17),
+					Size = UDim2.new(1, -36, 0, 13),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.SourceSans,
+					TextSize = 12,
+					TextColor3 = if dimmed then Color3.new(0.55, 0.55, 0.55) else Color3.new(0.35, 0.35, 0.35),
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Text = badge.Description,
+				}),
+			})
+		end
+		return items
+	end
+
+	-- A Win95 listbox holding badge rows (half of the side-by-side pair)
+	local function badgeListArea(name: string, scrollRef, xScale: number, rows, placeholder: string, dimmed: boolean)
+		return e("Frame", {
+			Position = UDim2.new(xScale, if xScale == 0 then 10 else 5, 0, 24),
+			Size = UDim2.new(0.5, -15, 1, -30),
+			BackgroundColor3 = Color3.new(1, 1, 1),
+			BorderSizePixel = 0,
+		}, {
+			[name .. "Scroll"] = e("ScrollingFrame", {
+				ref = scrollRef,
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundTransparency = 1,
+				BorderSizePixel = 0,
+				CanvasSize = UDim2.new(0, 0, 0, 0),
+				AutomaticCanvasSize = Enum.AutomaticSize.Y,
+				ScrollingDirection = Enum.ScrollingDirection.Y,
+				ScrollBarThickness = 0,
+			}, badgeRowItems(rows, placeholder, dimmed)),
+			Scrollbar = e(Win95Scrollbar, {
+				scrollRef = scrollRef,
+				lineScroll = 35,
 			}),
 		})
 	end
@@ -451,38 +484,32 @@ local function MainMenuContent(props: MainMenuState)
 					Name = "Badges",
 					Label = "Badges",
 					Content = {
-						SummaryLabel = e("TextLabel", {
+						-- Side-by-side listboxes: earned on the left, still
+						-- to be earned (dimmed) on the right
+						EarnedHeader = e("TextLabel", {
 							Position = UDim2.new(0, 10, 0, 4),
-							Size = UDim2.new(1, -20, 0, 20),
+							Size = UDim2.new(0.5, -15, 0, 18),
 							BackgroundTransparency = 1,
 							Font = Enum.Font.SourceSansBold,
 							TextSize = 16,
 							TextColor3 = Color3.new(0, 0, 0.5),
 							TextXAlignment = Enum.TextXAlignment.Left,
-							Text = props.badgesSummary or "",
+							Text = props.badgesEarnedHeader or "Earned",
 						}),
-						-- Earned badges, Win95 listbox style
-						ListArea = e("Frame", {
-							Position = UDim2.new(0, 10, 0, 26),
-							Size = UDim2.new(1, -20, 1, -32),
-							BackgroundColor3 = Color3.new(1, 1, 1),
-							BorderSizePixel = 0,
-						}, {
-							BadgesScroll = e("ScrollingFrame", {
-								ref = badgesScrollRef,
-								Size = UDim2.new(1, 0, 1, 0),
-								BackgroundTransparency = 1,
-								BorderSizePixel = 0,
-								CanvasSize = UDim2.new(0, 0, 0, 0),
-								AutomaticCanvasSize = Enum.AutomaticSize.Y,
-								ScrollingDirection = Enum.ScrollingDirection.Y,
-								ScrollBarThickness = 0,
-							}, badgeRowItems),
-							Scrollbar = e(Win95Scrollbar, {
-								scrollRef = badgesScrollRef,
-								lineScroll = 35,
-							}),
+						UnearnedHeader = e("TextLabel", {
+							Position = UDim2.new(0.5, 5, 0, 4),
+							Size = UDim2.new(0.5, -15, 0, 18),
+							BackgroundTransparency = 1,
+							Font = Enum.Font.SourceSansBold,
+							TextSize = 16,
+							TextColor3 = Color3.new(0, 0, 0.5),
+							TextXAlignment = Enum.TextXAlignment.Left,
+							Text = props.badgesUnearnedHeader or "Not Yet",
 						}),
+						EarnedArea = badgeListArea("Earned", earnedScrollRef, 0,
+							props.badgeRows, props.badgesPlaceholder or "None yet.", false),
+						UnearnedArea = badgeListArea("Unearned", unearnedScrollRef, 0.5,
+							props.unearnedBadgeRows, props.badgesPlaceholder or "You got them all!", true),
 					},
 				},
 			}),
@@ -642,18 +669,26 @@ function MainMenuView.new(container: Instance)
 				return
 			end
 			if ok and result then
-				local rows = {}
-				for _, badge in pairs(result.Earned) do
-					table.insert(rows, {
-						Name = badge.Name,
-						Description = badge.Description,
-						Icon = if badge.IconImageId ~= 0 then "rbxassetid://" .. badge.IconImageId else "",
-					})
+				local function toRows(entries)
+					local rows = {}
+					for _, badge in pairs(entries) do
+						table.insert(rows, {
+							Name = badge.Name,
+							Description = badge.Description,
+							Icon = if badge.IconImageId ~= 0 then "rbxassetid://" .. badge.IconImageId else "",
+						})
+					end
+					return rows
 				end
+				local earned = toRows(result.Earned)
+				local unearned = toRows(result.Unearned or {})
 				mRoot.setState({
-					badgesSummary = string.format("Badges earned: %d of %d", #rows, result.Total),
-					badgeRows = rows,
-					badgesPlaceholder = "No badges earned yet.",
+					badgesEarnedHeader = string.format("Earned (%d)", #earned),
+					badgesUnearnedHeader = string.format("Not Yet (%d)", #unearned),
+					badgeRows = earned,
+					unearnedBadgeRows = unearned,
+					-- Per-list defaults take over ("None yet." / "You got them all!")
+					badgesPlaceholder = StatefulRoot.None,
 				})
 			else
 				mRoot.setState({ badgesPlaceholder = "Badge list unavailable." })
@@ -735,8 +770,10 @@ function MainMenuView.new(container: Instance)
 		onStatsNodeClick = function(id: string)
 			selectStatsNode(id)
 		end,
-		badgesSummary = "",
+		badgesEarnedHeader = nil,
+		badgesUnearnedHeader = nil,
 		badgeRows = {},
+		unearnedBadgeRows = {},
 		badgesPlaceholder = "Fetching badges...",
 		battleContext = nil,
 		menuSession = 0,

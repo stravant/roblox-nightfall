@@ -6,7 +6,7 @@ local DebugFlags = {}
 
 -- Use MockDataStore instead of real datastores on the server
 function DebugFlags:UseMockData(): boolean
-	return true
+	return false
 end
 
 -- Whether the tutorial plays for players who haven't beaten it
