@@ -833,7 +833,9 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		updateMenuContext()
 		mTopbar:SetDoneTurnVisible(false)
 		mTopbar:SetLeaveVisible(false)
-		-- The tutorial teaches drag-to-place: show the hint prominently.
+		-- The tutorial guides click-to-place but accepts drags: show the
+		-- hint prominently (it starts as "Drag to Place" and flips to
+		-- "Click to Place" once a zone is selected).
 		-- No debug win either: the tutorial script must play out for real.
 		mUnitInfoView:SetDragHintProminent(true)
 		root().setState({ debugWinVisible = false })
@@ -842,6 +844,17 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	-- Clear the selection, for tutorial
 	function this:ClearSelection()
 		clearSelection()
+	end
+
+	-- Tutorial: retitle the prominent scripts-window hint
+	function this:SetProgramsHintText(text)
+		mUnitInfoView:SetDragHintText(text)
+	end
+
+	-- Tutorial: restrict program clicks/drags to one script (cleared by
+	-- ClearTutorialArrow along with the highlight)
+	function this:SetOnlyAllowProgram(unitId)
+		mUnitInfoView:SetOnlySelectUnit(unitId)
 	end
 
 	-- Select a command on the current unit programmatically, for tutorial

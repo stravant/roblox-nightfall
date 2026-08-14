@@ -116,26 +116,56 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	gameView:ClearSelection()
 	gameView:SetOnlyAllowClick(0, 0)
 
-	-- Upload phase: click the spot, then click the script. (This was a guided
-	-- drag-and-drop, but funnel data showed a big drop-off at this step — the
-	-- drag was too precise an ask this early. Dragging still works if the
-	-- player does it on their own.)
-	tutorialDialogue:SetText("This is a databattle: your scripts against the node's defenses. Click the highlighted upload spot.")
-	gameView:SetOnlyAllowUpload(4, 5)
-	waitForClick(4, 5)
-	tutorialDialogue:SetText("Now click the Hack script to place it there.")
-	gameView:ShowTutorialArrowProgramList('hack')
-	gameState.UnitAdded:wait()
+	-- Upload phase: guided clicks (click the spot, then the script). Funnel
+	-- data showed a big drop-off when a guided drag was the only path — the
+	-- drag was too precise an ask this early. A player who drags the script
+	-- on their own found an equally valid path: accept it and move on. The
+	-- scripts window hints "Drag to Place" until a zone is selected, then
+	-- flips to "Click to Place" to match the guidance.
+	local function placementStep(unitId, zoneX, zoneY, introText, placeText)
+		local placed = false
+		local placedCn = gameState.UnitAdded:connect(function()
+			placed = true
+		end)
+		local clickedZone = false
+		local clickedCn = gameView.SquareSelected:connect(function()
+			clickedZone = true
+		end)
+		gameView:SetOnlyAllowUpload(zoneX, zoneY)
+		tutorialDialogue:SetText(introText)
+		gameView:SetOnlyAllowClick(zoneX, zoneY)
+		gameView:ShowTutorialArrowSquare(zoneX, zoneY)
+		-- Restrict drags to this step's script (a freestyle drag of the OTHER
+		-- script would soft-lock the next step). AFTER the arrow: showing an
+		-- arrow clears the restriction via TutorialHide.
+		gameView:SetOnlyAllowProgram(unitId)
+		while not placed and not clickedZone do
+			wait()
+		end
+		gameView:ClearTutorialArrow() -- also drops the program restriction
+		gameView:SetOnlyAllowClick(0, 0)
+		if not placed then
+			-- Zone selected: the scripts window is click-to-place from here on
+			gameView:SetProgramsHintText("Click to Place")
+			tutorialDialogue:SetText(placeText)
+			gameView:ShowTutorialArrowProgramList(unitId)
+			while not placed do
+				wait()
+			end
+			gameView:ClearTutorialArrow()
+		end
+		placedCn:disconnect()
+		clickedCn:disconnect()
+		gameView:SetOnlyAllowUpload(nil)
+	end
+
+	placementStep('hack', 4, 5,
+		"This is a databattle: your scripts against the node's defenses. Click the highlighted upload spot.",
+		"Now click the Hack script to place it there.")
 	funnelStep(OnboardingSteps.ScriptPlaced)
-	gameView:ClearTutorialArrow()
-	tutorialDialogue:SetText("One more: click the next spot.")
-	gameView:SetOnlyAllowUpload(3, 3)
-	waitForClick(3, 3)
-	tutorialDialogue:SetText("And click Slingshot to place it.")
-	gameView:ShowTutorialArrowProgramList('slingshot')
-	gameState.UnitAdded:wait()
-	gameView:ClearTutorialArrow()
-	gameView:SetOnlyAllowUpload(nil)
+	placementStep('slingshot', 3, 3,
+		"One more: click the next spot.",
+		"And click Slingshot to place it.")
 	tutorialDialogue:SetText("Hit the start button when you're ready.")
 	gameController:SetStartEndEnabled(true)
 	gameView:ShowTutorialArrowStartGame()

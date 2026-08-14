@@ -198,6 +198,7 @@ type HudState = {
 	programs: { ProgramRow },
 	programsVisible: boolean,
 	dragHintProminent: boolean,
+	dragHintText: string,
 	hidden: boolean,
 	onCommandClick: (entry: CommandEntry) -> (),
 	onProgramClick: (id: string) -> (),
@@ -322,7 +323,7 @@ local function BattleHudContent(props: HudState)
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 17,
 				TextColor3 = Color3.new(0, 0, 0.5),
-				Text = "Click to Place",
+				Text = props.dragHintText,
 				LayoutOrder = 0,
 			})
 			else nil,
@@ -494,6 +495,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		programs = table.clone(mPrograms),
 		programsVisible = true,
 		dragHintProminent = false,
+		dragHintText = "Drag to Place",
 		hidden = false,
 		onCommandClick = function(entry: CommandEntry)
 			if entry.Disabled then
@@ -681,6 +683,19 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	-- Tutorial: show the "Click to Place" hint as its own prominent line
 	function this:SetDragHintProminent(state: boolean)
 		mRoot.setState({ dragHintProminent = state })
+	end
+
+	-- Tutorial: retitle the prominent hint (flips to "Click to Place" once
+	-- the player has an upload zone selected)
+	function this:SetDragHintText(text: string)
+		mRoot.setState({ dragHintText = text })
+	end
+
+	-- Tutorial: restrict program clicks/drags to one script without moving
+	-- the arrow (TutorialHighlightUnit sets this too, and TutorialHide
+	-- clears it)
+	function this:SetOnlySelectUnit(unitId: string?)
+		mOnlySelectUnit = unitId
 	end
 
 	function this:ClearProgramListSelection()
