@@ -723,11 +723,12 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		local window = mGui:FindFirstChild("ProgramsWindow", true)
 		if row and window then
 			-- Anchored to the WINDOW (inside the scrolling list the arrow
-			-- would be clipped) at the row's left edge, pointing right at it:
-			-- keeps it clear of the drag-demo hand gliding right off the row
+			-- would be clipped) at the row's RIGHT edge, pointing left at it:
+			-- the window hugs the screen's left edge, so an arrow on the left
+			-- lands offscreen on phones without a notch inset
 			local offset = row.AbsolutePosition - window.AbsolutePosition
-			mTutorialArrow:Show(window, 90,
-				UDim2.new(0, offset.X - 20, 0, offset.Y + row.AbsoluteSize.Y / 2))
+			mTutorialArrow:Show(window, -90,
+				UDim2.new(1, 20, 0, offset.Y + row.AbsoluteSize.Y / 2))
 		end
 	end
 
