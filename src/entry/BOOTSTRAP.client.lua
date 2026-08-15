@@ -68,6 +68,22 @@ local NiceToHavePreloadList = {
 	'rbxassetid://1335986152', --rbxgameasset://Images/DoneMarker',
 	'rbxassetid://1335928206', --rbxgameasset://Images/AttackDamage',
 }
+-- ...plus every unit image from the definitions (they're small, and the
+-- scripts list / shop / battles feel better with them warm; sourcing from
+-- Scripts means new units preload automatically). pcall: by now replication
+-- is long done, but a nice-to-have must never kill the bootstrap.
+pcall(function()
+	local seen = {}
+	for _, id in pairs(NiceToHavePreloadList) do
+		seen[id] = true
+	end
+	for _, def in pairs(require(game.ReplicatedStorage:WaitForChild('Scripts'))) do
+		if def.Image and not seen[def.Image] then
+			seen[def.Image] = true
+			table.insert(NiceToHavePreloadList, def.Image)
+		end
+	end
+end)
 spawn(function()
 	game:GetService('ContentProvider'):PreloadAsync(NiceToHavePreloadList)
 end)
