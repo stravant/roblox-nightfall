@@ -241,12 +241,14 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 
 	ModalManager:SetModal(true)
 	mainDialogue:SetVisible(true)
-	mainDialogue:ExecuteConversation(Netmap.PostTutorialConversation)
+	local outcome = mainDialogue:ExecuteConversation(Netmap.PostTutorialConversation)
 	mainDialogue:SetVisible(false)
 	ModalManager:SetModal(false)
 
 	mActive = false
-	return true
+	-- outcome: 'end:explore' or 'end:battle' (MainView routes the latter
+	-- straight into the next fight)
+	return true, outcome
 end
 
 return Tutorial

@@ -484,21 +484,28 @@ function MainView.new()
 	
 	-- Play the tutorial dialogue and tutorial
 	function this:PlayTutorial()
-		local ranTutorial = Tutorial:PlayTutorial(mGui, mNetmapView, mDialogue, mMainMenu, mTopbarBattleInterface, function()
+		local ranTutorial, outcome = Tutorial:PlayTutorial(mGui, mNetmapView, mDialogue, mMainMenu, mTopbarBattleInterface, function()
 			-- Mark hq beaten (reveals the adjacent nodes) before the wrap-up
 			-- box tells the player to go click one
 			this:ProcessWonBattle('hq', 1000)
 			game.ReplicatedStorage.Remotes.BeatTutorial:FireServer()
 		end)
 		if ranTutorial then
-			-- NOT part of the tutorial (it's complete): fresh graduates get
-			-- one pointer at the first infected node so the next action is
-			-- obvious, cleared the moment they select anything
-			mNetmapView:TutorialPointAtNode('lm12')
-			task.spawn(function()
-				mNetmapView.NodeSelected:wait()
-				mNetmapView:ClearTutorialPointer()
-			end)
+			if outcome == 'end:battle' then
+				-- They asked for the next fight: straight into lm12. Winning
+				-- it flows through the normal completion path (its win
+				-- conversation, then the warez node reveal) like any battle.
+				this:PlayGame(Netmap.ById.lm12.PlaceId, 'lm12')
+			else
+				-- Exploring: NOT part of the tutorial (it's complete); fresh
+				-- graduates get one pointer at the first infected node so the
+				-- next action is obvious, cleared once they select anything
+				mNetmapView:TutorialPointAtNode('lm12')
+				task.spawn(function()
+					mNetmapView.NodeSelected:wait()
+					mNetmapView:ClearTutorialPointer()
+				end)
+			end
 		end
 	end
 	

@@ -339,10 +339,12 @@ function DialogueView.new()
 		this:SetText("")
 	end
 
+	-- Returns the terminal target that ended the conversation: plain 'end',
+	-- or an 'end:<outcome>' variant the caller can branch on
 	function this:ExecuteConversation(conversation)
 		this:SetUser(conversation.User, conversation.Image)
 		local chatPart = "main"
-		while chatPart ~= "end" do
+		while true do
 			local partData = conversation.Parts[chatPart]
 			this:SetText(partData.Text, partData.Response1, partData.Response2)
 			local choice = this.OptionSelected:wait()
@@ -350,6 +352,9 @@ function DialogueView.new()
 				chatPart = partData.Target1
 			else
 				chatPart = partData.Target2
+			end
+			if chatPart == "end" or chatPart:sub(1, 4) == "end:" then
+				return chatPart
 			end
 		end
 	end

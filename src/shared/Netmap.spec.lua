@@ -46,6 +46,28 @@ return function(t)
 		t.expect(checked > 0).toBeTruthy()
 	end)
 
+	t.test("every conversation target resolves to a part or an end", function()
+		local conversations = { Netmap.TutorialCallout, Netmap.PostTutorialConversation }
+		for _, node in pairs(Netmap.ById) do
+			if node.Conversation then
+				table.insert(conversations, node.Conversation)
+			end
+		end
+		for _, convo in pairs(conversations) do
+			for partName, part in pairs(convo.Parts) do
+				for _, key in pairs({ "Target1", "Target2" }) do
+					local target = part[key]
+					if target ~= nil
+						and target ~= "end"
+						and target:sub(1, 4) ~= "end:"
+						and convo.Parts[target] == nil then
+						error("Conversation part " .. partName .. " targets missing part " .. tostring(target))
+					end
+				end
+			end
+		end
+	end)
+
 	t.test("every warez listing sells an existing script", function()
 		for id, node in pairs(Netmap.ById) do
 			if node.Warez then
