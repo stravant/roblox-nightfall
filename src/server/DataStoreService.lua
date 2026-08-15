@@ -22,16 +22,24 @@ local DataStoreService = {}
 local PRODUCTION_VERSION = 'test12'
 
 local PREFIX = PRODUCTION_VERSION
-local PLAYER_ORDERED_PREFIX = PREFIX..'_ordered'
-local PLAYER_DATA_PREFIX = PREFIX..'_data'
+
+-- Player data lives in ONE normal datastore under one key per player. The
+-- ordered-store version index below is LEGACY: it predates datastore size
+-- limits being lifted (every save wrote a new timestamped version key plus
+-- an ordered index entry to find the newest). It is read as a fallback for
+-- players who haven't saved since the switch, and never written.
+local PLAYER_STORE = PREFIX..'_playerdata'
+local LEGACY_ORDERED_PREFIX = PREFIX..'_ordered'
+local LEGACY_DATA_PREFIX = PREFIX..'_data'
 
 local NODE_STATS_DATASTORE = PREFIX..'_nodestats'
 
 local REPLAYS_DATASTORE = PREFIX..'_replays'
--- Exposed for integration tests to inspect the (mock) replay store
+-- Exposed for integration tests to inspect the (mock) stores
 DataStoreService.ReplaysStoreName = REPLAYS_DATASTORE
--- Exposed for integration tests to inspect a player's (mock) version index
-DataStoreService.PlayerOrderedPrefix = PLAYER_ORDERED_PREFIX
+DataStoreService.PlayerStoreName = PLAYER_STORE
+DataStoreService.LegacyOrderedPrefix = LEGACY_ORDERED_PREFIX
+DataStoreService.LegacyDataPrefix = LEGACY_DATA_PREFIX
 
 -- Datastores are keyed by the domain-scoped User identity (serialized to a
 -- string), not the raw numeric UserId
@@ -39,25 +47,32 @@ local function playerKey(player)
 	return player.User:ToString()
 end
 
+local mPlayerStore = DataStore:GetDataStore(PLAYER_STORE)
+
 -- Returns: (Success, [ServerPlayerData])
 function DataStoreService:LoadPlayerDataAsync(player)
 	local key = playerKey(player)
 	local st, a, b = pcall(function()
-		local playerOrderedStore = DataStore:GetOrderedDataStore(PLAYER_ORDERED_PREFIX..'_'..key)
-		local mostRecent = playerOrderedStore:GetSortedAsync(false, 1):GetCurrentPage()[1]
-		if mostRecent then
-			local playerNormalStore = DataStore:GetDataStore(PLAYER_DATA_PREFIX..'_'..key)
-			local data = playerNormalStore:GetAsync(''..mostRecent.value)
-			if data then
-				return true, ServerPlayerData.new(player, data)
-			else
-				warn("DataStoreService | OrderedDataStore for "..player.UserId.." had time "..mostRecent.value.." but data was missing.")
-				return false, nil
-			end
-		else
-			print("DataStoreService | Player "..player.UserId.." has no timestamp yet.")
-			return true, nil
+		local data = mPlayerStore:GetAsync(key)
+		if data then
+			return true, ServerPlayerData.new(player, data)
 		end
+		-- Legacy fallback: the old versioned scheme (ordered index of
+		-- timestamp keys). Read-only; the next save moves the player onto
+		-- the modern key above.
+		local orderedStore = DataStore:GetOrderedDataStore(LEGACY_ORDERED_PREFIX..'_'..key)
+		local mostRecent = orderedStore:GetSortedAsync(false, 1):GetCurrentPage()[1]
+		if mostRecent then
+			local legacyStore = DataStore:GetDataStore(LEGACY_DATA_PREFIX..'_'..key)
+			local legacy = legacyStore:GetAsync(''..mostRecent.value)
+			if legacy then
+				return true, ServerPlayerData.new(player, legacy)
+			end
+			warn("DataStoreService | Legacy index for "..player.UserId.." had time "..mostRecent.value.." but data was missing.")
+			return false, nil
+		end
+		print("DataStoreService | Player "..player.UserId.." has no data yet.")
+		return true, nil
 	end)
 	if st then
 		return a, b
@@ -67,59 +82,45 @@ function DataStoreService:LoadPlayerDataAsync(player)
 	end
 end
 
--- Version keys are timestamps, but SAME-SECOND saves must not share a key:
--- live datastores throttle writes to one key for ~6 seconds (the "request
--- was added to queue" warning), which back-to-back purchases hit — and the
--- queued duplicate writes also race last-write-wins. Bump forward a second
--- as needed so keys stay unique and monotonic per player.
-local mLastSaveTm = {}
+-- Saves are DEBOUNCED per player: the single fixed key would hit the ~6s
+-- per-key write cooldown when e.g. buying several units back to back, so
+-- rapid saves coalesce into one trailing write of the newest data. Saving
+-- is best-effort fire-and-forget (nothing in the game is trade-critical);
+-- the debounce is skipped entirely against the in-memory mock so tests
+-- keep synchronous semantics.
+local kSaveDebounceSeconds = if typeof(DataStore) == "Instance" then 6 else 0
+local mSaveStates = {} -- playerKey -> {LastWrite, Pending, Writing}
 
--- Returns: (Success)
+-- Returns: (Success) -- always true; the write itself is asynchronous
 function DataStoreService:SavePlayerDataAsync(player, serverPlayerData)
 	local key = playerKey(player)
-	local data = serverPlayerData:Serialize()
-	local tm = os.time()
-	local last = mLastSaveTm[key]
-	if last and tm <= last then
-		tm = last + 1
+	local state = mSaveStates[key]
+	if not state then
+		state = { LastWrite = -math.huge, Pending = nil, Writing = false }
+		mSaveStates[key] = state
 	end
-	mLastSaveTm[key] = tm
-
-	-- Fire off the normal store save
-	local playerNormalStore = DataStore:GetDataStore(PLAYER_DATA_PREFIX..'_'..key)
-	local dataStoreCompleted = false
-	local dataStoreSucceeded = false
-	local dataStoreError = nil
-	local dataStoreCompletedSignal = Instance.new('BindableEvent')
-	spawn(function()
-		local st, err = pcall(function()
-			playerNormalStore:SetAsync(''..tm, data)
+	state.Pending = serverPlayerData:Serialize()
+	if not state.Writing then
+		state.Writing = true
+		task.spawn(function()
+			while state.Pending do
+				local sinceLast = os.clock() - state.LastWrite
+				if sinceLast < kSaveDebounceSeconds then
+					task.wait(kSaveDebounceSeconds - sinceLast)
+				end
+				local data = state.Pending
+				state.Pending = nil
+				local st, err = pcall(function()
+					mPlayerStore:SetAsync(key, data)
+				end)
+				state.LastWrite = os.clock()
+				if not st then
+					warn("DataStoreService | Failed to save player "..player.UserId.." because `"..tostring(err).."`.")
+				end
+			end
+			state.Writing = false
 		end)
-		dataStoreError = err
-		dataStoreSucceeded = st
-		dataStoreCompleted = true
-		dataStoreCompletedSignal:Fire()
-	end)
-	
-	-- Synchronously fire off the timestamp save
-	local st, err = pcall(function()
-		local playerOrderedStore = DataStore:GetOrderedDataStore(PLAYER_ORDERED_PREFIX..'_'..key)
-		playerOrderedStore:SetAsync(''..tm, tm)
-	end)
-	if not st then
-		warn("DataStoreService | Failed to save player "..player.UserId.." timestamp because `"..tostring(err).."`.")
-		return false
 	end
-
-	-- Successfully saved the timestamp, now wait until the data is saved
-	if not dataStoreCompleted then
-		dataStoreCompletedSignal.Event:wait()
-	end
-	if not dataStoreSucceeded then
-		warn("DataStoreService | Saved player "..player.UserId.." timestamp "..tm.." but fail to save data because `"..tostring(dataStoreError).."`.")
-		return false
-	end
-	
 	return true
 end
 
@@ -271,8 +272,23 @@ function DataStoreService:SaveReplay(replayString)
 end
 
 
+-- Server shutdown (BindToClose): wait out any debounced writes still in
+-- flight. Bounded well under BindToClose's 30 second allowance.
 function DataStoreService:WaitForSavesToComplete()
-	-- TODO:
+	local deadline = os.clock() + 20
+	while os.clock() < deadline do
+		local busy = false
+		for _, state in pairs(mSaveStates) do
+			if state.Pending ~= nil or state.Writing then
+				busy = true
+				break
+			end
+		end
+		if not busy then
+			return
+		end
+		task.wait(0.1)
+	end
 end
 
 

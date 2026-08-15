@@ -781,23 +781,53 @@ return function(t)
 			.. "SecurityClearance5,MidnightAverted,NodeSweeper")
 	end)
 
-	t.test("same-second saves get distinct version keys", function()
-		-- Live datastores throttle same-key writes for ~6s; back-to-back
-		-- purchases used to collide on the os.time() version key
+	t.test("player data saves to the single modern key", function()
 		local ServerPlayerData = require(game.ServerScriptService.ServerPlayerData)
 		local MockDataStore = require(game.ServerScriptService.MockDataStore)
-		local player = makePlayer(6012, "RapidSaver")
+		local player = makePlayer(6012, "ModernSaver")
 		local data = ServerPlayerData.new(player)
 		t.expect(DataStoreService:SavePlayerDataAsync(player, data)).toBeTruthy()
-		t.expect(DataStoreService:SavePlayerDataAsync(player, data)).toBeTruthy()
-		t.expect(DataStoreService:SavePlayerDataAsync(player, data)).toBeTruthy()
+		local stored = MockDataStore:GetDataStore(DataStoreService.PlayerStoreName)
+			:GetAsync(player.User:ToString())
+		t.expect(stored ~= nil).toBeTruthy()
+		t.expect(stored.SecurityLevel).toBe(1)
+		-- Nothing writes the legacy versioned index anymore
 		local ordered = MockDataStore:GetOrderedDataStore(
-			DataStoreService.PlayerOrderedPrefix .. "_" .. player.User:ToString())
-		local page = ordered:GetSortedAsync(false, 10):GetCurrentPage()
-		t.expect(#page).toBe(3)
-		-- Strictly monotonic: the load path picks the newest version
-		t.expect(page[1].value > page[2].value).toBeTruthy()
-		t.expect(page[2].value > page[3].value).toBeTruthy()
+			DataStoreService.LegacyOrderedPrefix .. "_" .. player.User:ToString())
+		t.expect(#ordered:GetSortedAsync(false, 10):GetCurrentPage()).toBe(0)
+	end)
+
+	t.test("legacy versioned-store data loads via the compat path", function()
+		local MockDataStore = require(game.ServerScriptService.MockDataStore)
+		local player = makePlayer(6013, "LegacyPlayer")
+		local key = player.User:ToString()
+		-- Seed ONLY the old scheme: a version index entry plus its data blob,
+		-- marked with a security level a fresh player can't have
+		local legacyData
+		do
+			local ServerPlayerData = require(game.ServerScriptService.ServerPlayerData)
+			legacyData = ServerPlayerData.new(player):Serialize()
+			legacyData.SecurityLevel = 3
+		end
+		MockDataStore:GetOrderedDataStore(DataStoreService.LegacyOrderedPrefix .. "_" .. key)
+			:SetAsync("1000", 1000)
+		MockDataStore:GetDataStore(DataStoreService.LegacyDataPrefix .. "_" .. key)
+			:SetAsync("1000", legacyData)
+
+		local loaded = remotes.Load:InvokeServer_TEST(player)
+		t.expect(loaded.SecurityLevel).toBe(3)
+
+		-- A save moves them onto the modern key; the next load prefers it
+		remotes.BeatTutorial:FireServer_TEST(player)
+		local modern = MockDataStore:GetDataStore(DataStoreService.PlayerStoreName):GetAsync(key)
+		t.expect(modern ~= nil).toBeTruthy()
+		t.expect(modern.SecurityLevel).toBe(3)
+		t.expect(modern.NodeStatus.hq.Beaten).toBeTruthy()
+		playerLeaves(player)
+		local rejoinPlayer = makePlayer(6013, "LegacyPlayer")
+		local rejoined = remotes.Load:InvokeServer_TEST(rejoinPlayer)
+		t.expect(rejoined.SecurityLevel).toBe(3)
+		t.expect(rejoined.NodeStatus.hq.Beaten).toBeTruthy()
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()
