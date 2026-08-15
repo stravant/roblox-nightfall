@@ -35,9 +35,12 @@ return function(t)
 	t.test("mounts with the programs window and an empty command row", function()
 		withHud(function(hud, gui)
 			local column = gui.LeftColumn
-			-- Rows live inside the window's scrolling list
-			local hack = column.ProgramsWindow:FindFirstChild("hack", true)
-			local slingshot = column.ProgramsWindow:FindFirstChild("slingshot", true)
+			-- The Programs window floats top-right, outside the left column;
+			-- rows live inside its scrolling list
+			local programs = gui.ProgramsWindow
+			t.expect(programs.AnchorPoint).toBe(Vector2.new(1, 0))
+			local hack = programs:FindFirstChild("hack", true)
+			local slingshot = programs:FindFirstChild("slingshot", true)
 			t.expect(hack.CountLabel.Text).toBe("2x")
 			t.expect(hack.NameLabel.Text).toBe(Scripts.hack.Name)
 			t.expect(slingshot.CountLabel.Text).toBe("0x")
@@ -107,7 +110,7 @@ return function(t)
 			ReactRoblox.act(function()
 				hud:UpdateCount("hack", -1)
 			end)
-			t.expect(gui.LeftColumn.ProgramsWindow:FindFirstChild("hack", true).CountLabel.Text).toBe("1x")
+			t.expect(gui.ProgramsWindow:FindFirstChild("hack", true).CountLabel.Text).toBe("1x")
 			t.expect(hud:GetCount("hack")).toBe(1)
 		end)
 	end)

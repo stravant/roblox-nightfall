@@ -356,10 +356,11 @@ local function BattleHudContent(props: HudState)
 
 	local pane = props.pane
 
-	-- Everything on the left stacks in one column: the Programs window during
-	-- setup, then the unit info window with its commands right below it.
-	-- During setup (programs list visible) the command buttons are hidden:
-	-- they're not usable yet and don't fit alongside the list anyway.
+	-- The unit info window stacks on the left with its commands below it.
+	-- The Programs window floats at the TOP RIGHT during setup: most players
+	-- are right handed, and dragging scripts out of a left-edge list meant
+	-- crossing the board with the hand covering it. During setup the command
+	-- buttons are hidden: they're not usable yet.
 	local commandCount = if props.programsVisible then 0 else #props.commands
 	local commandRowHeight = commandCount * 54 + math.max(0, commandCount - 1) * 8
 
@@ -429,18 +430,20 @@ local function BattleHudContent(props: HudState)
 				}),
 			})
 			else nil,
+		}),
 		ProgramsWindow = if props.programsVisible
 			then windowChrome(
 				if props.dragHintProminent then "Scripts" else "Scripts - Click or Drag to Place",
 				{
 					Name = "ProgramsWindow",
+					AnchorPoint = Vector2.new(1, 0),
+					Position = UDim2.new(1, -12, 0, 12),
 					Size = UDim2.new(0, 160, 0, listHeight + (if props.dragHintProminent then 58 else 36)),
-					LayoutOrder = 0,
+					ZIndex = 3,
 				},
 				programItems
 			)
 			else nil,
-		}),
 	})
 end
 
@@ -732,15 +735,12 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		local window = mGui:FindFirstChild("ProgramsWindow", true)
 		if row and window then
 			-- Anchored to the WINDOW (inside the scrolling list the arrow
-			-- would be clipped) at the row's RIGHT edge, pointing left at it:
-			-- the window hugs the screen's left edge, so an arrow on the left
-			-- lands offscreen on phones without a notch inset
+			-- would be clipped), tight against the row's LEFT edge pointing
+			-- right at it: the window hugs the screen's RIGHT edge now, so an
+			-- arrow on the row's right would land offscreen
 			local offset = row.AbsolutePosition - window.AbsolutePosition
-			-- Tight against the ROW's right edge (the window edge is a
-			-- scrollbar-and-padding further out, which read as ambiguous
-			-- about which row was meant)
-			mTutorialArrow:Show(window, -90,
-				UDim2.new(0, offset.X + row.AbsoluteSize.X + 10, 0, offset.Y + row.AbsoluteSize.Y / 2))
+			mTutorialArrow:Show(window, 90,
+				UDim2.new(0, offset.X - 10, 0, offset.Y + row.AbsoluteSize.Y / 2))
 		end
 	end
 
