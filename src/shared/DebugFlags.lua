@@ -36,9 +36,16 @@ function DebugFlags:EnableDialogueVoices(): boolean
 	return false
 end
 
+-- Start fresh players with a huge credit balance (shop/economy testing).
+-- Only affects NEW player data, so with real datastores an existing save
+-- keeps its balance; with UseMockData every playtest starts fresh anyway.
+function DebugFlags:LotsOfCredits(): boolean
+	return false
+end
+
 -- Starting credits for fresh player data
 function DebugFlags:GetInitialCredits(): number
-	return 500
+	return if self:LotsOfCredits() then 999999 else 500
 end
 
 return DebugFlags
