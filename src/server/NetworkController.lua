@@ -160,7 +160,7 @@ function NetworkController.install(remotes)
 	-- values; capped LOW per session so one marathon session can't skew the
 	-- gesture split (and a spammy client can't burn the budget).
 	local kPlacementMethods = { drag = true, clickUnit = true, clickZone = true }
-	local kMaxPlacementReports = 20
+	local kMaxPlacementReports = 10
 	local PlacementReportCounts = {}
 	remotes.PlacementMethod.OnServerEvent:connect(function(player, method)
 		if type(method) ~= "string" or not kPlacementMethods[method] then
