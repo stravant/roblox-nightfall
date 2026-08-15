@@ -21,6 +21,8 @@ local GameState = require(game.ReplicatedStorage.GameState)
 local GameController = require(game.ReplicatedStorage.GameController)
 local GameView = require(game.ReplicatedStorage.GameView)
 local DialogueView = require(game.ReplicatedStorage.DialogueView)
+local WarezView = require(game.ReplicatedStorage.WarezView)
+local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local React = require(game.ReplicatedStorage.Packages.React)
@@ -97,7 +99,8 @@ local function ControlBar(props: BarState)
 		BackgroundColor3 = Color3.new(0, 0, 0),
 		BackgroundTransparency = 0.35,
 		BorderSizePixel = 0,
-		ZIndex = 8,
+		-- Above the input blocker so the bar stays clickable
+		ZIndex = 10,
 	}, {
 		Title = e("TextLabel", {
 			Position = UDim2.new(0, 8, 0, 2),
@@ -168,12 +171,28 @@ function JourneyPlayback.new(deps: any, record: any)
 	local mBattle = nil -- { GameState, Controller, GameView }
 	-- Corner dialogue box for recorded conversation lines
 	local mDialogue = nil
+	-- The real shop window while a shop segment plays
+	local mShop = nil
 
 	local mBarGui = Instance.new("Frame")
 	mBarGui.Name = "JourneyPlaybackBar"
 	mBarGui.Size = UDim2.new(1, 0, 1, 0)
 	mBarGui.BackgroundTransparency = 1
 	mBarGui.ZIndex = 8
+
+	-- Swallows the watcher's clicks on the replayed UI (the shop's Purchase
+	-- button is LIVE and would spend the watcher's credits); the control bar
+	-- sits above it. ModalManager handles the netmap camera side.
+	local mBlocker = Instance.new("ImageButton")
+	mBlocker.Name = "PlaybackInputBlocker"
+	local guiInset = game:GetService("GuiService"):GetGuiInset()
+	mBlocker.Position = UDim2.new(0, 0, 0, -guiInset.Y)
+	mBlocker.Size = UDim2.new(1, 0, 1, guiInset.Y)
+	mBlocker.BackgroundTransparency = 1
+	mBlocker.Image = ""
+	mBlocker.AutoButtonColor = false
+	mBlocker.ZIndex = 9
+	mBlocker.Parent = mBarGui
 
 	-- Forward-declared: the callbacks below are created inside the create()
 	-- initializer, where a `local mBar = ...` would not be in scope yet and
@@ -203,6 +222,13 @@ function JourneyPlayback.new(deps: any, record: any)
 		end
 	end
 
+	local function closeShop()
+		if mShop then
+			mShop:GetGui():Destroy()
+			mShop = nil
+		end
+	end
+
 	local function teardownBattle()
 		if mBattle then
 			mBattle.GameView:Destroy()
@@ -223,12 +249,14 @@ function JourneyPlayback.new(deps: any, record: any)
 		end
 		mStopped = true
 		teardownBattle()
+		closeShop()
 		if mDialogue then
 			mDialogue:Destroy()
 			mDialogue = nil
 		end
 		mBar.unmount()
 		mBarGui:Destroy()
+		ModalManager:SetModal(false)
 		JourneyRecorder:SetSuppressed(false)
 	end
 
@@ -362,6 +390,21 @@ function JourneyPlayback.new(deps: any, record: any)
 			if mDialogue then
 				mDialogue:SetText("")
 			end
+		elseif event == "ShopOpen" and detail then
+			closeShop()
+			local node = Netmap.ById[detail]
+			if node and node.Warez then
+				mShop = WarezView.new(detail, node.Warez)
+				mShop:GetGui().Parent = deps.container
+			end
+		elseif event == "ShopSelect" and detail and mShop then
+			mShop:SelectProgram(detail)
+		elseif event == "ShopBuy" and detail and mShop then
+			-- Highlight what they bought (the purchase itself only shows in
+			-- the ticker: the live purchase path would spend REAL credits)
+			mShop:SelectProgram(detail)
+		elseif event == "ShopClose" then
+			closeShop()
 		elseif event == "BattleEnter" and detail then
 			local nodeId = detail:match("^(%S+)")
 			enterBattle(nodeId :: string, events, index)
@@ -413,6 +456,9 @@ function JourneyPlayback.new(deps: any, record: any)
 
 	function this:Play()
 		JourneyRecorder:SetSuppressed(true)
+		-- Modal blocks the watcher's netmap camera/node input for the whole
+		-- playback (the gui blocker handles window UI)
+		ModalManager:SetModal(true)
 		mBarGui.Parent = deps.container
 		task.spawn(function()
 			local events = record.Events or {}
