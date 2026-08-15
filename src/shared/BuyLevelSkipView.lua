@@ -24,6 +24,9 @@ local kSkips3Image = "rbxassetid://1396653499"
 local kSkips5Image = "rbxassetid://1397114413"
 
 type BuyLevelSkipState = {
+	price1Text: string,
+	price3Text: string,
+	price5Text: string,
 	onSkips1: () -> (),
 	onSkips3: () -> (),
 	onSkips5: () -> (),
@@ -103,9 +106,9 @@ local function BuyLevelSkipContent(props: BuyLevelSkipState)
 				PaddingLeft = UDim.new(0, 4),
 				PaddingRight = UDim.new(0, 4),
 			}),
-			Skips1 = skipOption(kSkips1Image, "1 Skip - R$200", 0.167, props.onSkips1),
-			Skips3 = skipOption(kSkips3Image, "3 Skips - R$450", 0.5, props.onSkips3),
-			Skips5 = skipOption(kSkips5Image, "5 Skips - R$400", 0.833, props.onSkips5),
+			Skips1 = skipOption(kSkips1Image, "1 Skip - " .. props.price1Text, 0.167, props.onSkips1),
+			Skips3 = skipOption(kSkips3Image, "3 Skips - " .. props.price3Text, 0.5, props.onSkips3),
+			Skips5 = skipOption(kSkips5Image, "5 Skips - " .. props.price5Text, 0.833, props.onSkips5),
 		}),
 		CancelButton = e(WindowsButton, {
 			AnchorPoint = Vector2.new(1, 1),
@@ -161,6 +164,9 @@ function BuyLevelSkipView.new(container: Instance)
 	end
 
 	mRoot = StatefulRoot.create(mGui, BuyLevelSkipContent, {
+		price1Text = "...",
+		price3Text = "...",
+		price5Text = "...",
 		onSkips1 = function()
 			promptPurchase(DeveloperProduct.Skip1)
 		end,
@@ -175,6 +181,27 @@ function BuyLevelSkipView.new(container: Instance)
 			this.Done:fire()
 		end,
 	})
+
+	-- Prices come from live product info rather than hardcoded numbers, so
+	-- price changes (and dynamic/regional pricing) show correctly. Each
+	-- fetch fills in as it lands; a failed fetch leaves the placeholder.
+	for _, product in pairs({
+		{ Key = "price1Text", ProductId = DeveloperProduct.Skip1 },
+		{ Key = "price3Text", ProductId = DeveloperProduct.Skip3 },
+		{ Key = "price5Text", ProductId = DeveloperProduct.Skip5 },
+	}) do
+		task.spawn(function()
+			local st, info = pcall(function()
+				return MarketplaceService:GetProductInfo(product.ProductId, Enum.InfoType.Product)
+			end)
+			if mDestroyed or not mRoot then
+				return
+			end
+			if st and info and info.PriceInRobux then
+				mRoot.setState({ [product.Key] = "R$" .. info.PriceInRobux })
+			end
+		end)
+	end
 
 	mGui.Parent = container
 
