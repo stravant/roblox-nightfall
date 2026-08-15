@@ -25,11 +25,11 @@ local kInsetImage = "rbxassetid://1378143823"
 
 -- Typewriter pacing: fast per-character reveal with per-character jitter and
 -- occasional longer stalls, like text trickling in over a slow serial line
-local kTypeBaseDelay = 0.004 -- seconds per character before jitter
-local kTypeJitter = 0.007 -- up to this much random extra per character
+local kTypeBaseDelay = 0.0046 -- seconds per character before jitter
+local kTypeJitter = 0.0077 -- up to this much random extra per character
 local kTypeStallChance = 0.06 -- odds a character hangs like a dropped packet
-local kTypeStallMin = 0.02
-local kTypeStallMax = 0.07
+local kTypeStallMin = 0.023
+local kTypeStallMax = 0.077
 
 type DialogueState = {
 	username: string,
