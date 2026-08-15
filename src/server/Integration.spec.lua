@@ -1010,6 +1010,20 @@ return function(t)
 		t.expect(counts.clickUnit).toBe(1)
 		t.expect(counts.clickZone).toBe(1)
 		t.expect(counts.teleport).toBe(nil)
+
+		-- Capped at 20 per session so marathon sessions can't skew the split
+		local spammer = makePlayer(9401, "MarathonPlacer")
+		for _ = 1, 30 do
+			remotes.PlacementMethod:FireServer_TEST(spammer, "drag")
+		end
+		local spamCount = 0
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Args[1] == "PlacementMethod"
+				and event.Player.UserId == 9401 then
+				spamCount += 1
+			end
+		end
+		t.expect(spamCount).toBe(20)
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()

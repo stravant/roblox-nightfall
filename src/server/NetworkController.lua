@@ -157,9 +157,10 @@ function NetworkController.install(remotes)
 	end)
 
 	-- Script placement gesture analytic (drag vs click flows). Whitelisted
-	-- values; capped per session so a spammy client can't burn the budget.
+	-- values; capped LOW per session so one marathon session can't skew the
+	-- gesture split (and a spammy client can't burn the budget).
 	local kPlacementMethods = { drag = true, clickUnit = true, clickZone = true }
-	local kMaxPlacementReports = 300
+	local kMaxPlacementReports = 20
 	local PlacementReportCounts = {}
 	remotes.PlacementMethod.OnServerEvent:connect(function(player, method)
 		if type(method) ~= "string" or not kPlacementMethods[method] then
