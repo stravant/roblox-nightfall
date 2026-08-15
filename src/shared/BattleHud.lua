@@ -727,8 +727,11 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 			-- the window hugs the screen's left edge, so an arrow on the left
 			-- lands offscreen on phones without a notch inset
 			local offset = row.AbsolutePosition - window.AbsolutePosition
+			-- Tight against the ROW's right edge (the window edge is a
+			-- scrollbar-and-padding further out, which read as ambiguous
+			-- about which row was meant)
 			mTutorialArrow:Show(window, -90,
-				UDim2.new(1, 20, 0, offset.Y + row.AbsoluteSize.Y / 2))
+				UDim2.new(0, offset.X + row.AbsoluteSize.X + 10, 0, offset.Y + row.AbsoluteSize.Y / 2))
 		end
 	end
 
