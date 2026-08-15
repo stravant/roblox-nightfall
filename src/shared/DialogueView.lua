@@ -56,10 +56,12 @@ local function DialogueContent(props: DialogueState)
 	if props.tutorial then
 		chatBoxAnchor = Vector2.new(1, 1)
 		chatBoxPosition = UDim2.new(1, -10, 1, -10)
+		-- Compact corner box: smaller text than the netmap conversations so
+		-- the longest tutorial lines still fit the halved height
 		if touch then
-			chatBoxSize = UDim2.new(0, 300, 0, 130)
+			chatBoxSize = UDim2.new(0, 300, 0, 90)
 		else
-			chatBoxSize = UDim2.new(0, 300, 0, 200)
+			chatBoxSize = UDim2.new(0, 300, 0, 100)
 		end
 	end
 
@@ -155,7 +157,7 @@ local function DialogueContent(props: DialogueState)
 					Size = UDim2.new(1, -8 - kPicColumn, 1, -8),
 					BackgroundTransparency = 1,
 					Font = Enum.Font.SourceSans,
-					TextSize = 22,
+					TextSize = if props.tutorial then 15 else 22,
 					TextColor3 = Color3.new(0, 0, 0),
 					TextXAlignment = Enum.TextXAlignment.Left,
 					TextYAlignment = Enum.TextYAlignment.Top,
