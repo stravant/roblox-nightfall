@@ -4,19 +4,19 @@
 
 local DebugFlags = {}
 
--- Use MockDataStore instead of real datastores on the server
-function DebugFlags:UseMockData(): boolean
-	return false
-end
-
 -- Whether the tutorial plays for players who haven't beaten it
 function DebugFlags:PlayTutorial(): boolean
 	return true
 end
 
+-- Use MockDataStore instead of real datastores on the server
+function DebugFlags:UseMockData(): boolean
+	return false
+end
+
 -- Pretend every node is beaten (unlocks the whole netmap)
 function DebugFlags:HasBeatenAllNodes(): boolean
-	return true
+	return false
 end
 
 -- Master switch for ALL debug UI (checkpoint picker, debug win button, ...)
@@ -40,7 +40,7 @@ end
 -- Only affects NEW player data, so with real datastores an existing save
 -- keeps its balance; with UseMockData every playtest starts fresh anyway.
 function DebugFlags:LotsOfCredits(): boolean
-	return true
+	return false
 end
 
 -- Starting credits for fresh player data
