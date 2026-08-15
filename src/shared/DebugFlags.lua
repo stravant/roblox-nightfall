@@ -18,7 +18,7 @@ end
 
 -- Use MockDataStore instead of real datastores on the server
 function DebugFlags:UseMockData(): boolean
-	return studioOnly(true)
+	return studioOnly(false)
 end
 
 -- Pretend every node is beaten (unlocks the whole netmap)

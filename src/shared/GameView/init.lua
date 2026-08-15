@@ -1011,12 +1011,23 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		end)
 	end
 
-	-- Upload zone handling through the HUD (click a zone, then a program)
+	-- Upload zone handling through the HUD: click a zone then a program to
+	-- place there, or click a program with NO zone selected to drop it onto
+	-- the first free spot (dragging remains the way to pick a specific spot)
 	mUnitInfoView.UnitSelected:connect(function(id)
 		if mSelectionType == 'upload' then
 			if not tryUploadProgram(id, mSelection.x, mSelection.y) then
 				return
 			end
+		elseif not gameState:IsGameStarted() then
+			for _, zone in pairs(mUploadZones) do
+				-- Free spots only: tryUploadProgram would happily REPLACE an
+				-- occupied zone's unit, which a blind click must not do
+				if not gameState:GetUnit(zone.x, zone.y) and tryUploadProgram(id, zone.x, zone.y) then
+					return
+				end
+			end
+			clearSelection()
 		else
 			-- Deselect the current selection if there is one
 			clearSelection()

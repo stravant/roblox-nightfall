@@ -485,6 +485,10 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	-- A drag-out is in progress: ignore row presses until release (the held
 	-- pointer transiting other rows must not start a second drag)
 	local mDragActive = false
+	-- Whether the CURRENT press turned into a drag-out: the row's click event
+	-- still fires on release if the pointer ended back over the row, and a
+	-- finished/aborted drag must not read as a click-to-place
+	local mPressBecameDrag = false
 	local mScrollDisabled: ScrollingFrame? = nil
 	local mConnections: { RBXScriptConnection } = {}
 
@@ -505,11 +509,15 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 			this.CommandSelected:fire(if entry.IsMove then nil else entry.Key)
 		end,
 		onProgramClick = function(id: string)
+			if mPressBecameDrag then
+				return
+			end
 			if not mOnlySelectUnit or mOnlySelectUnit == id then
 				this.UnitSelected:fire(id)
 			end
 		end,
 		onProgramPress = function(id: string, viewportPos: Vector2)
+			mPressBecameDrag = false
 			if mDragActive then
 				return
 			end
@@ -544,6 +552,7 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 			local id = mProgramPress.Id
 			mProgramPress = nil
 			mDragActive = true
+			mPressBecameDrag = true
 			local scroll = findProgramScroll()
 			if scroll then
 				-- Fully inert while the drag is out: no touch scrolling, and
