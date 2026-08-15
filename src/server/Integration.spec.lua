@@ -237,6 +237,9 @@ return function(t)
 		ServerError = mockRemoteEvent("ServerError"),
 		GetNodeRecords = mockRemoteFunction("GetNodeRecords"),
 		GetBadges = mockRemoteFunction("GetBadges"),
+		JourneyEvents = mockRemoteEvent("JourneyEvents"),
+		GetJourneyList = mockRemoteFunction("GetJourneyList"),
+		GetJourney = mockRemoteFunction("GetJourney"),
 	}
 
 	----------------------------------------------------------------------
@@ -828,6 +831,65 @@ return function(t)
 		local rejoined = remotes.Load:InvokeServer_TEST(rejoinPlayer)
 		t.expect(rejoined.SecurityLevel).toBe(3)
 		t.expect(rejoined.NodeStatus.hq.Beaten).toBeTruthy()
+	end)
+
+	t.test("session journeys record, persist on leave, and serve the viewer", function()
+		local JourneyService = require(game.ServerScriptService.JourneyService)
+		local MockDataStore = require(game.ServerScriptService.MockDataStore)
+
+		-- Restrict viewing to one specific user for this test
+		local originalIsViewer = JourneyService.IsViewer
+		JourneyService.IsViewer = function(player)
+			return player.UserId == 9001
+		end
+
+		local ok, err = pcall(function()
+			local player = makePlayer(9000, "JourneyedPlayer")
+			remotes.JourneyEvents:FireServer_TEST(player, {
+				{ 0.5, "NetmapNodeClick", "hq" },
+				{ 3.2, "DialogueLine", "Aeacus: Plug into the smart HQ node." },
+				{ 9.9, "NetmapPan", "120 studs to 80,-40" },
+			})
+			remotes.JourneyEvents:FireServer_TEST(player, {
+				{ 15.0, "BattleEnter", "lm12" },
+			})
+			-- Garbage batches are ignored outright
+			remotes.JourneyEvents:FireServer_TEST(player, "not a table")
+			remotes.JourneyEvents:FireServer_TEST(player, { { "bad", 123 } })
+			playerLeaves(player) -- flushes the session to the store
+
+			-- The viewer (and only the viewer) can list and read it
+			local outsider = makePlayer(9002, "Nosy")
+			t.expect(remotes.GetJourneyList:InvokeServer_TEST(outsider)).toBe(nil)
+			local viewer = makePlayer(9001, "TheDev")
+			local list = remotes.GetJourneyList:InvokeServer_TEST(viewer)
+			t.expect(#list >= 1).toBeTruthy()
+			local mine = nil
+			for _, summary in pairs(list) do
+				if summary.UserId == 9000 then
+					mine = summary
+				end
+			end
+			t.expect(mine ~= nil).toBeTruthy()
+			t.expect(mine.Name).toBe("JourneyedPlayer")
+			t.expect(mine.EventCount).toBe(4)
+			t.expect(mine.Duration).toBe(15)
+
+			local record = remotes.GetJourney:InvokeServer_TEST(viewer, mine.Key)
+			t.expect(#record.Events).toBe(4)
+			t.expect(record.Events[1][2]).toBe("NetmapNodeClick")
+			t.expect(record.Events[1][3]).toBe("hq")
+			t.expect(record.Events[3][2]).toBe("NetmapPan")
+			t.expect(remotes.GetJourney:InvokeServer_TEST(outsider, mine.Key)).toBe(nil)
+
+			-- And it round-trips the store itself
+			local stored = MockDataStore:GetDataStore(DataStoreService.JourneyStoreName):GetAsync(mine.Key)
+			t.expect(stored.Events[4][2]).toBe("BattleEnter")
+		end)
+		JourneyService.IsViewer = originalIsViewer
+		if not ok then
+			error(err, 0)
+		end
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()

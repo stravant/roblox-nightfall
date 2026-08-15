@@ -34,6 +34,29 @@ function MockDataStore:GetDataStore(name: string?)
 		return new
 	end
 
+	-- Single-page key listing (ascending lexicographic, like the real
+	-- service); enough for the journey viewer's needs
+	function DataStore:ListKeysAsync(prefix, _pageSize)
+		local keys = {}
+		for k in pairs(data) do
+			if not prefix or prefix == "" or k:sub(1, #prefix) == prefix then
+				table.insert(keys, k)
+			end
+		end
+		table.sort(keys)
+		local page = {}
+		for _, k in pairs(keys) do
+			table.insert(page, { KeyName = k })
+		end
+		local result = { IsFinished = true }
+		function result:GetCurrentPage()
+			return page
+		end
+		function result:AdvanceToNextPageAsync()
+		end
+		return result
+	end
+
 	mStores[key] = DataStore
 	return DataStore
 end

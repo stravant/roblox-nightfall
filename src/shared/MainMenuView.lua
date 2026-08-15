@@ -24,6 +24,7 @@ local WindowsSlider = require(game.ReplicatedStorage.Components.WindowsSlider)
 local WindowsTabView = require(game.ReplicatedStorage.Components.WindowsTabView)
 local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
 local Netmap = require(game.ReplicatedStorage.Netmap)
+local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 
 local e = React.createElement
 
@@ -699,6 +700,7 @@ function MainMenuView.new(container: Instance)
 	-- Show / hide the menu
 	local mSession = 0
 	function this:Show()
+		JourneyRecorder:Record("MenuOpen")
 		ModalManager:SetModal(true)
 		updateStats()
 		updateBadges()
@@ -710,6 +712,7 @@ function MainMenuView.new(container: Instance)
 		mGui.Visible = true
 	end
 	function this:Hide()
+		JourneyRecorder:Record("MenuClose")
 		mGui.Visible = false
 		ModalManager:SetModal(false)
 	end

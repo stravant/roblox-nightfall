@@ -13,6 +13,8 @@ local Scripts = require(game.ReplicatedStorage.Scripts)
 local MainMenuView = require(game.ReplicatedStorage.MainMenuView)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
+local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
+local JourneyViewerView = require(game.ReplicatedStorage.JourneyViewerView)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
@@ -289,6 +291,7 @@ function MainView.new()
 			mMainMenu:Show()
 		end,
 		onFeedbackClick = function()
+			JourneyRecorder:Record("FeedbackOpen")
 			if mFeedbackPrompting or ModalManager:IsModal() then
 				return
 			end
@@ -360,6 +363,50 @@ function MainView.new()
 	local mNetmapView = Netmap3DView.new(mTopbarCredits)
 	mNetmapView:GetGui().Position = UDim2.new(0.5, 0, 0.5, 0)
 	mNetmapView:GetGui().Parent = mGui
+
+	-- DEV: the session journey viewer, bottom-left of the netmap. Only for
+	-- the game's owner (or anyone in Studio); the server enforces the same
+	-- eligibility on the data itself.
+	do
+		local RunService = game:GetService("RunService")
+		local eligible = RunService:IsStudio()
+			or (game.CreatorType == Enum.CreatorType.User
+				and game.Players.LocalPlayer.UserId == game.CreatorId)
+		if eligible then
+			local host = Instance.new("Frame")
+			host.Name = "JourneyButton"
+			host.AnchorPoint = Vector2.new(0, 1)
+			host.Position = UDim2.new(0, 10, 1, -10)
+			host.Size = UDim2.new(0, 130, 0, 36)
+			host.BackgroundTransparency = 1
+			StatefulRoot.create(host, function()
+				return e(WindowsButton, {
+					Size = UDim2.new(1, 0, 1, 0),
+					Text = "DEV: Journeys",
+					OnClick = function()
+						if ModalManager:IsModal() then
+							return
+						end
+						JourneyViewerView.new(mGui, {
+							List = function()
+								local ok, result = pcall(function()
+									return game.ReplicatedStorage.Remotes.GetJourneyList:InvokeServer()
+								end)
+								return if ok then result else nil
+							end,
+							Get = function(key)
+								local ok, result = pcall(function()
+									return game.ReplicatedStorage.Remotes.GetJourney:InvokeServer(key)
+								end)
+								return if ok then result else nil
+							end,
+						})
+					end,
+				})
+			end, {})
+			host.Parent = mNetmapView:GetGui()
+		end
+	end
 	mNetmapView:SetVisible(true)
 
 	-- Give the netmap a unitInfoView
@@ -374,6 +421,7 @@ function MainView.new()
 	
 	-- Setup events
 	mNetmapView.NodeSelected:connect(function(nodeId)
+		JourneyRecorder:Record("NetmapNodeClick", nodeId)
 		-- While the tutorial runs it owns node clicks
 		if Tutorial:IsActive() then
 			return
@@ -396,6 +444,7 @@ function MainView.new()
 	
 	-- Warez node
 	function this:VisitWarez(nodeId)
+		JourneyRecorder:Record("ShopOpen", nodeId)
 		-- Onboarding funnel: found the shop (server dedupes)
 		game.ReplicatedStorage.Remotes.FunnelStep:FireServer(OnboardingSteps.ShopVisited)
 		ModalManager:SetModal(true)
@@ -404,11 +453,13 @@ function MainView.new()
 		-- Show the GUI and handle the events for it
 		local warezGui = WarezView.new(nodeId, Netmap.ById[nodeId].Warez)
 		local purchaseConnection = warezGui.MadePurchase:connect(function(id)
+			JourneyRecorder:Record("ShopBuy", id)
 			mNetmapView:UpdateCreditDisplay()
 			this:ShowNotification("Acquired script "..Scripts[id].Name, Scripts[id])
 		end)
 		local doneConnection;
 		doneConnection = warezGui.Done:connect(function()
+			JourneyRecorder:Record("ShopClose")
 			warezGui:GetGui().Parent = nil
 			purchaseConnection:Disconnect()
 			doneConnection:Disconnect()
@@ -440,6 +491,7 @@ function MainView.new()
 	-- Play a game at a place. initialPlacement (from the fail screen's Retry):
 	-- a list of {x, y, Id} pre-placed on the upload zones without starting.
 	function this:PlayGame(placeId, nodeId, initialPlacement)
+		JourneyRecorder:Record("BattleEnter", nodeId .. (if initialPlacement then " (retry)" else ""))
 		-- Onboarding funnel: entered a first real battle (server dedupes)
 		game.ReplicatedStorage.Remotes.FunnelStep:FireServer(OnboardingSteps.NodeChosen)
 		ModalManager:SetModal(true)
@@ -468,9 +520,11 @@ function MainView.new()
 					table.insert(startingPlacement, { x = zone.x, y = zone.y, Id = unit.Definition.Id })
 				end
 			end
+			JourneyRecorder:Record("BattleStart", nodeId)
 			gameController:StartGame()
 		end)
 		mTopbarBattleInterface:SetOnDoneTurn(function()
+			JourneyRecorder:Record("DoneTurn")
 			gameController:EndTurn()
 		end)
 		mTopbarBattleInterface:SetCreditsVisible(false)
@@ -480,6 +534,10 @@ function MainView.new()
 		-- Restore the main state when the game is over
 		local gameCompletedConnection;
 		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart, skipped, retryRequested)
+			JourneyRecorder:Record("BattleExit", nodeId
+				.. (if didWin then " won" elseif didStart then " lost" else " left")
+				.. (if skipped then " (skip)" else "")
+				.. (if retryRequested then " (retry)" else ""))
 			setBattleTitle(nil)
 			mTopbarBattleInterface:SetStartVisible(false)
 			mTopbarBattleInterface:SetAutoPlaceVisible(false)

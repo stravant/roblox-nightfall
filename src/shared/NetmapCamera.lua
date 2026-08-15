@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 
 local Signal = require(game.ReplicatedStorage.Signal)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
+local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 
 local NetmapCamera = {}
 
@@ -96,6 +97,20 @@ local mCamera = workspace.CurrentCamera
 	-- captured a global nil here once, silently killing scroll zoom.
 	local mInstalled = false
 
+	-- Journey: one zoom event per burst of wheel/pinch zooming (a second of
+	-- quiet after the first change), with the level it settled at
+	local mZoomRecordPending = false
+	local function recordZoomSettled()
+		if mZoomRecordPending then
+			return
+		end
+		mZoomRecordPending = true
+		task.delay(1, function()
+			mZoomRecordPending = false
+			JourneyRecorder:Record("NetmapZoom", tostring(math.floor(mZoomLevel)))
+		end)
+	end
+
 	local function handleWheel(delta)
 		if not mInstalled or ModalManager:IsModal() then
 			return
@@ -103,6 +118,7 @@ local mCamera = workspace.CurrentCamera
 		mZoomLevel -= delta * 80
 		mZoomLevel = math.clamp(mZoomLevel, MIN_ZOOM, MAX_ZOOM)
 		setPosition(mCurrentPosition)
+		recordZoomSettled()
 	end
 	
 	local function getUnitRay()
@@ -152,6 +168,7 @@ local mCamera = workspace.CurrentCamera
 	-- In-flight FocusOn glide ({Start, Target, T, Duration}); cancelled by any
 	-- user pan/pinch
 	local mFocusTween = nil
+	local mPanStartPosition = Vector3.new()
 	local function button1Down(inputObject: InputObject?)
 		if not mInstalled or ModalManager:IsModal() or mPinching then
 			return
@@ -163,6 +180,7 @@ local mCamera = workspace.CurrentCamera
 		mDownInput = inputObject
 		mPanStartHit = getInputHit(inputObject)
 		mDownScreenPos = getInputScreenPos(inputObject)
+		mPanStartPosition = mCurrentPosition
 		mDidPan = false
 		mIsPanning = true
 	end
@@ -171,6 +189,11 @@ local mCamera = workspace.CurrentCamera
 		mDownInput = nil
 		if mDidPan then
 			mInertialVelocity = computeExtraVelocity()
+			-- Journey: how far the camera moved and where it ended up (are
+			-- they exploring toward the locked/upcoming nodes?)
+			local moved = mCurrentPosition - mPanStartPosition
+			JourneyRecorder:Record("NetmapPan", string.format("%d studs to %d,%d",
+				math.floor(moved.Magnitude), math.floor(mCurrentPosition.X), math.floor(mCurrentPosition.Z)))
 		elseif mIsPanning then
 			this.Clicked:fire(getUnitRay())
 		end
@@ -254,6 +277,7 @@ local mCamera = workspace.CurrentCamera
 			if mPinching then
 				mZoomLevel = math.clamp(mPinchStartZoom / scale, MIN_ZOOM, MAX_ZOOM)
 				setPosition(mCurrentPosition)
+				recordZoomSettled()
 			end
 		else
 			mPinching = false

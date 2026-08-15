@@ -14,6 +14,7 @@ local BadgeService = Services:Get('BadgeService')
 local DataStoreService = require(game.ServerScriptService.DataStoreService)
 local ServerPlayerData = require(game.ServerScriptService.ServerPlayerData)
 local BadgeAwarder = require(game.ServerScriptService.BadgeAwarder)
+local JourneyService = require(game.ServerScriptService.JourneyService)
 local Badges = require(game.ReplicatedStorage.Badges)
 local DeveloperProduct = require(game.ReplicatedStorage.DeveloperProduct)
 local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
@@ -28,6 +29,9 @@ local NetworkController = {}
 -- mock remote objects in tests
 function NetworkController.install(remotes)
 	local PlayerDataCache = {}
+
+	-- Session journey recording (the UX study tool)
+	JourneyService.install(remotes)
 
 	-- Client-reported onboarding funnel detail steps. Only whitelisted step
 	-- numbers are accepted; Roblox itself dedupes repeats and backfills skips.

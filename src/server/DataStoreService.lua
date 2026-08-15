@@ -256,6 +256,65 @@ function DataStoreService:GetUserRecord(nodeId, stat, userId)
 	return nil
 end
 
+--------------------------------------------------------------------------------
+-- Session journeys (the UX study tool): a rolling log of session event
+-- streams, one record per session under a time-prefixed key. Deliberately
+-- versioned SEPARATELY from the player data stores: bump the version here
+-- to clear the log without touching any persistent player data. Records
+-- aren't tied to player storage at all — they're just diagnostics to read.
+--------------------------------------------------------------------------------
+
+local JOURNEY_DATASTORE = 'journeys_v1'
+DataStoreService.JourneyStoreName = JOURNEY_DATASTORE
+local mJourneyStore = DataStore:GetDataStore(JOURNEY_DATASTORE)
+
+-- Fire-and-forget (journeys are diagnostics, not player data)
+function DataStoreService:SaveJourney(key, record)
+	task.spawn(function()
+		local st, err = pcall(function()
+			mJourneyStore:SetAsync(key, record)
+		end)
+		if not st then
+			warn("DataStoreService | Failed to save journey "..key.." because `"..tostring(err).."`.")
+		end
+	end)
+end
+
+function DataStoreService:GetJourney(key)
+	local st, result = pcall(function()
+		return mJourneyStore:GetAsync(key)
+	end)
+	return if st then result else nil
+end
+
+-- Newest-first journey keys, capped
+function DataStoreService:ListJourneyKeys(maxCount)
+	local keys = {}
+	local st, err = pcall(function()
+		local pages = mJourneyStore:ListKeysAsync("j_", 100)
+		while true do
+			for _, item in pairs(pages:GetCurrentPage()) do
+				table.insert(keys, item.KeyName)
+			end
+			if pages.IsFinished then
+				break
+			end
+			pages:AdvanceToNextPageAsync()
+		end
+	end)
+	if not st then
+		warn("DataStoreService | Failed to list journeys because `"..tostring(err).."`.")
+	end
+	-- Keys embed a zero-padded start time: reverse lexicographic = newest first
+	table.sort(keys, function(a, b)
+		return a > b
+	end)
+	while #keys > maxCount do
+		table.remove(keys)
+	end
+	return keys
+end
+
 -- Save a replay
 local mReplaysDatastore = DataStore:GetDataStore(REPLAYS_DATASTORE)
 function DataStoreService:SaveReplay(replayString)

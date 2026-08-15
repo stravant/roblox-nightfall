@@ -17,6 +17,7 @@ local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
 local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
+local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 
 local e = React.createElement
 
@@ -479,6 +480,7 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		bigScreen = DeviceInfo.ScreenHeight > 500,
 		programs = mPrograms,
 		onSelect = function(id: string)
+			JourneyRecorder:Record("ShopSelect", id)
 			this:SelectProgram(id)
 		end,
 		onPurchase = function()

@@ -13,6 +13,7 @@ local Places = require(game.ReplicatedStorage.Places)
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local BattleHud = require(game.ReplicatedStorage.BattleHud)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
+local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 local ReplaySubmission = require(game.ReplicatedStorage.ReplaySubmission)
 local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 
@@ -381,6 +382,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 
 	-- Undo lives in the topbar; its handler needs this view's selection state
 	mTopbar:SetOnUndo(function()
+		JourneyRecorder:Record("Undo")
 		local unit = controller:Undo()
 		if unit then
 			setSelectionUnit(unit)
@@ -707,6 +709,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			-- Action
 			if mActionableSquares[x][y] then
 				mLastUsedCommandId[unit.Definition.Id] = mSelectedCommand
+				JourneyRecorder:Record("Attack", unit.Definition.Id .. " " .. mSelectedCommand .. " @" .. x .. "," .. y)
 				controller:UnitExecute(unit, mSelectedCommand, x, y)
 				mActionableSquares = nil
 				doAutoSelectNextUnit()
@@ -715,6 +718,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			-- Move
 			local action = mActionableSquares[x][y]
 			if action == 'move' then
+				JourneyRecorder:Record("Move", unit.Definition.Id .. " @" .. x .. "," .. y)
 				doAnimatedMove(unit, x, y)
 				-- We may win as a result of moving and collecting the access codes
 				if gameState:HasWon() then
@@ -730,6 +734,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 				end
 			else
 				-- Attack, but need to move first
+				JourneyRecorder:Record("MoveAttack", unit.Definition.Id .. " @" .. x .. "," .. y)
 				doAnimatedMove(unit, action.x, action.y)
 				-- The move can win the game (collecting the last codes),
 				-- ending the battle and clearing the selection under us
@@ -926,6 +931,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		-- Now upload the new unit
 		mUnitInfoView:UpdateCount(id, -1)
 		gameState:UploadUnit(x, y, Scripts[id])
+		JourneyRecorder:Record("Place", id .. " @" .. x .. "," .. y)
 
 		-- Show the start game button now that we have at least one unit uploaded
 		mTopbar:SetStartVisible(true)
@@ -963,6 +969,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		if gameState:IsGameStarted() then
 			return
 		end
+		JourneyRecorder:Record("AutoPlace")
 		local pool = {}
 		for _, info in pairs(gameState:GetAvailableUnits()) do
 			table.insert(pool, info.Id)

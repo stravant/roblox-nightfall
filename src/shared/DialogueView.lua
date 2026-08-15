@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local Signal = require(game.ReplicatedStorage.Signal)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local DialogueVoice = require(game.ReplicatedStorage.DialogueVoice)
+local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 local DeviceInfo = require(game.ReplicatedStorage.DeviceInfo)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
@@ -214,6 +215,7 @@ function DialogueView.new()
 		mouseCatcherVisible = true,
 		-- Note, button 2 is actually the top one in the GUI
 		onButton1 = function()
+			JourneyRecorder:Record("DialogueChoice", if mHasTwoButtons then "2" else "1")
 			if mHasTwoButtons then
 				this.OptionSelected:fire(2)
 			else
@@ -222,6 +224,7 @@ function DialogueView.new()
 			SoundManager:Play("SelectUnit")
 		end,
 		onButton2 = function()
+			JourneyRecorder:Record("DialogueChoice", "1")
 			this.OptionSelected:fire(1)
 			SoundManager:Play("SelectUnit")
 		end,
@@ -314,6 +317,10 @@ function DialogueView.new()
 		-- The dialogue text is always the character talking to us (the
 		-- player's side only exists as the response buttons, never spoken)
 		DialogueVoice:Speak(mUsername, text)
+		if text ~= "" then
+			-- Journey: dialogue pacing (how long players sit on each line)
+			JourneyRecorder:Record("DialogueLine", (mUsername ~= "" and mUsername .. ": " or "") .. text:sub(1, 40))
+		end
 		mRoot.setState({
 			text = text,
 			hasContent = text ~= "" or choice1 ~= nil,
