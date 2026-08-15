@@ -916,6 +916,58 @@ return function(t)
 		t.expect(rejoined.Settings.NetmapZoom).toBe(350)
 	end)
 
+	t.test("a frozen legacy save (pre-Settings format) still loads and plays", function()
+		-- HARDCODED snapshot of the save format from before Settings
+		-- (volumes / netmap camera) existed: a fresh player who just beat
+		-- the tutorial. DO NOT update this blob to match format changes —
+		-- the entire point is that saves written by OLD versions must keep
+		-- loading forever. Add new frozen blobs for future eras instead.
+		local kLegacySave = {
+			NodeStatus = {
+				hq = { Beaten = true, Seen = true, Accessible = true, AttemptCount = 0 },
+				wz1 = { Beaten = true, Seen = true, Accessible = true, AttemptCount = 0 },
+				lm12 = { Beaten = false, Seen = true, Accessible = true, AttemptCount = 0 },
+				ph11 = { Beaten = false, Seen = true, Accessible = true, AttemptCount = 0 },
+			},
+			Credits = 1500,
+			SecurityLevel = 1,
+			Units = {
+				{ Id = 'slingshot', Count = 1 },
+				{ Id = 'hack', Count = 1 },
+			},
+			SkipsPurchased = 0,
+			SkipsUsed = {},
+			SkipPurchaseIds = {},
+		}
+		local MockDataStore = require(game.ServerScriptService.MockDataStore)
+		local player = makePlayer(9200, "LegacyFormatPlayer")
+		MockDataStore:GetDataStore(DataStoreService.PlayerStoreName)
+			:SetAsync(player.User:ToString(), kLegacySave)
+
+		local loaded = remotes.Load:InvokeServer_TEST(player)
+		t.expect(loaded.IsFirstTimeUser).toBeFalsy()
+		t.expect(loaded.NodeStatus.hq.Beaten).toBeTruthy()
+		t.expect(loaded.NodeStatus.lm12.Accessible).toBeTruthy()
+		t.expect(#loaded.Units).toBe(2)
+		-- Missing Settings defaults in rather than erroring
+		t.expect(loaded.Settings.SoundVolume).toBe(1)
+		t.expect(loaded.Settings.MusicVolume).toBe(1)
+		t.expect(loaded.Settings.NetmapX).toBe(nil)
+		local expectedCredits = 1500
+		if DebugFlags:LotsOfCredits() then
+			expectedCredits = math.max(expectedCredits, DebugFlags:GetInitialCredits())
+		end
+		t.expect(loaded.Credits).toBe(expectedCredits)
+
+		-- The legacy data flows through gameplay: win a battle on it
+		remotes.ProcessReplay:FireServer_TEST(player, kL12WinningReplay)
+		playerLeaves(player)
+		local rejoined = remotes.Load:InvokeServer_TEST(makePlayer(9200, "LegacyFormatPlayer"))
+		t.expect(rejoined.NodeStatus.lm12.Beaten).toBeTruthy()
+		t.expect(rejoined.NodeStatus.lm12.Wins).toBe(1)
+		t.expect(rejoined.Settings.SoundVolume).toBe(1)
+	end)
+
 	t.test("leaving before loading counts as a bounce", function()
 		local ghost = makePlayer(4004, "Bouncer")
 		-- Never invokes Load: PlayerRemoving fires with no cached data
