@@ -40,7 +40,7 @@ end
 -- Only affects NEW player data, so with real datastores an existing save
 -- keeps its balance; with UseMockData every playtest starts fresh anyway.
 function DebugFlags:LotsOfCredits(): boolean
-	return false
+	return true
 end
 
 -- Starting credits for fresh player data

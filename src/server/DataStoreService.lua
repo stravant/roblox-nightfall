@@ -30,6 +30,8 @@ local NODE_STATS_DATASTORE = PREFIX..'_nodestats'
 local REPLAYS_DATASTORE = PREFIX..'_replays'
 -- Exposed for integration tests to inspect the (mock) replay store
 DataStoreService.ReplaysStoreName = REPLAYS_DATASTORE
+-- Exposed for integration tests to inspect a player's (mock) version index
+DataStoreService.PlayerOrderedPrefix = PLAYER_ORDERED_PREFIX
 
 -- Datastores are keyed by the domain-scoped User identity (serialized to a
 -- string), not the raw numeric UserId
@@ -65,11 +67,23 @@ function DataStoreService:LoadPlayerDataAsync(player)
 	end
 end
 
+-- Version keys are timestamps, but SAME-SECOND saves must not share a key:
+-- live datastores throttle writes to one key for ~6 seconds (the "request
+-- was added to queue" warning), which back-to-back purchases hit — and the
+-- queued duplicate writes also race last-write-wins. Bump forward a second
+-- as needed so keys stay unique and monotonic per player.
+local mLastSaveTm = {}
+
 -- Returns: (Success)
 function DataStoreService:SavePlayerDataAsync(player, serverPlayerData)
 	local key = playerKey(player)
 	local data = serverPlayerData:Serialize()
 	local tm = os.time()
+	local last = mLastSaveTm[key]
+	if last and tm <= last then
+		tm = last + 1
+	end
+	mLastSaveTm[key] = tm
 
 	-- Fire off the normal store save
 	local playerNormalStore = DataStore:GetDataStore(PLAYER_DATA_PREFIX..'_'..key)

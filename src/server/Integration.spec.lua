@@ -781,6 +781,25 @@ return function(t)
 			.. "SecurityClearance5,MidnightAverted,NodeSweeper")
 	end)
 
+	t.test("same-second saves get distinct version keys", function()
+		-- Live datastores throttle same-key writes for ~6s; back-to-back
+		-- purchases used to collide on the os.time() version key
+		local ServerPlayerData = require(game.ServerScriptService.ServerPlayerData)
+		local MockDataStore = require(game.ServerScriptService.MockDataStore)
+		local player = makePlayer(6012, "RapidSaver")
+		local data = ServerPlayerData.new(player)
+		t.expect(DataStoreService:SavePlayerDataAsync(player, data)).toBeTruthy()
+		t.expect(DataStoreService:SavePlayerDataAsync(player, data)).toBeTruthy()
+		t.expect(DataStoreService:SavePlayerDataAsync(player, data)).toBeTruthy()
+		local ordered = MockDataStore:GetOrderedDataStore(
+			DataStoreService.PlayerOrderedPrefix .. "_" .. player.User:ToString())
+		local page = ordered:GetSortedAsync(false, 10):GetCurrentPage()
+		t.expect(#page).toBe(3)
+		-- Strictly monotonic: the load path picks the newest version
+		t.expect(page[1].value > page[2].value).toBeTruthy()
+		t.expect(page[2].value > page[3].value).toBeTruthy()
+	end)
+
 	t.test("leaving before loading counts as a bounce", function()
 		local ghost = makePlayer(4004, "Bouncer")
 		-- Never invokes Load: PlayerRemoving fires with no cached data
