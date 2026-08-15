@@ -289,7 +289,13 @@ function MainView.new()
 		onDoneTurnClick = nil,
 		onUndoClick = nil,
 		onMenuClick = function()
-			mMainMenu:Show()
+			-- The Menu button toggles: it stays clickable above the menu's
+			-- screen dim (the topbar is its own ScreenGui)
+			if mMainMenu:IsVisible() then
+				mMainMenu:Hide()
+			else
+				mMainMenu:Show()
+			end
 		end,
 		onFeedbackClick = function()
 			JourneyRecorder:Record("FeedbackOpen")

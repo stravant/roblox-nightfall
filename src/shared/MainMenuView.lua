@@ -717,6 +717,10 @@ function MainMenuView.new(container: Instance)
 		ModalManager:SetModal(false)
 	end
 
+	function this:IsVisible()
+		return mGui.Visible
+	end
+
 	-- Attach/detach the in-databattle context (adds the default-selected
 	-- Databattle tab with forfeit/skip). Pass nil when the battle ends.
 	function this:SetBattleContext(context: BattleContext?)
