@@ -70,8 +70,16 @@ local NiceToHavePreloadList = {
 }
 -- ...plus every unit image from the definitions (they're small, and the
 -- scripts list / shop / battles feel better with them warm; sourcing from
--- Scripts means new units preload automatically). pcall: by now replication
--- is long done, but a nice-to-have must never kill the bootstrap.
+-- Scripts means new units preload automatically).
+--
+-- MUST wait for replication before requiring a game module here:
+-- ReplicatedFirst runs before ReplicatedStorage finishes replicating, and
+-- Scripts requiring its own dependencies mid-replication doesn't just fail —
+-- the engine caches the module's error, breaking every later require of
+-- Scripts for the whole session. The pcall is a second line of defense.
+if not game:IsLoaded() then
+	game.Loaded:Wait()
+end
 pcall(function()
 	local seen = {}
 	for _, id in pairs(NiceToHavePreloadList) do
