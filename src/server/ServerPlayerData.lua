@@ -31,6 +31,12 @@ function ServerPlayerData.new(player, serialized)
 	if serialized then
 		mNodeStatus = Copy.Deep(serialized.NodeStatus)
 		mCredits = serialized.Credits
+		if DebugFlags:LotsOfCredits() then
+			-- Debug: top existing saves up too, not just fresh data. NOTE:
+			-- the boosted balance persists on the next save, so don't flip
+			-- this on against a real datastore save you care about.
+			mCredits = math.max(mCredits, DebugFlags:GetInitialCredits())
+		end
 		mSecurityLevel = serialized.SecurityLevel
 		mUnitInventory = Copy.Deep(serialized.Units)
 		mSkipsPurchased = serialized.SkipsPurchased or 0
