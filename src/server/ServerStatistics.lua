@@ -81,6 +81,18 @@ function ServerStatistics:PlayerBeatTutorial(playerOrId: any)
 	self:OnboardingStep(playerOrId, OnboardingSteps.TutorialBeaten)
 end
 
+-- Which path the player picked in the post-tutorial wrap-up chat:
+-- 'explore' (netmap) or 'battle' (straight into lm12). One custom event,
+-- split by the custom field.
+function ServerStatistics:PostTutorialChoice(playerOrId: any, choice: string)
+	local player = resolve(playerOrId)
+	if player then
+		try("PostTutorialChoice", function()
+			AnalyticsService:LogCustomEvent(player, "PostTutorialChoice", 1, context(choice))
+		end)
+	end
+end
+
 --------------------------------------------------------------------------------
 -- Progression
 --------------------------------------------------------------------------------

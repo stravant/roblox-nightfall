@@ -238,6 +238,7 @@ return function(t)
 		GetNodeRecords = mockRemoteFunction("GetNodeRecords"),
 		GetBadges = mockRemoteFunction("GetBadges"),
 		SaveSettings = mockRemoteEvent("SaveSettings"),
+		PostTutorialChoice = mockRemoteEvent("PostTutorialChoice"),
 		JourneyEvents = mockRemoteEvent("JourneyEvents"),
 		GetJourneyList = mockRemoteFunction("GetJourneyList"),
 		GetJourney = mockRemoteFunction("GetJourney"),
@@ -966,6 +967,26 @@ return function(t)
 		t.expect(rejoined.NodeStatus.lm12.Beaten).toBeTruthy()
 		t.expect(rejoined.NodeStatus.lm12.Wins).toBe(1)
 		t.expect(rejoined.Settings.SoundVolume).toBe(1)
+	end)
+
+	t.test("the post-tutorial choice logs one whitelisted custom event", function()
+		local player = makePlayer(9300, "Chooser")
+		remotes.PostTutorialChoice:FireServer_TEST(player, "battle")
+		-- Repeats, junk, and non-whitelisted values are all dropped
+		remotes.PostTutorialChoice:FireServer_TEST(player, "battle")
+		remotes.PostTutorialChoice:FireServer_TEST(player, "explore")
+		remotes.PostTutorialChoice:FireServer_TEST(player, "banana")
+		remotes.PostTutorialChoice:FireServer_TEST(player, 42)
+		local count = 0
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Args[1] == "PostTutorialChoice" then
+				count += 1
+				t.expect(event.Player.UserId).toBe(9300)
+				t.expect(event.Args[2]).toBe(1)
+				t.expect(event.Args[3][Enum.AnalyticsCustomFieldKeys.CustomField01.Name]).toBe("battle")
+			end
+		end
+		t.expect(count).toBe(1)
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()

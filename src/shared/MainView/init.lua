@@ -491,6 +491,9 @@ function MainView.new()
 			game.ReplicatedStorage.Remotes.BeatTutorial:FireServer()
 		end)
 		if ranTutorial then
+			-- Analytics: the explore-vs-battle split (server whitelists)
+			game.ReplicatedStorage.Remotes.PostTutorialChoice:FireServer(
+				if outcome == 'end:battle' then 'battle' else 'explore')
 			if outcome == 'end:battle' then
 				-- They asked for the next fight: straight into lm12. Winning
 				-- it flows through the normal completion path (its win

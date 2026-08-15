@@ -156,6 +156,21 @@ function NetworkController.install(remotes)
 		end
 	end)
 
+	-- Post-tutorial wrap-up choice, for the explore-vs-battle split chart.
+	-- Whitelisted values, one report per player per session.
+	local kPostTutorialChoices = { explore = true, battle = true }
+	local PostTutorialChoiceReported = {}
+	remotes.PostTutorialChoice.OnServerEvent:connect(function(player, choice)
+		if type(choice) ~= "string" or not kPostTutorialChoices[choice] then
+			return
+		end
+		if PostTutorialChoiceReported[player] then
+			return
+		end
+		PostTutorialChoiceReported[player] = true
+		ServerStatistics:PostTutorialChoice(player, choice)
+	end)
+
 	-- Client preference settings (volumes), stored with the save. The client
 	-- throttles sends; the debounced save coalesces the writes.
 	remotes.SaveSettings.OnServerEvent:connect(function(player, settings)
@@ -386,6 +401,7 @@ function NetworkController.install(remotes)
 		FriendsCache[player] = nil
 		NodeRecordsCache[player] = nil
 		BadgeOwnershipCache[player] = nil
+		PostTutorialChoiceReported[player] = nil
 	end)
 
 	function MarketplaceService.ProcessReceipt(info)
