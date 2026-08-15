@@ -284,6 +284,12 @@ local mCamera = workspace.CurrentCamera
 		end
 	end)
 	
+	-- Journey playback: set the zoom level directly
+	function this:SetZoom(level)
+		mZoomLevel = math.clamp(level, MIN_ZOOM, MAX_ZOOM)
+		setPosition(mCurrentPosition)
+	end
+
 	-- animate: glide there over a moment instead of snapping
 	function this:FocusOn(position, animate)
 		if animate then

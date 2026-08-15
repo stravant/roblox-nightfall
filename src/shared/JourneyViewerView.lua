@@ -51,6 +51,7 @@ type ViewerState = {
 	onPick: (key: string, title: string) -> (),
 	onBack: () -> (),
 	onClose: () -> (),
+	onWatch: () -> (),
 }
 
 local function sessionRow(summary: any, i: number, onPick: (key: string, title: string) -> ())
@@ -207,6 +208,26 @@ local function JourneyViewerContent(props: ViewerState)
 			Text = "Back to List",
 			OnClick = props.onBack,
 		}),
+		WatchButton = e(WindowsButton, {
+			Name = "WatchButton",
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, -8),
+			Size = UDim2.new(0, 160, 0, 36),
+			ImageColor3 = Color3.new(0, 0, 1),
+			Visible = props.mode == "timeline" and #props.events > 0,
+			OnClick = props.onWatch,
+		}, {
+			Text = e("TextLabel", {
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.new(0.5, 0, 0.5, -1),
+				Size = UDim2.new(1, -20, 0, 24),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 18,
+				TextColor3 = Color3.new(1, 1, 1),
+				Text = "Watch Playback",
+			}),
+		}),
 		CloseButton = e(WindowsButton, {
 			Name = "CloseButton",
 			AnchorPoint = Vector2.new(1, 1),
@@ -224,6 +245,9 @@ function JourneyViewerView.new(container: Instance, provider: any)
 	local this = {}
 
 	this.Done = Signal.new()
+	this.WatchRequested = Signal.new() -- (record)
+
+	local mCurrentRecord = nil
 
 	local mGui = Instance.new("ImageButton")
 	mGui.Name = "JourneyMouseCatcher"
@@ -265,6 +289,7 @@ function JourneyViewerView.new(container: Instance, provider: any)
 					return
 				end
 				if record and record.Events then
+					mCurrentRecord = record
 					mRoot.setState({
 						events = record.Events,
 						statusText = #record.Events .. " events. Gap column = time since previous event.",
@@ -275,7 +300,15 @@ function JourneyViewerView.new(container: Instance, provider: any)
 			end)
 		end,
 		onBack = function()
+			mCurrentRecord = nil
 			mRoot.setState({ mode = "list", events = {} })
+		end,
+		onWatch = function()
+			if mCurrentRecord then
+				local record = mCurrentRecord
+				this:Destroy()
+				this.WatchRequested:fire(record)
+			end
 		end,
 		onClose = function()
 			this:Destroy()

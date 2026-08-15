@@ -15,6 +15,7 @@ local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
 local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 local JourneyViewerView = require(game.ReplicatedStorage.JourneyViewerView)
+local JourneyPlayback = require(game.ReplicatedStorage.JourneyPlayback)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
@@ -387,7 +388,7 @@ function MainView.new()
 						if ModalManager:IsModal() then
 							return
 						end
-						JourneyViewerView.new(mGui, {
+						local viewer = JourneyViewerView.new(mGui, {
 							List = function()
 								local ok, result = pcall(function()
 									return game.ReplicatedStorage.Remotes.GetJourneyList:InvokeServer()
@@ -401,6 +402,13 @@ function MainView.new()
 								return if ok then result else nil
 							end,
 						})
+						viewer.WatchRequested:connect(function(record)
+							JourneyPlayback.new({
+								container = mGui,
+								netmapView = mNetmapView,
+								topbar = mTopbarBattleInterface,
+							}, record):Play()
+						end)
 					end,
 				})
 			end, {})

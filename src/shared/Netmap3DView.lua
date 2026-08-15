@@ -627,6 +627,14 @@ function Netmap3DView.new(topbarCredits)
 		end
 	end
 	
+	-- Journey playback: drive the camera from a recorded session
+	function this:PanTo(position)
+		mCamera:FocusOn(position, true)
+	end
+	function this:SetZoomLevel(level)
+		mCamera:SetZoom(level)
+	end
+
 	function this:GetGui()
 		return mGui
 	end

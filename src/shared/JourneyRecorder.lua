@@ -18,6 +18,14 @@ local JourneyRecorder = {}
 local mStartClock: number? = nil
 local mPending: { { any } } = {}
 local mFlusherRunning = false
+local mSuppressed = false
+
+-- Journey playback drives the real views, which would record phantom
+-- events into the WATCHER's own journey; it suppresses recording while
+-- a playback runs
+function JourneyRecorder:SetSuppressed(suppressed: boolean)
+	mSuppressed = suppressed
+end
 
 local function isLiveClient(): boolean
 	return RunService:IsRunning() and RunService:IsClient()
@@ -38,7 +46,7 @@ local function flush()
 end
 
 function JourneyRecorder:Record(event: string, detail: string?)
-	if not isLiveClient() then
+	if not isLiveClient() or mSuppressed then
 		return
 	end
 	if not mStartClock then

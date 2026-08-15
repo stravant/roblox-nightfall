@@ -709,7 +709,8 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			-- Action
 			if mActionableSquares[x][y] then
 				mLastUsedCommandId[unit.Definition.Id] = mSelectedCommand
-				JourneyRecorder:Record("Attack", unit.Definition.Id .. " " .. mSelectedCommand .. " @" .. x .. "," .. y)
+				JourneyRecorder:Record("Attack", unit.Definition.Id .. " " .. mSelectedCommand
+					.. " " .. unit.Tail[1].x .. "," .. unit.Tail[1].y .. ">" .. x .. "," .. y)
 				controller:UnitExecute(unit, mSelectedCommand, x, y)
 				mActionableSquares = nil
 				doAutoSelectNextUnit()
@@ -718,7 +719,8 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			-- Move
 			local action = mActionableSquares[x][y]
 			if action == 'move' then
-				JourneyRecorder:Record("Move", unit.Definition.Id .. " @" .. x .. "," .. y)
+				JourneyRecorder:Record("Move", unit.Definition.Id
+					.. " " .. unit.Tail[1].x .. "," .. unit.Tail[1].y .. ">" .. x .. "," .. y)
 				doAnimatedMove(unit, x, y)
 				-- We may win as a result of moving and collecting the access codes
 				if gameState:HasWon() then
@@ -733,8 +735,10 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 					doAutoSelectNextUnit()
 				end
 			else
-				-- Attack, but need to move first
-				JourneyRecorder:Record("MoveAttack", unit.Definition.Id .. " @" .. x .. "," .. y)
+				-- Attack, but need to move first (recorded as Move + Attack so
+				-- playback can replay two uniform actions)
+				JourneyRecorder:Record("Move", unit.Definition.Id
+					.. " " .. unit.Tail[1].x .. "," .. unit.Tail[1].y .. ">" .. action.x .. "," .. action.y)
 				doAnimatedMove(unit, action.x, action.y)
 				-- The move can win the game (collecting the last codes),
 				-- ending the battle and clearing the selection under us
@@ -747,6 +751,8 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 				end
 				local commandId = getUsableCommand(unit)
 				if commandId then
+					JourneyRecorder:Record("Attack", unit.Definition.Id .. " " .. commandId
+						.. " " .. unit.Tail[1].x .. "," .. unit.Tail[1].y .. ">" .. x .. "," .. y)
 					controller:UnitExecute(unit, commandId, x, y)
 				end
 				if mSelection ~= unit then
