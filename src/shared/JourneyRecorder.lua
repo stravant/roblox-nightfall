@@ -28,7 +28,9 @@ function JourneyRecorder:SetSuppressed(suppressed: boolean)
 end
 
 local function isLiveClient(): boolean
-	return RunService:IsRunning() and RunService:IsClient()
+	-- Studio playtests don't record: the journey log is for REAL sessions
+	-- (the viewer still works from Studio, it just reads)
+	return RunService:IsRunning() and RunService:IsClient() and not RunService:IsStudio()
 end
 
 local function flush()
