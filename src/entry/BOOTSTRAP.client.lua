@@ -68,30 +68,6 @@ local NiceToHavePreloadList = {
 	'rbxassetid://1335986152', --rbxgameasset://Images/DoneMarker',
 	'rbxassetid://1335928206', --rbxgameasset://Images/AttackDamage',
 }
--- ...plus every unit image from the definitions (they're small, and the
--- scripts list / shop / battles feel better with them warm; sourcing from
--- Scripts means new units preload automatically).
---
--- MUST wait for replication before requiring a game module here:
--- ReplicatedFirst runs before ReplicatedStorage finishes replicating, and
--- Scripts requiring its own dependencies mid-replication doesn't just fail —
--- the engine caches the module's error, breaking every later require of
--- Scripts for the whole session. The pcall is a second line of defense.
-if not game:IsLoaded() then
-	game.Loaded:Wait()
-end
-pcall(function()
-	local seen = {}
-	for _, id in pairs(NiceToHavePreloadList) do
-		seen[id] = true
-	end
-	for _, def in pairs(require(game.ReplicatedStorage:WaitForChild('Scripts'))) do
-		if def.Image and not seen[def.Image] then
-			seen[def.Image] = true
-			table.insert(NiceToHavePreloadList, def.Image)
-		end
-	end
-end)
 spawn(function()
 	game:GetService('ContentProvider'):PreloadAsync(NiceToHavePreloadList)
 end)
@@ -104,7 +80,12 @@ local warmup = Instance.new('ScreenGui')
 warmup.Name = 'ImageWarmup'
 warmup.ResetOnSpawn = false
 warmup.DisplayOrder = -100
-for _, id in pairs(NiceToHavePreloadList) do
+local mWarmedUp = {}
+local function addWarmupImage(id)
+	if mWarmedUp[id] then
+		return
+	end
+	mWarmedUp[id] = true
 	local img = Instance.new('ImageLabel')
 	img.BackgroundTransparency = 1
 	img.ImageTransparency = 0.99 -- fully transparent risks being culled unrendered
@@ -113,7 +94,38 @@ for _, id in pairs(NiceToHavePreloadList) do
 	img.Image = id
 	img.Parent = warmup
 end
+for _, id in pairs(NiceToHavePreloadList) do
+	addWarmupImage(id)
+end
 warmup.Parent = game.Players.LocalPlayer:WaitForChild('PlayerGui')
+
+-- ...plus every unit image from the definitions (they're small, and the
+-- scripts list / shop / battles feel better with them warm; sourcing from
+-- Scripts means new units preload automatically). In its own task: it MUST
+-- wait for replication before requiring a game module — ReplicatedFirst runs
+-- before ReplicatedStorage finishes replicating, and Scripts requiring its
+-- own dependencies mid-replication doesn't just fail, the engine caches the
+-- module error and breaks every later require of Scripts in the session —
+-- and the static preloads above must not wait along with it.
+spawn(function()
+	if not game:IsLoaded() then
+		game.Loaded:Wait()
+	end
+	local unitImages = {}
+	pcall(function()
+		for _, def in pairs(require(game.ReplicatedStorage:WaitForChild('Scripts'))) do
+			if def.Image and not mWarmedUp[def.Image] then
+				table.insert(unitImages, def.Image)
+			end
+		end
+	end)
+	if #unitImages > 0 then
+		for _, id in pairs(unitImages) do
+			addWarmupImage(id)
+		end
+		game:GetService('ContentProvider'):PreloadAsync(unitImages)
+	end
+end)
 -- Straight onto the netmap: no click-to-continue gate. (Setup holds the
 -- title screen open itself when the debug checkpoint picker is showing.)
 LoadingGui.Content.TitleImage.LoadingText.Text = "Connecting..."
