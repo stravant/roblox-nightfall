@@ -16,7 +16,7 @@ end
 
 -- Pretend every node is beaten (unlocks the whole netmap)
 function DebugFlags:HasBeatenAllNodes(): boolean
-	return false
+	return true
 end
 
 -- Master switch for ALL debug UI (checkpoint picker, debug win button, ...)

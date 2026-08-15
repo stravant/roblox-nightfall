@@ -88,7 +88,14 @@ local mCamera = workspace.CurrentCamera
 	end
 	
 	setPosition(mCurrentPosition)
-	
+
+	-- The camera only reacts to input while installed: its connections are
+	-- global, and un-gated they would silently pan the hidden netmap camera
+	-- during databattles (whose board drags share the same input events).
+	-- MUST be declared before every closure that references it: handleWheel
+	-- captured a global nil here once, silently killing scroll zoom.
+	local mInstalled = false
+
 	local function handleWheel(delta)
 		if not mInstalled or ModalManager:IsModal() then
 			return
@@ -142,10 +149,6 @@ local mCamera = workspace.CurrentCamera
 	local mPinching = false
 	local mPinchStartZoom = mZoomLevel
 	local mInertialVelocity = Vector3.new()
-	-- The camera only reacts to input while installed: its connections are
-	-- global, and un-gated they would silently pan the hidden netmap camera
-	-- during databattles (whose board drags share the same input events)
-	local mInstalled = false
 	-- In-flight FocusOn glide ({Start, Target, T, Duration}); cancelled by any
 	-- user pan/pinch
 	local mFocusTween = nil
