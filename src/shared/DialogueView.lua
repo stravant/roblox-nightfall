@@ -4,6 +4,8 @@
 -- OptionSelected signal; the GUI from GetGui() is a host frame whose contents
 -- are rendered by React (layout matches ui-reference/ModuleTemplates/DialogueView.json).
 
+local RunService = game:GetService("RunService")
+
 local Signal = require(game.ReplicatedStorage.Signal)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local DialogueVoice = require(game.ReplicatedStorage.DialogueVoice)
@@ -19,6 +21,14 @@ local kWindowSliceCenter = Rect.new(16, 24, 16, 24)
 local kWindowImageRectOffset = Vector2.new(0, 0)
 local kWindowImageRectSize = Vector2.new(32, 48)
 local kInsetImage = "rbxassetid://1378143823"
+
+-- Typewriter pacing: fast per-character reveal with per-character jitter and
+-- occasional longer stalls, like text trickling in over a slow serial line
+local kTypeBaseDelay = 0.012 -- seconds per character before jitter
+local kTypeJitter = 0.02 -- up to this much random extra per character
+local kTypeStallChance = 0.06 -- odds a character hangs like a dropped packet
+local kTypeStallMin = 0.06
+local kTypeStallMax = 0.2
 
 type DialogueState = {
 	username: string,
@@ -235,6 +245,69 @@ function DialogueView.new()
 		})
 	end
 
+	-- Typewriter reveal, driven imperatively on the Content label via
+	-- MaxVisibleGraphemes (React never declares that property, so the writes
+	-- are never fought; driving it through setState would re-render every
+	-- frame). The full text is always in the label — the cap just reveals it.
+	local mTypeToken = 0
+	local mTypeCn: RBXScriptConnection? = nil
+	local mTypeRandom = Random.new()
+	local function stopTypewriter()
+		mTypeToken += 1
+		if mTypeCn then
+			mTypeCn:Disconnect()
+			mTypeCn = nil
+		end
+	end
+	local function startTypewriter(text: string)
+		stopTypewriter()
+		local token = mTypeToken
+		local label = mGui:FindFirstChild("Content", true) :: TextLabel?
+		if not label then
+			return -- not mounted yet: just show the text without the effect
+		end
+		local total = utf8.len(text) or #text
+		label.MaxVisibleGraphemes = 0
+		if total == 0 then
+			label.MaxVisibleGraphemes = -1
+			return
+		end
+		local shown = 0
+		local acc = 0
+		local function nextDelay(): number
+			local delay = kTypeBaseDelay + mTypeRandom:NextNumber() * kTypeJitter
+			if mTypeRandom:NextNumber() < kTypeStallChance then
+				delay += mTypeRandom:NextNumber(kTypeStallMin, kTypeStallMax)
+			end
+			return delay
+		end
+		local pending = nextDelay()
+		mTypeCn = RunService.Heartbeat:Connect(function(dt)
+			if token ~= mTypeToken or not label.Parent then
+				if mTypeCn then
+					mTypeCn:Disconnect()
+					mTypeCn = nil
+				end
+				return
+			end
+			acc += dt
+			while acc >= pending and shown < total do
+				acc -= pending
+				shown += 1
+				pending = nextDelay()
+			end
+			if shown >= total then
+				-- -1 = everything: robust if grapheme count and codepoint
+				-- count ever disagree
+				label.MaxVisibleGraphemes = -1
+				mTypeCn:Disconnect()
+				mTypeCn = nil
+			else
+				label.MaxVisibleGraphemes = shown
+			end
+		end)
+	end
+
 	function this:SetText(text: string, choice1: string?, choice2: string?)
 		mHasTwoButtons = choice2 ~= nil
 		-- The dialogue text is always the character talking to us (the
@@ -246,6 +319,7 @@ function DialogueView.new()
 			choice1 = choice1 or StatefulRoot.None,
 			choice2 = choice2 or StatefulRoot.None,
 		})
+		startTypewriter(text)
 	end
 
 	function this:SetTutorial()
@@ -274,6 +348,7 @@ function DialogueView.new()
 
 	function this:Destroy()
 		DialogueVoice:Stop()
+		stopTypewriter()
 		mRoot.unmount()
 		mGui:Destroy()
 	end
