@@ -18,6 +18,7 @@ local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
 local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
 local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
+local Netmap = require(game.ReplicatedStorage.Netmap)
 
 local e = React.createElement
 
@@ -425,8 +426,21 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 			Color = data.Color,
 		})
 	end
-	-- Cheapest first
+	-- A node can pin an explicit order (WarezOrder); otherwise cheapest first
+	local node = Netmap.ById[warezNodeId]
+	local rank = {}
+	if node and node.WarezOrder then
+		for i, id in pairs(node.WarezOrder) do
+			rank[id] = i
+		end
+	end
 	table.sort(mPrograms, function(a, b)
+		local rankA, rankB = rank[a.Id], rank[b.Id]
+		if rankA and rankB then
+			return rankA < rankB
+		elseif rankA or rankB then
+			return rankA ~= nil -- pinned entries ahead of unpinned
+		end
 		return a.Cost < b.Cost
 	end)
 

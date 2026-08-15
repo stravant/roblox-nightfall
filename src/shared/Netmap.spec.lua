@@ -46,6 +46,28 @@ return function(t)
 		t.expect(checked > 0).toBeTruthy()
 	end)
 
+	t.test("WarezOrder lists exactly the node's stock", function()
+		for id, node in pairs(Netmap.ById) do
+			if node.WarezOrder then
+				local ordered = {}
+				for _, unitId in pairs(node.WarezOrder) do
+					if not node.Warez or node.Warez[unitId] == nil then
+						error("Node " .. id .. " WarezOrder lists unsold script " .. tostring(unitId))
+					end
+					if ordered[unitId] then
+						error("Node " .. id .. " WarezOrder repeats " .. tostring(unitId))
+					end
+					ordered[unitId] = true
+				end
+				for unitId in pairs(node.Warez) do
+					if not ordered[unitId] then
+						error("Node " .. id .. " WarezOrder is missing " .. tostring(unitId))
+					end
+				end
+			end
+		end
+	end)
+
 	t.test("every conversation target resolves to a part or an end", function()
 		local conversations = { Netmap.TutorialCallout, Netmap.PostTutorialConversation }
 		for _, node in pairs(Netmap.ById) do

@@ -66,6 +66,41 @@ return function(t)
 		end)
 	end)
 
+	t.test("wz1 pins its shop order (Bit-Man off the top)", function()
+		local Netmap = require(game.ReplicatedStorage.Netmap)
+		local originalGetProgramList = LocalPlayerData.GetProgramList
+		local originalGetCredits = LocalPlayerData.GetCredits
+		LocalPlayerData.GetProgramList = function()
+			return {}
+		end
+		LocalPlayerData.GetCredits = function()
+			return 10000
+		end
+		local screen = Instance.new("ScreenGui")
+		screen.Parent = CoreGui
+		local view
+		local ok, err = pcall(function()
+			ReactRoblox.act(function()
+				view = WarezView.new("wz1", Netmap.ById.wz1.Warez)
+			end)
+			view:GetGui().Parent = screen
+			local gui = view:GetGui()
+			local lastOrder = -1
+			for _, id in pairs({ "bug", "hack", "dr", "bitman", "slingshot" }) do
+				local row = shopRow(gui, id)
+				t.expect(row ~= nil).toBeTruthy()
+				t.expect(row.LayoutOrder > lastOrder).toBeTruthy()
+				lastOrder = row.LayoutOrder
+			end
+		end)
+		LocalPlayerData.GetProgramList = originalGetProgramList
+		LocalPlayerData.GetCredits = originalGetCredits
+		screen:Destroy()
+		if not ok then
+			error(err, 0)
+		end
+	end)
+
 	t.test("construction selects the cheapest program and fills the detail panel", function()
 		withView(10000, function(view, gui)
 			t.expect(gui.MainBox.PurchaseButton.Visible).toBeTruthy()

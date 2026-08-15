@@ -198,6 +198,9 @@ node{
 		dr = 500;
 		bitman = 250;
 	};
+	-- Explicit shop ordering (default is cheapest first): Bit-Man's weird
+	-- grid commands confuse new players when it leads the very first shop
+	WarezOrder = { 'bug', 'hack', 'dr', 'bitman', 'slingshot' };
 	Links = {};
 }
 
