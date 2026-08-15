@@ -663,6 +663,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			end
 
 			-- Did not find a next unit. End the turn automatically
+			JourneyRecorder:Record("DoneTurn", "(auto)")
 			controller:EndTurn()
 		end
 	end

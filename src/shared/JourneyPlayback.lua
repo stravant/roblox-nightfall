@@ -258,6 +258,40 @@ function JourneyPlayback.new(deps: any, record: any)
 		end
 	end
 
+	-- In real play the turn ends AUTOMATICALLY when the last unit finishes
+	-- (and newer recordings capture that as a "(auto)" DoneTurn). For
+	-- recordings without it: if every friendly unit is done and the recording
+	-- doesn't have a DoneTurn coming next, end the turn ourselves — otherwise
+	-- the enemy turn never runs and the board diverges from the recording.
+	local function nextBattleEventType(events: { any }, index: number): string?
+		for i = index + 1, #events do
+			local eventType = events[i][2]
+			if eventType == "Move" or eventType == "Attack" or eventType == "DoneTurn"
+				or eventType == "BattleExit" or eventType == "BattleEnter" or eventType == "Undo" then
+				return eventType
+			end
+		end
+		return nil
+	end
+	local function autoEndTurnIfNeeded(events: { any }, index: number)
+		if not mBattle then
+			return
+		end
+		local gameState = mBattle.GameState
+		if not gameState:IsGameStarted() or gameState:IsEnemyTurn()
+			or gameState:HasWon() or gameState:HasLost() then
+			return
+		end
+		for unit in pairs(gameState:GetUnits()) do
+			if not unit.Enemy and not unit.Done then
+				return
+			end
+		end
+		if nextBattleEventType(events, index) ~= "DoneTurn" then
+			mBattle.Controller:EndTurn()
+		end
+	end
+
 	local function enterBattle(nodeId: string, events: { any }, startIndex: number)
 		teardownBattle()
 		local node = Netmap.ById[nodeId]
@@ -348,6 +382,7 @@ function JourneyPlayback.new(deps: any, record: any)
 					ticker("(couldn't resolve " .. id .. " for a move)")
 				end
 			end
+			autoEndTurnIfNeeded(events, index)
 		elseif event == "Attack" and detail and mBattle then
 			waitForPlayerTurn()
 			local id, command, fx, fy, tx, ty = JourneyPlayback.ParseAttack(detail)
@@ -359,6 +394,7 @@ function JourneyPlayback.new(deps: any, record: any)
 					ticker("(couldn't resolve " .. id .. " for an attack)")
 				end
 			end
+			autoEndTurnIfNeeded(events, index)
 		elseif event == "DoneTurn" and mBattle then
 			waitForPlayerTurn()
 			mBattle.Controller:EndTurn()

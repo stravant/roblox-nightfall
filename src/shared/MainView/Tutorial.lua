@@ -22,6 +22,7 @@ local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
+local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 
 -- Onboarding funnel detail: best-effort, the server validates/dedupes
 local function funnelStep(step)
@@ -78,11 +79,15 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	-- The guided databattle
 	----------------------------------------------------------------------
 
+	-- Journey: the tutorial battle doesn't go through MainView:PlayGame, so
+	-- record its own battle boundary events for playback
+	JourneyRecorder:Record("BattleEnter", "hq (tutorial)")
 	local placeData = Places.tutorial
 	local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 	local gameController = GameController.new(gameState)
 	local gameView = GameView.new(gameState, gameController, mainMenu, topbar)
 	topbar:SetOnStart(function()
+		JourneyRecorder:Record("BattleStart", "hq")
 		gameController:StartGame()
 	end)
 	topbar:SetCreditsVisible(false)
@@ -208,6 +213,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	tutorialDialogue:SetText("")
 	wait(1.2)
 
+	JourneyRecorder:Record("BattleExit", "hq won (tutorial)")
 	tutorialDialogue:Destroy()
 	gameView:Destroy()
 	topbar:SetStartVisible(false)
