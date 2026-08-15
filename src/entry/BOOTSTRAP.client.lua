@@ -1,18 +1,16 @@
+-- No custom loading screen: the game goes straight onto the netmap (Setup
+-- builds it immediately); the engine's own default loading screen covers the
+-- first instants of the join. This script only WARMS assets in the
+-- background — nothing here may block anything.
 
+local ContentProvider = game:GetService('ContentProvider')
 
--- Copy in our loading screen
-local LoadingGui = game.ReplicatedFirst.TitleScreen:Clone()
-LoadingGui.Parent = game.Players.LocalPlayer:WaitForChild('PlayerGui')
-
--- Kill the loading screen
-game.ReplicatedFirst:RemoveDefaultLoadingScreen()
-
--- Essential preloads that we have to do before the user gets to the home screen
-local EssentialPreloadList = {
+-- The netmap's imagery (the first thing on screen)
+local NetmapPreloadList = {
 	'rbxassetid://1445844332', --rbxgameasset://Images/NewBackgroundCentre',
 	'rbxassetid://1445844947', --rbxgameasset://Images/NewBackgroundLeft',
 	'rbxassetid://1445845291', --rbxgameasset://Images/NewBackgroundRight',
-	'rbxassetid://1352772741', --rbxgameasset://Images/UIButton',
+	'rbxassetid://1372686003', --rbxgameasset://Images/UIButton',
 	'rbxassetid://1353268980', --rbxgameasset://Images/UIButtonHover',
 	'rbxassetid://1353265347', --rbxgameasset://Images/UIDialogue',
 	'rbxassetid://1352624214', --rbxgameasset://Images/UserAeacus',
@@ -25,33 +23,8 @@ local EssentialPreloadList = {
 	'rbxassetid://1423257394', --rbxgameasset://Images/NodeWarez64',
 	'rbxassetid://1350381780', --rbxgameasset://Images/NodeConnections',
 }
-local FastSpawn = Instance.new('BindableEvent')
-FastSpawn.Event:connect(function(f, ...) f(...) end)
 
--- Preload the essential preloads and update the loading text while doing so
-FastSpawn:Fire(function()
-	game.ContentProvider:PreloadAsync(EssentialPreloadList)
-end)
-local startTime = tick()
-local TEST = false
-while game.ContentProvider.RequestQueueSize > 0 or (TEST and tick() - startTime < 3) do
-	local frac = game.ContentProvider.RequestQueueSize / #EssentialPreloadList
-	if frac > 1 then
-		frac = 1
-	end
-	frac = 1 - frac
-	local dt = tick() - startTime
-	local cursor;
-	if math.sin(dt*5) > 0 then
-		cursor = " "
-	else
-		cursor = "_"
-	end
-	LoadingGui.Content.TitleImage.LoadingText.Text = "Loading"..cursor.." "..math.floor(frac * 100).."%"
-	wait()
-end
-
--- While we're here... fire off the "nice to have" preloads, but proceed right away before they're done
+-- Battle imagery (needed a little later)
 local NiceToHavePreloadList = {
 	'rbxassetid://1338015926', --rbxgameasset://Images/UnitHack',
 	'rbxassetid://1338021929', --rbxgameasset://Images/UnitSlingshot',
@@ -68,8 +41,12 @@ local NiceToHavePreloadList = {
 	'rbxassetid://1335986152', --rbxgameasset://Images/DoneMarker',
 	'rbxassetid://1335928206', --rbxgameasset://Images/AttackDamage',
 }
+
 spawn(function()
-	game:GetService('ContentProvider'):PreloadAsync(NiceToHavePreloadList)
+	ContentProvider:PreloadAsync(NetmapPreloadList)
+end)
+spawn(function()
+	ContentProvider:PreloadAsync(NiceToHavePreloadList)
 end)
 
 -- PreloadAsync only fetches assets into the content cache: the engine still
@@ -94,6 +71,9 @@ local function addWarmupImage(id)
 	img.Image = id
 	img.Parent = warmup
 end
+for _, id in pairs(NetmapPreloadList) do
+	addWarmupImage(id)
+end
 for _, id in pairs(NiceToHavePreloadList) do
 	addWarmupImage(id)
 end
@@ -105,8 +85,7 @@ warmup.Parent = game.Players.LocalPlayer:WaitForChild('PlayerGui')
 -- wait for replication before requiring a game module — ReplicatedFirst runs
 -- before ReplicatedStorage finishes replicating, and Scripts requiring its
 -- own dependencies mid-replication doesn't just fail, the engine caches the
--- module error and breaks every later require of Scripts in the session —
--- and the static preloads above must not wait along with it.
+-- module error and breaks every later require of Scripts in the session.
 spawn(function()
 	if not game:IsLoaded() then
 		game.Loaded:Wait()
@@ -123,20 +102,6 @@ spawn(function()
 		for _, id in pairs(unitImages) do
 			addWarmupImage(id)
 		end
-		game:GetService('ContentProvider'):PreloadAsync(unitImages)
+		ContentProvider:PreloadAsync(unitImages)
 	end
 end)
--- Straight onto the netmap: no click-to-continue gate. (Setup holds the
--- title screen open itself when the debug checkpoint picker is showing.)
-LoadingGui.Content.TitleImage.LoadingText.Text = "Connecting..."
-LoadingGui.PreloadCompleted.Value = true
-
-
-
-
-
-
-
-
-
-

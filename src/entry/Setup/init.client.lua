@@ -22,23 +22,34 @@ if not LocalPlayerData:Load() then
 
 end
 
-local TitleScreen = PlayerGui:WaitForChild('TitleScreen')
-
--- Debug checkpoint picker on the title screen: jump straight to the first
--- entry of a security level. Must resolve BEFORE MainView is constructed
--- (the netmap reads progression at build time), so with the picker enabled
--- the MainView is built after the title-screen click instead of during it.
+-- Debug checkpoint picker: jump straight to the first entry of a security
+-- level. Must resolve BEFORE MainView is constructed (the netmap reads
+-- progression at build time), so debug builds pause on a small overlay —
+-- the only thing that ever holds up entry; normal players go straight in.
 local mCheckpointLevel = 1
 if DebugFlags:ShowDebugCheckpoints() then
+	local overlay = Instance.new('ScreenGui')
+	overlay.Name = 'DebugCheckpointPicker'
+	overlay.IgnoreGuiInset = true
+	overlay.DisplayOrder = 100
+	overlay.Parent = PlayerGui
+
+	local dim = Instance.new('Frame')
+	dim.Size = UDim2.new(1, 0, 1, 0)
+	dim.BackgroundColor3 = Color3.new(0, 0, 0)
+	dim.BackgroundTransparency = 0.4
+	dim.BorderSizePixel = 0
+	dim.Parent = overlay
+
 	local picker = Instance.new('Frame')
 	picker.Name = 'DebugCheckpoints'
-	picker.AnchorPoint = Vector2.new(0.5, 1)
-	picker.Position = UDim2.new(0.5, 0, 1, -12)
-	picker.Size = UDim2.new(0, 640, 0, 64)
+	picker.AnchorPoint = Vector2.new(0.5, 0.5)
+	picker.Position = UDim2.new(0.5, 0, 0.5, 0)
+	picker.Size = UDim2.new(0, 640, 0, 102)
 	picker.BackgroundColor3 = Color3.fromRGB(192, 192, 192)
 	picker.BorderSizePixel = 1
-	-- Above the title screen's full-screen ClickOverlay in any ZIndexBehavior
 	picker.ZIndex = 10
+	picker.Parent = overlay
 
 	local title = Instance.new('TextLabel')
 	title.Position = UDim2.new(0, 0, 0, 2)
@@ -87,37 +98,29 @@ if DebugFlags:ShowDebugCheckpoints() then
 		table.insert(buttons, { Level = checkpoint.Level, Button = button })
 	end
 	refresh()
-	picker.Parent = TitleScreen
-end
 
-local function waitForPreload()
-	if not TitleScreen.PreloadCompleted.Value then
-		TitleScreen.PreloadCompleted.Changed:wait()
-	end
-end
+	local startButton = Instance.new('TextButton')
+	startButton.AnchorPoint = Vector2.new(0.5, 0)
+	startButton.Position = UDim2.new(0.5, 0, 0, 62)
+	startButton.Size = UDim2.new(0, 160, 0, 32)
+	startButton.BackgroundColor3 = Color3.new(0.701961, 0, 0)
+	startButton.Font = Enum.Font.Code
+	startButton.TextSize = 16
+	startButton.TextColor3 = Color3.new(1, 1, 1)
+	startButton.Text = "START"
+	startButton.BorderSizePixel = 1
+	startButton.ZIndex = 11
+	startButton.Parent = picker
 
-local mv
-if DebugFlags:ShowDebugCheckpoints() then
-	-- The auto-dismissing title screen is the picker's only window, so with
-	-- the picker up, hold the title screen open until a click
-	waitForPreload()
-	TitleScreen.Content.TitleImage.LoadingText.Text = "> DEBUG: pick a checkpoint, then click to start <"
-	TitleScreen.Content.ClickOverlay.MouseButton1Click:Wait()
+	startButton.MouseButton1Click:Wait()
+	overlay:Destroy()
 	if mCheckpointLevel > 1 then
 		LocalPlayerData:ApplyDebugCheckpoint(mCheckpointLevel)
 	end
-	mv = MainView.new()
-else
-	-- Normal flow: build the main view during the loading screen and go
-	-- straight in once the preloads finish
-	mv = MainView.new()
-	waitForPreload()
 end
 
--- Preload completed, show the main view
+-- Straight in: no loading screen (BOOTSTRAP warms assets in the background)
+local mv = MainView.new()
 mv:GetGui().Parent = ScreenGui
-
--- Remove the loading screen now that we're ready
-TitleScreen:Destroy()
 
 game:GetService('UserInputService').ModalEnabled = true
