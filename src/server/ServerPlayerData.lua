@@ -104,21 +104,32 @@ function ServerPlayerData.new(player, serialized)
 		return mIsFirstTimeUser
 	end
 
-	-- Client preference settings (volumes). Returns whether anything changed
-	-- (the caller only saves when it did).
+	-- Client preference settings (volumes, netmap camera). Fields MERGE so a
+	-- partial payload never clobbers the others. Returns whether anything
+	-- changed (the caller only saves when it did).
+	local kSettingsFields = {
+		{ Key = "SoundVolume", Min = 0, Max = 3 },
+		{ Key = "MusicVolume", Min = 0, Max = 3 },
+		{ Key = "NetmapX", Min = -1000, Max = 1000 },
+		{ Key = "NetmapZ", Min = -1000, Max = 1000 },
+		{ Key = "NetmapZoom", Min = 100, Max = 1000 },
+	}
 	function this:ProcessSaveSettings(settings)
-		if type(settings) ~= "table"
-			or type(settings.SoundVolume) ~= "number"
-			or type(settings.MusicVolume) ~= "number" then
+		if type(settings) ~= "table" then
 			return false
 		end
-		local sound = math.clamp(settings.SoundVolume, 0, 3)
-		local music = math.clamp(settings.MusicVolume, 0, 3)
-		if mSettings.SoundVolume == sound and mSettings.MusicVolume == music then
-			return false
+		local changed = false
+		for _, field in pairs(kSettingsFields) do
+			local value = settings[field.Key]
+			if type(value) == "number" then
+				value = math.clamp(value, field.Min, field.Max)
+				if mSettings[field.Key] ~= value then
+					mSettings[field.Key] = value
+					changed = true
+				end
+			end
 		end
-		mSettings = { SoundVolume = sound, MusicVolume = music }
-		return true
+		return changed
 	end
 	
 	local function addUnit(id)

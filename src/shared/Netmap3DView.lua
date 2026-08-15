@@ -106,6 +106,44 @@ function Netmap3DView.new(topbarCredits)
 	end
 	
 	local mCamera = NetmapCamera.new()
+
+	-- The camera position/zoom persist in the save data: restore them now,
+	-- and send the state (with the volumes: the server merges per-field but
+	-- sending everything keeps one payload shape) a beat after the user
+	-- stops moving the camera
+	do
+		local settings = LocalPlayerData:GetSettings()
+		if settings then
+			if settings.NetmapX and settings.NetmapZ then
+				mCamera:FocusOn(Vector3.new(settings.NetmapX, 0, settings.NetmapZ), false)
+			end
+			if settings.NetmapZoom then
+				mCamera:SetZoom(settings.NetmapZoom)
+			end
+		end
+		local pendingSend = false
+		mCamera.Changed:connect(function()
+			if pendingSend then
+				return
+			end
+			pendingSend = true
+			task.delay(2, function()
+				pendingSend = false
+				local position, zoom = mCamera:GetState()
+				local sound, music = SoundManager:GetVolumes()
+				pcall(function()
+					game.ReplicatedStorage.Remotes.SaveSettings:FireServer({
+						SoundVolume = sound,
+						MusicVolume = music,
+						NetmapX = position.X,
+						NetmapZ = position.Z,
+						NetmapZoom = zoom,
+					})
+				end)
+			end)
+		end)
+	end
+
 	mCamera.Clicked:connect(function(unitRay)
 		if not mGui.Visible or not mGui.Parent then
 			return

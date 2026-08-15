@@ -901,6 +901,8 @@ return function(t)
 		t.expect(loaded.Settings.MusicVolume).toBe(1)
 
 		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = 0.25, MusicVolume = 2 })
+		-- A partial payload (netmap camera only) merges rather than clobbers
+		remotes.SaveSettings:FireServer_TEST(player, { NetmapX = 120, NetmapZ = -40, NetmapZoom = 350 })
 		-- Garbage and out-of-range input is rejected or clamped
 		remotes.SaveSettings:FireServer_TEST(player, "junk")
 		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = "loud" })
@@ -909,6 +911,9 @@ return function(t)
 		local rejoined = remotes.Load:InvokeServer_TEST(makePlayer(9100, "AudioTweaker"))
 		t.expect(rejoined.Settings.SoundVolume).toBe(0.25)
 		t.expect(rejoined.Settings.MusicVolume).toBe(2)
+		t.expect(rejoined.Settings.NetmapX).toBe(120)
+		t.expect(rejoined.Settings.NetmapZ).toBe(-40)
+		t.expect(rejoined.Settings.NetmapZoom).toBe(350)
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()

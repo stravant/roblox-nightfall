@@ -15,6 +15,9 @@ function NetmapCamera.new()
 	local this = {}
 	
 	this.Clicked = Signal.new()
+	-- The USER moved the camera (pan finished / zoom settled): consumers
+	-- persist the position from this
+	this.Changed = Signal.new()
 	
 local mCamera = workspace.CurrentCamera
 	mCamera.CameraType = Enum.CameraType.Scriptable
@@ -108,6 +111,7 @@ local mCamera = workspace.CurrentCamera
 		task.delay(1, function()
 			mZoomRecordPending = false
 			JourneyRecorder:Record("NetmapZoom", tostring(math.floor(mZoomLevel)))
+			this.Changed:fire()
 		end)
 	end
 
@@ -194,6 +198,7 @@ local mCamera = workspace.CurrentCamera
 			local moved = mCurrentPosition - mPanStartPosition
 			JourneyRecorder:Record("NetmapPan", string.format("%d studs to %d,%d",
 				math.floor(moved.Magnitude), math.floor(mCurrentPosition.X), math.floor(mCurrentPosition.Z)))
+			this.Changed:fire()
 		elseif mIsPanning then
 			this.Clicked:fire(getUnitRay())
 		end
@@ -284,6 +289,10 @@ local mCamera = workspace.CurrentCamera
 		end
 	end)
 	
+	function this:GetState()
+		return mCurrentPosition, mZoomLevel
+	end
+
 	-- Journey playback: set the zoom level directly
 	function this:SetZoom(level)
 		mZoomLevel = math.clamp(level, MIN_ZOOM, MAX_ZOOM)
