@@ -6,6 +6,8 @@ local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
 task.wait()
 local s = game:GetService('StarterGui')
 s:SetCoreGuiEnabled(Enum.CoreGuiType.All, false)
+-- ...except chat: players should be able to talk to each other
+s:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
 
 local Player = game.Players.LocalPlayer
 local PlayerGui = Player:WaitForChild('PlayerGui')
