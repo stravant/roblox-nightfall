@@ -156,6 +156,23 @@ function NetworkController.install(remotes)
 		end
 	end)
 
+	-- Script placement gesture analytic (drag vs click flows). Whitelisted
+	-- values; capped per session so a spammy client can't burn the budget.
+	local kPlacementMethods = { drag = true, clickUnit = true, clickZone = true }
+	local kMaxPlacementReports = 300
+	local PlacementReportCounts = {}
+	remotes.PlacementMethod.OnServerEvent:connect(function(player, method)
+		if type(method) ~= "string" or not kPlacementMethods[method] then
+			return
+		end
+		local count = PlacementReportCounts[player] or 0
+		if count >= kMaxPlacementReports then
+			return
+		end
+		PlacementReportCounts[player] = count + 1
+		ServerStatistics:PlacementMethod(player, method)
+	end)
+
 	-- Post-tutorial wrap-up choice, for the explore-vs-battle split chart.
 	-- Whitelisted values, one report per player per session.
 	local kPostTutorialChoices = { explore = true, battle = true }
@@ -402,6 +419,7 @@ function NetworkController.install(remotes)
 		NodeRecordsCache[player] = nil
 		BadgeOwnershipCache[player] = nil
 		PostTutorialChoiceReported[player] = nil
+		PlacementReportCounts[player] = nil
 	end)
 
 	function MarketplaceService.ProcessReceipt(info)

@@ -1011,6 +1011,14 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		end)
 	end
 
+	-- Adhoc analytic: which gesture places scripts (drag vs the two click
+	-- flows). Server whitelists and caps.
+	local function reportPlacementMethod(method)
+		pcall(function()
+			game.ReplicatedStorage.Remotes.PlacementMethod:FireServer(method)
+		end)
+	end
+
 	-- Upload zone handling through the HUD: click a zone then a program to
 	-- place there, or click a program with NO zone selected to drop it onto
 	-- the first free spot (dragging remains the way to pick a specific spot)
@@ -1019,11 +1027,13 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			if not tryUploadProgram(id, mSelection.x, mSelection.y) then
 				return
 			end
+			reportPlacementMethod('clickZone')
 		elseif not gameState:IsGameStarted() then
 			for _, zone in pairs(mUploadZones) do
 				-- Free spots only: tryUploadProgram would happily REPLACE an
 				-- occupied zone's unit, which a blind click must not do
 				if not gameState:GetUnit(zone.x, zone.y) and tryUploadProgram(id, zone.x, zone.y) then
+					reportPlacementMethod('clickUnit')
 					return
 				end
 			end
@@ -1115,6 +1125,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			if x and y and tryUploadProgram(id, x, y) then
 				SoundManager:Play('SelectUnit')
 				mUnitInfoView:SetSelectedUnitDefinition(id)
+				reportPlacementMethod('drag')
 			end
 		end)
 	end

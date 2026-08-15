@@ -81,6 +81,17 @@ function ServerStatistics:PlayerBeatTutorial(playerOrId: any)
 	self:OnboardingStep(playerOrId, OnboardingSteps.TutorialBeaten)
 end
 
+-- Which gesture placed a script during setup: 'drag', 'clickUnit' (script
+-- clicked with no zone selected), or 'clickZone' (zone first, then script)
+function ServerStatistics:PlacementMethod(playerOrId: any, method: string)
+	local player = resolve(playerOrId)
+	if player then
+		try("PlacementMethod", function()
+			AnalyticsService:LogCustomEvent(player, "PlacementMethod", 1, context(method))
+		end)
+	end
+end
+
 -- Which path the player picked in the post-tutorial wrap-up chat:
 -- 'explore' (netmap) or 'battle' (straight into lm12). One custom event,
 -- split by the custom field.

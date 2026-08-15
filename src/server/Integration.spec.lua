@@ -239,6 +239,7 @@ return function(t)
 		GetBadges = mockRemoteFunction("GetBadges"),
 		SaveSettings = mockRemoteEvent("SaveSettings"),
 		PostTutorialChoice = mockRemoteEvent("PostTutorialChoice"),
+		PlacementMethod = mockRemoteEvent("PlacementMethod"),
 		JourneyEvents = mockRemoteEvent("JourneyEvents"),
 		GetJourneyList = mockRemoteFunction("GetJourneyList"),
 		GetJourney = mockRemoteFunction("GetJourney"),
@@ -987,6 +988,28 @@ return function(t)
 			end
 		end
 		t.expect(count).toBe(1)
+	end)
+
+	t.test("placement method reports log whitelisted custom events", function()
+		local player = makePlayer(9400, "Placer")
+		remotes.PlacementMethod:FireServer_TEST(player, "drag")
+		remotes.PlacementMethod:FireServer_TEST(player, "clickUnit")
+		remotes.PlacementMethod:FireServer_TEST(player, "clickZone")
+		remotes.PlacementMethod:FireServer_TEST(player, "drag")
+		remotes.PlacementMethod:FireServer_TEST(player, "teleport")
+		remotes.PlacementMethod:FireServer_TEST(player, 5)
+		local counts = {}
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Args[1] == "PlacementMethod"
+				and event.Player.UserId == 9400 then
+				local method = event.Args[3][Enum.AnalyticsCustomFieldKeys.CustomField01.Name]
+				counts[method] = (counts[method] or 0) + 1
+			end
+		end
+		t.expect(counts.drag).toBe(2)
+		t.expect(counts.clickUnit).toBe(1)
+		t.expect(counts.clickZone).toBe(1)
+		t.expect(counts.teleport).toBe(nil)
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()
