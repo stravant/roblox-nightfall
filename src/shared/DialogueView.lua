@@ -47,9 +47,10 @@ type DialogueState = {
 local function DialogueContent(props: DialogueState)
 	local touch = DeviceInfo.Touch
 
-	-- ChatBox geometry (the tutorial uses a compact corner box)
-	local chatBoxAnchor = Vector2.new(0.5, 0)
-	local chatBoxPosition = UDim2.new(0.5, 0, 0.5, -32)
+	-- ChatBox geometry: vertically centered (the tutorial overrides this
+	-- with a compact corner box)
+	local chatBoxAnchor = Vector2.new(0.5, 0.5)
+	local chatBoxPosition = UDim2.new(0.5, 0, 0.5, 0)
 	local chatBoxSize = UDim2.new(0, 480, 0, 190)
 	if props.tutorial then
 		chatBoxAnchor = Vector2.new(1, 1)
