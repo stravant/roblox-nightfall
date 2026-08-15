@@ -175,7 +175,11 @@ function JourneyPlayback.new(deps: any, record: any)
 	mBarGui.BackgroundTransparency = 1
 	mBarGui.ZIndex = 8
 
-	local mBar = StatefulRoot.create(mBarGui, ControlBar, {
+	-- Forward-declared: the callbacks below are created inside the create()
+	-- initializer, where a `local mBar = ...` would not be in scope yet and
+	-- they would capture a global nil instead
+	local mBar
+	mBar = StatefulRoot.create(mBarGui, ControlBar, {
 		timeText = "0:00.0",
 		tickerText = "Starting...",
 		speedText = "1x",
