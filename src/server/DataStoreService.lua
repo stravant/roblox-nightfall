@@ -266,14 +266,42 @@ end
 
 local JOURNEY_DATASTORE = 'journeys_v1'
 DataStoreService.JourneyStoreName = JOURNEY_DATASTORE
-local mJourneyStore = DataStore:GetDataStore(JOURNEY_DATASTORE)
 
--- Fire-and-forget (journeys are diagnostics, not player data)
+-- Journeys deliberately BYPASS UseMockData when the real service works:
+-- sessions recorded in Studio playtests must survive the playtest (the
+-- in-memory mock dies with the server), and Studio can then also browse
+-- the LIVE game's journeys. Falls back to the mock when the real service
+-- is unavailable (integration tests via the Services mock; Studio without
+-- API access enabled).
+local mJourneyStore
+do
+	local raw = Services:Get('DataStoreService')
+	if typeof(raw) == "Instance" then
+		local st, store = pcall(function()
+			return raw:GetDataStore(JOURNEY_DATASTORE)
+		end)
+		if st then
+			mJourneyStore = store
+		else
+			warn("DataStoreService | Journeys using the in-memory mock (enable"
+				.. " 'Studio Access to API Services' to persist them): " .. tostring(store))
+			mJourneyStore = MockDataStore:GetDataStore(JOURNEY_DATASTORE)
+		end
+	else
+		mJourneyStore = DataStore:GetDataStore(JOURNEY_DATASTORE)
+	end
+end
+
+-- Fire-and-forget (journeys are diagnostics, not player data), but tracked
+-- so WaitForSavesToComplete can drain them at shutdown
+local mJourneySavesInFlight = 0
 function DataStoreService:SaveJourney(key, record)
+	mJourneySavesInFlight += 1
 	task.spawn(function()
 		local st, err = pcall(function()
 			mJourneyStore:SetAsync(key, record)
 		end)
+		mJourneySavesInFlight -= 1
 		if not st then
 			warn("DataStoreService | Failed to save journey "..key.." because `"..tostring(err).."`.")
 		end
@@ -331,12 +359,12 @@ function DataStoreService:SaveReplay(replayString)
 end
 
 
--- Server shutdown (BindToClose): wait out any debounced writes still in
--- flight. Bounded well under BindToClose's 30 second allowance.
+-- Server shutdown (BindToClose): wait out any debounced player writes and
+-- in-flight journey writes. Bounded well under BindToClose's 30s allowance.
 function DataStoreService:WaitForSavesToComplete()
 	local deadline = os.clock() + 20
 	while os.clock() < deadline do
-		local busy = false
+		local busy = mJourneySavesInFlight > 0
 		for _, state in pairs(mSaveStates) do
 			if state.Pending ~= nil or state.Writing then
 				busy = true

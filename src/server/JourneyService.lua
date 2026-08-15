@@ -139,6 +139,20 @@ function JourneyService.install(remotes: any)
 			end
 		end
 	end)
+
+	-- Server shutdown (including Studio stop): flush every live session and
+	-- wait for the writes, or the tail of each session is lost. Only bound
+	-- in a running game — the test place installs repeatedly in edit mode.
+	if game:GetService("RunService"):IsRunning() then
+		game:BindToClose(function()
+			for _, session in pairs(mSessions) do
+				if #session.Record.Events > 0 then
+					saveSession(session)
+				end
+			end
+			DataStoreService:WaitForSavesToComplete()
+		end)
+	end
 end
 
 return JourneyService
