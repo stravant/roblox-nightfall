@@ -20,6 +20,7 @@ function ServerPlayerData.new(player, serialized)
 	
 	local mCredits;
 	local mSecurityLevel;
+	local mSettings;
 	local mUnitInventory;
 	local mNodeStatus;	
 	local mSkipsPurchased;
@@ -42,6 +43,7 @@ function ServerPlayerData.new(player, serialized)
 		mSkipsPurchased = serialized.SkipsPurchased or 0
 		mSkipsUsed = Copy.Deep(serialized.SkipsUsed or {})
 		mSkipPurchaseIds = Copy.Deep(serialized.SkipPurchaseIds or {})
+		mSettings = Copy.Deep(serialized.Settings or { SoundVolume = 1, MusicVolume = 1 })
 		mIsFirstTimeUser = false
 	else
 		mCredits = DebugFlags:GetInitialCredits()
@@ -62,6 +64,7 @@ function ServerPlayerData.new(player, serialized)
 		mSkipsPurchased = 0
 		mSkipsUsed = {}
 		mSkipPurchaseIds = {}
+		mSettings = { SoundVolume = 1, MusicVolume = 1 }
 		mIsFirstTimeUser = true
 	end
 	
@@ -81,6 +84,7 @@ function ServerPlayerData.new(player, serialized)
 		tb.SkipsPurchased = mSkipsPurchased
 		tb.SkipsUsed = Copy.Deep(mSkipsUsed)
 		tb.SkipPurchaseIds = Copy.Deep(mSkipPurchaseIds)
+		tb.Settings = Copy.Deep(mSettings)
 		if forClient then
 			tb.IsFirstTimeUser = mIsFirstTimeUser
 		end
@@ -98,6 +102,23 @@ function ServerPlayerData.new(player, serialized)
 	
 	function this:IsNewPlayer()
 		return mIsFirstTimeUser
+	end
+
+	-- Client preference settings (volumes). Returns whether anything changed
+	-- (the caller only saves when it did).
+	function this:ProcessSaveSettings(settings)
+		if type(settings) ~= "table"
+			or type(settings.SoundVolume) ~= "number"
+			or type(settings.MusicVolume) ~= "number" then
+			return false
+		end
+		local sound = math.clamp(settings.SoundVolume, 0, 3)
+		local music = math.clamp(settings.MusicVolume, 0, 3)
+		if mSettings.SoundVolume == sound and mSettings.MusicVolume == music then
+			return false
+		end
+		mSettings = { SoundVolume = sound, MusicVolume = music }
+		return true
 	end
 	
 	local function addUnit(id)

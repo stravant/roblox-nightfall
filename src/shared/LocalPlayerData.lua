@@ -10,6 +10,7 @@ LocalPlayerData.SkipsChanged = Signal.new()
 local mNodeInfo = nil
 local mUnitInventory = nil
 local mCredits = nil
+local mSettings = nil
 local mSecurityLevel = nil
 local mSkipsUsed = nil
 local mSkipsAvailable = nil
@@ -45,6 +46,7 @@ function LocalPlayerData:Load()
 	mSkipsAvailable = (data.SkipsPurchased or 0) - mSkipsUsed
 	
 	mIsFirstTimeUser = data.IsFirstTimeUser
+	mSettings = data.Settings
 
 	-- Fill in the missing nodes	
 	for id, node in pairs(Netmap.ById) do
@@ -79,6 +81,12 @@ function LocalPlayerData:UseSkip()
 	mSkipsAvailable = mSkipsAvailable - 1
 	LocalPlayerData.SkipsChanged:fire()
 end
+-- Persisted client preference settings ({SoundVolume, MusicVolume}), nil
+-- until loaded
+function LocalPlayerData:GetSettings()
+	return mSettings
+end
+
 function LocalPlayerData:GetSkips()
 	return mSkipsAvailable, mSkipsUsed
 end

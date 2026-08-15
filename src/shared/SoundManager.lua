@@ -64,7 +64,13 @@ local function buildSoundFolder(): Folder
 	return folder
 end
 
+local Signal = require(game.ReplicatedStorage.Signal)
+
 local SoundManager = {}
+
+-- Fires whenever a volume slider changes either volume (Setup persists the
+-- values to the save, throttled)
+SoundManager.VolumesChanged = Signal.new()
 
 local mInstalled = false
 local mFolder = buildSoundFolder()
@@ -103,6 +109,19 @@ function SoundManager:GetSoundEffectVolume(): number
 	return mSoundEffectVolume
 end
 
+function SoundManager:GetVolumes(): (number, number)
+	return mSoundEffectVolume, mMusicVolume
+end
+
+-- Apply persisted volumes (on load, BEFORE the menu sliders are built: they
+-- read the current volumes when added)
+function SoundManager:SetVolumes(soundVolume: number, musicVolume: number)
+	mSoundEffectVolume = math.clamp(soundVolume, 0, 3)
+	mMusicVolume = math.clamp(musicVolume, 0, 3);
+	(mFolder :: any).SoundEffectGroup.Volume = mSoundEffectVolume;
+	(mFolder :: any).MusicGroup.Volume = mMusicVolume
+end
+
 local mSliderCns: { [any]: any } = {}
 
 local function posToVolume(sliderValue: number): number
@@ -125,6 +144,7 @@ function SoundManager:AddMusicSlider(slider: any)
 	mSliderCns[slider] = slider.Changed:connect(function(value: number)
 		mMusicVolume = posToVolume(value);
 		(mFolder :: any).MusicGroup.Volume = mMusicVolume
+		SoundManager.VolumesChanged:fire()
 	end)
 end
 
@@ -133,6 +153,7 @@ function SoundManager:AddSoundSlider(slider: any)
 	mSliderCns[slider] = slider.Changed:connect(function(value: number)
 		mSoundEffectVolume = posToVolume(value);
 		(mFolder :: any).SoundEffectGroup.Volume = mSoundEffectVolume
+		SoundManager.VolumesChanged:fire()
 		if not (mFolder :: any).SelectUnit.Playing then
 			(mFolder :: any).SelectUnit:Play()
 		end

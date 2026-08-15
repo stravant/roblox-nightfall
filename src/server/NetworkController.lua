@@ -156,6 +156,18 @@ function NetworkController.install(remotes)
 		end
 	end)
 
+	-- Client preference settings (volumes), stored with the save. The client
+	-- throttles sends; the debounced save coalesces the writes.
+	remotes.SaveSettings.OnServerEvent:connect(function(player, settings)
+		local playerData = PlayerDataCache[player]
+		if not playerData then
+			return
+		end
+		if playerData:ProcessSaveSettings(settings) then
+			DataStoreService:SavePlayerDataAsync(player, playerData)
+		end
+	end)
+
 	remotes.Load.OnServerInvoke = function(player)
 		local success, playerData = DataStoreService:LoadPlayerDataAsync(player)
 		if success then

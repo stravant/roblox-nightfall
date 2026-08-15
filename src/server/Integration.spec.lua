@@ -237,6 +237,7 @@ return function(t)
 		ServerError = mockRemoteEvent("ServerError"),
 		GetNodeRecords = mockRemoteFunction("GetNodeRecords"),
 		GetBadges = mockRemoteFunction("GetBadges"),
+		SaveSettings = mockRemoteEvent("SaveSettings"),
 		JourneyEvents = mockRemoteEvent("JourneyEvents"),
 		GetJourneyList = mockRemoteFunction("GetJourneyList"),
 		GetJourney = mockRemoteFunction("GetJourney"),
@@ -890,6 +891,24 @@ return function(t)
 		if not ok then
 			error(err, 0)
 		end
+	end)
+
+	t.test("volume settings persist in the save data", function()
+		local player = makePlayer(9100, "AudioTweaker")
+		local loaded = remotes.Load:InvokeServer_TEST(player)
+		-- Defaults for a fresh player
+		t.expect(loaded.Settings.SoundVolume).toBe(1)
+		t.expect(loaded.Settings.MusicVolume).toBe(1)
+
+		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = 0.25, MusicVolume = 2 })
+		-- Garbage and out-of-range input is rejected or clamped
+		remotes.SaveSettings:FireServer_TEST(player, "junk")
+		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = "loud" })
+		playerLeaves(player)
+
+		local rejoined = remotes.Load:InvokeServer_TEST(makePlayer(9100, "AudioTweaker"))
+		t.expect(rejoined.Settings.SoundVolume).toBe(0.25)
+		t.expect(rejoined.Settings.MusicVolume).toBe(2)
 	end)
 
 	t.test("leaving before loading counts as a bounce", function()

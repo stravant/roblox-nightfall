@@ -2,6 +2,7 @@
 local MainView = require(game.ReplicatedStorage.MainView)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
 local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
+local SoundManager = require(game.ReplicatedStorage.SoundManager)
 
 task.wait()
 local s = game:GetService('StarterGui')
@@ -20,6 +21,31 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 if not LocalPlayerData:Load() then
 
+end
+
+-- Volume settings live in the save data. Apply BEFORE MainView builds the
+-- menu (the sliders read the current volumes when added), and persist
+-- changes throttled so slider drags coalesce into one send.
+do
+	local settings = LocalPlayerData:GetSettings()
+	if settings and settings.SoundVolume and settings.MusicVolume then
+		SoundManager:SetVolumes(settings.SoundVolume, settings.MusicVolume)
+	end
+	local pendingSend = false
+	SoundManager.VolumesChanged:connect(function()
+		if pendingSend then
+			return
+		end
+		pendingSend = true
+		task.delay(2, function()
+			pendingSend = false
+			local sound, music = SoundManager:GetVolumes()
+			game.ReplicatedStorage.Remotes.SaveSettings:FireServer({
+				SoundVolume = sound,
+				MusicVolume = music,
+			})
+		end)
+	end)
 end
 
 -- Debug checkpoint picker: jump straight to the first entry of a security
