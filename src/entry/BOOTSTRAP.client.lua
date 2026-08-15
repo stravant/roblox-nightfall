@@ -87,6 +87,25 @@ end)
 spawn(function()
 	game:GetService('ContentProvider'):PreloadAsync(NiceToHavePreloadList)
 end)
+
+-- PreloadAsync only fetches assets into the content cache: the engine still
+-- decodes and uploads a texture the first time it's actually RENDERED,
+-- which shows as pop-in. Render every image as a near-invisible 1x1 pixel
+-- in a corner, and keep the gui alive so the textures stay resident.
+local warmup = Instance.new('ScreenGui')
+warmup.Name = 'ImageWarmup'
+warmup.ResetOnSpawn = false
+warmup.DisplayOrder = -100
+for _, id in pairs(NiceToHavePreloadList) do
+	local img = Instance.new('ImageLabel')
+	img.BackgroundTransparency = 1
+	img.ImageTransparency = 0.99 -- fully transparent risks being culled unrendered
+	img.Size = UDim2.new(0, 1, 0, 1)
+	img.Position = UDim2.new(0, 0, 1, -1)
+	img.Image = id
+	img.Parent = warmup
+end
+warmup.Parent = game.Players.LocalPlayer:WaitForChild('PlayerGui')
 -- Straight onto the netmap: no click-to-continue gate. (Setup holds the
 -- title screen open itself when the debug checkpoint picker is showing.)
 LoadingGui.Content.TitleImage.LoadingText.Text = "Connecting..."
