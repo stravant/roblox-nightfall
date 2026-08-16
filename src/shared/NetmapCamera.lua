@@ -237,7 +237,13 @@ local mCamera = workspace.CurrentCamera
 		end
 	end
 	
-	UserInputService.InputBegan:Connect(function(inputObject)
+	UserInputService.InputBegan:Connect(function(inputObject, gameProcessed)
+		if gameProcessed then
+			-- CoreGui (chat, topbar) or game UI handled this press: never
+			-- start a camera gesture underneath it. Gestures already in
+			-- flight still see Changed/Ended so they can't get stuck.
+			return
+		end
 		if inputObject.UserInputType == Enum.UserInputType.MouseButton1 or inputObject.UserInputType == Enum.UserInputType.Touch then
 			button1Down(inputObject)
 		end
@@ -250,10 +256,15 @@ local mCamera = workspace.CurrentCamera
 			button1Up()
 		end
 	end)
-	UserInputService.InputChanged:Connect(function(inputObject: InputObject)
+	UserInputService.InputChanged:Connect(function(inputObject: InputObject, gameProcessed: boolean)
 		if inputObject.UserInputType == Enum.UserInputType.MouseWheel then
-			handleWheel(inputObject.Position.Z)
+			-- Scrolling over UI (e.g. the chat window) must not zoom the map
+			if not gameProcessed then
+				handleWheel(inputObject.Position.Z)
+			end
 		elseif inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+			-- Movement deliberately NOT gated on gameProcessed: a pan in
+			-- flight must keep tracking while the pointer crosses UI
 			mousePan(inputObject)
 		elseif inputObject.UserInputType == Enum.UserInputType.Touch then
 			if inputObject == mDownInput then
