@@ -59,6 +59,45 @@ local kPopupNodeCenterY = 6
 local kBackingWidthTrimPx = 6
 local kBackingHeightTrimPx = 6
 
+-- Link-flow texture, drawn in code with an EditableImage so the art can be
+-- iterated freely without uploading assets: a comet-like tracer (quadratic
+-- ramp up to a bright head, then a sharp falloff) that the beams scroll
+-- from the source node toward the target. White so Beam.Color tints it.
+local mFlowContent: any = nil
+local function getFlowContent()
+	if mFlowContent == nil then
+		local ok, result = pcall(function()
+			local image = game:GetService("AssetService"):CreateEditableImage({
+				Size = Vector2.new(64, 16),
+			})
+			local buf = buffer.create(64 * 16 * 4)
+			for y = 0, 15 do
+				local v = (y - 7.5) / 7.5
+				local widthFade = math.exp(-v * v * 3)
+				for x = 0, 63 do
+					local intensity
+					if x <= 48 then
+						local u = x / 48
+						intensity = u * u
+					else
+						intensity = math.max(0, 1 - (x - 48) / 6)
+					end
+					local index = (y * 64 + x) * 4
+					buffer.writeu8(buf, index, 255)
+					buffer.writeu8(buf, index + 1, 255)
+					buffer.writeu8(buf, index + 2, 255)
+					buffer.writeu8(buf, index + 3, math.floor(intensity * widthFade * 255 + 0.5))
+				end
+			end
+			image:WritePixelsBuffer(Vector2.zero, Vector2.new(64, 16), buf)
+			return Content.fromObject(image)
+		end)
+		-- false = unavailable (old engine / budget): links stay static
+		mFlowContent = if ok then result else false
+	end
+	return if mFlowContent then mFlowContent else nil
+end
+
 -- `topbarCredits` is MainView's topbar credits interface: SetText(text) and
 -- GetInset() (the sunken frame the fly-away delta text animates inside)
 function Netmap3DView.new(topbarCredits)
@@ -262,9 +301,38 @@ function Netmap3DView.new(topbarCredits)
 		beam.Color = ColorSequence.new(Color3.new(1, 0, 0))
 		beam.Width0 = 0.5
 		beam.Width1 = 0.5
-		
+
+		-- Moving flow overlay on top of the solid line: tracers scrolling
+		-- from this (source) node toward the target
+		local flowBeam = nil
+		local flowContent = getFlowContent()
+		if flowContent then
+			local ok = pcall(function()
+				flowBeam = Instance.new("Beam")
+				flowBeam.Attachment0 = attach0
+				flowBeam.Attachment1 = attach1
+				flowBeam.Width0 = 1.1
+				flowBeam.Width1 = 1.1
+				flowBeam.Color = ColorSequence.new(Color3.new(1, 0.55, 0.45))
+				flowBeam.LightEmission = 1
+				flowBeam.Transparency = NumberSequence.new(0)
+				flowBeam.TextureMode = Enum.TextureMode.Wrap
+				flowBeam.TextureLength = 9
+				flowBeam.TextureSpeed = 4
+				flowBeam.TextureContent = flowContent
+				flowBeam.Parent = mConnectionsContainer
+			end)
+			if not ok then
+				if flowBeam then
+					flowBeam:Destroy()
+				end
+				flowBeam = nil
+			end
+		end
+
 		nodeView.AdjacentLinks[adjId] = {
 			Beam = beam;
+			FlowBeam = flowBeam;
 		}
 	end
 	
@@ -278,6 +346,13 @@ function Netmap3DView.new(topbarCredits)
 				beam.Transparency = NumberSequence.new(0.55)
 				beam.Width0 = 0.9
 				beam.Width1 = 0.9
+				if beamView.FlowBeam then
+					-- Calmer flow on beaten links: green tracers, ambling
+					beamView.FlowBeam.Color = ColorSequence.new(Color3.new(0.5, 1, 0.6))
+					beamView.FlowBeam.TextureSpeed = 1.5
+					beamView.FlowBeam.Width0 = 1.3
+					beamView.FlowBeam.Width1 = 1.3
+				end
 			end
 		end
 	end
