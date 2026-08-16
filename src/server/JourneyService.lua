@@ -127,6 +127,8 @@ function JourneyService.install(remotes: any)
 					UserId = record.UserId,
 					Name = record.Name,
 					Start = record.Start,
+					Ended = record.Ended,
+					LastUpdate = record.LastUpdate,
 					EventCount = #events,
 					Duration = if last then last[1] else 0,
 				})

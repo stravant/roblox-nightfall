@@ -892,6 +892,10 @@ return function(t)
 			t.expect(mine.Name).toBe("JourneyedPlayer")
 			t.expect(mine.EventCount).toBe(4)
 			t.expect(mine.Duration).toBe(15)
+			-- The SUMMARY carries the completion status (the viewer's tags
+			-- read these, not the store record)
+			t.expect(mine.Ended ~= nil).toBeTruthy()
+			t.expect(mine.LastUpdate ~= nil).toBeTruthy()
 
 			local record = remotes.GetJourney:InvokeServer_TEST(viewer, mine.Key)
 			t.expect(#record.Events).toBe(4)
