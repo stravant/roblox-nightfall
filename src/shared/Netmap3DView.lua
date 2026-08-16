@@ -874,19 +874,27 @@ function Netmap3DView.new(topbarCredits)
 		end
 	end
 
-	-- Idle animations drawing attention to clickable nodes: each node TYPE
-	-- animates its "Animate" parts its own way while the node is interesting
-	-- (accessible warez, or accessible and unbeaten); rest poses restore the
-	-- moment it stops being. The final node keeps its particle effect and hq
-	-- has no Animate folder, so neither shows up here.
+	-- Idle animations for every REVEALED node (beaten ones too — the living
+	-- netmap is the point): each node TYPE animates its "Animate" parts its
+	-- own way. All part movement goes through one BulkMoveTo per frame. The
+	-- final node keeps its particle effect and hq has no Animate folder, so
+	-- neither shows up here.
 	local kGlintCycle = 2.2 -- seconds per full shop glint sequence
 	local kGlintStagger = 0.45 -- offset between the three signs
 	local kGlintLength = 0.3 -- how long each sign glows
+	local mBulkParts = {}
+	local mBulkCFrames = {}
+	local function pushMove(part, cframe)
+		table.insert(mBulkParts, part)
+		table.insert(mBulkCFrames, cframe)
+	end
 	local function animateNodeIdles(t)
+		table.clear(mBulkParts)
+		table.clear(mBulkCFrames)
 		for id, nodeView in pairs(mNodeView) do
 			local parts = nodeView.AnimateParts
 			if parts then
-				if nodeView.Seen and isInterestingNode(nodeView) then
+				if nodeView.Seen then
 					nodeView.AnimPlaying = true
 					local kind = id:sub(1, 2)
 					local seed = nodeView.AnimSeed
@@ -894,10 +902,10 @@ function Netmap3DView.new(topbarCredits)
 						-- The rings drift slightly, each on its own phase
 						for i, entry in pairs(parts) do
 							local phase = seed + i * 2.1
-							entry.Part.CFrame = entry.Base * CFrame.new(
+							pushMove(entry.Part, entry.Base * CFrame.new(
 								math.sin(t * 0.7 + phase) * 0.15,
 								math.sin(t * 0.9 + phase * 1.7) * 0.1,
-								math.cos(t * 0.8 + phase) * 0.15)
+								math.cos(t * 0.8 + phase) * 0.15))
 						end
 					elseif kind == 'lm' then
 						-- Sporadic sideways glances: smooth noise cubed, so
@@ -906,44 +914,73 @@ function Netmap3DView.new(topbarCredits)
 						local noise = math.clamp(math.noise(t * 0.45, seed) * 2.5, -1, 1)
 						local angle = noise * noise * noise * math.rad(35)
 						for _, entry in pairs(parts) do
-							entry.Part.CFrame = entry.Base * CFrame.Angles(0, angle, 0)
+							pushMove(entry.Part, entry.Base * CFrame.Angles(0, angle, 0))
 						end
 					elseif kind == 'ca' then
 						-- The globe turns about its axis
 						for _, entry in pairs(parts) do
-							entry.Part.CFrame = entry.Base * CFrame.Angles(0, t * 0.6, 0)
+							pushMove(entry.Part, entry.Base * CFrame.Angles(0, t * 0.6, 0))
 						end
 					elseif kind == 'dr' then
 						-- The whole donut floats up and down
 						local bob = math.sin(t * 1.4 + seed) * 0.25
 						for _, entry in pairs(parts) do
-							entry.Part.CFrame = entry.Base + Vector3.new(0, bob, 0)
+							pushMove(entry.Part, entry.Base + Vector3.new(0, bob, 0))
 						end
 					elseif kind == 'wz' then
-						-- The dollar signs glint one after the other
+						-- The dollar signs glint one after the other: a
+						-- billboard sparkle pulsing over each sign in turn
+						-- (world-sized, so it scales with zoom)
 						local cycle = (t + seed) % kGlintCycle
 						for i, entry in pairs(parts) do
-							local start = (i - 1) * kGlintStagger
-							local glinting = cycle >= start and cycle < start + kGlintLength
-							entry.Part.Material = if glinting then Enum.Material.Neon else entry.Material
+							if not entry.Glint then
+								local gui = Instance.new("BillboardGui")
+								gui.Name = "Glint"
+								gui.Size = UDim2.new(3, 0, 3, 0)
+								gui.StudsOffset = Vector3.new(0.3, 0.6, 0)
+								gui.LightInfluence = 0
+								gui.Parent = entry.Part
+								local image = Instance.new("ImageLabel")
+								image.BackgroundTransparency = 1
+								image.Size = UDim2.new(1, 0, 1, 0)
+								image.Image = "rbxasset://textures/particles/sparkles_main.dds"
+								image.ImageTransparency = 1
+								image.Parent = gui
+								entry.Glint = image
+							end
+							local progress = (cycle - (i - 1) * kGlintStagger) / kGlintLength
+							if progress >= 0 and progress < 1 then
+								-- One soft pulse with a twirl
+								local pulse = math.sin(progress * math.pi)
+								entry.Glint.ImageTransparency = 1 - pulse * 0.9
+								entry.Glint.Rotation = progress * 90
+							elseif entry.Glint.ImageTransparency < 1 then
+								entry.Glint.ImageTransparency = 1
+							end
 						end
 					elseif kind == 'pd' then
 						-- Only the gavel turns (the chair shares the folder)
 						for _, entry in pairs(parts) do
 							if entry.Part.Name == "Gavel" then
-								entry.Part.CFrame = entry.Base * CFrame.Angles(0, t * 0.9, 0)
+								pushMove(entry.Part, entry.Base * CFrame.Angles(0, t * 0.9, 0))
 							end
 						end
 					end
 				elseif nodeView.AnimPlaying then
-					-- Restore the rest pose once when animation stops
+					-- Restore the rest pose once when the node un-reveals
 					nodeView.AnimPlaying = false
 					for _, entry in pairs(parts) do
-						entry.Part.CFrame = entry.Base
+						pushMove(entry.Part, entry.Base)
 						entry.Part.Material = entry.Material
+						if entry.Glint then
+							entry.Glint.ImageTransparency = 1
+						end
 					end
 				end
 			end
+		end
+		if #mBulkParts > 0 then
+			workspace:BulkMoveTo(mBulkParts, mBulkCFrames, Enum.BulkMoveMode.FireCFrameChanged)
 		end
 	end
 
