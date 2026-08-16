@@ -173,8 +173,11 @@ function Netmap3DView.new(topbarCredits)
 	-- The authored SecurityKey mesh is ~12.6 studs long; shrink it to node
 	-- scale. It floats to the node's SCREEN-right: the netmap camera's yaw
 	-- is a fixed 45 degrees, so screen-right is the world (1, 0, -1) diagonal.
-	local kSecurityKeyScale = 0.45
-	local kSecurityKeyOffset = Vector3.new(1, 0, -1).Unit * 6 + Vector3.new(0, 3.8, 0)
+	local kSecurityKeyScale = 0.9
+	-- Far enough right that the doubled key's spin sweep clears the node
+	-- geometry, and high enough that the teeth clear the ground at the
+	-- bottom of the bob
+	local kSecurityKeyOffset = Vector3.new(1, 0, -1).Unit * 7.5 + Vector3.new(0, 6.4, 0)
 
 	-- Generous invisible hit cylinders so hovers/clicks can't miss a node.
 	-- They live in their own folder rather than inside the node models: the
@@ -250,8 +253,10 @@ function Netmap3DView.new(topbarCredits)
 			end
 
 			-- Nodes whose win grants the next security level float a key
-			-- beside them until claimed (upgradeSecurity nodes, plus the
-			-- booby-trapped beginNightfall node = the level-5 gate)
+			-- beside them (upgradeSecurity nodes, plus the booby-trapped
+			-- beginNightfall node = the level-5 gate). Always shown - on
+			-- undiscovered and beaten nodes too - so the progression path
+			-- through the netmap reads at a glance.
 			local securityKey = nil
 			local nodeFunction = Netmap.ById[id]
 				and Netmap.ById[id].Conversation
@@ -265,6 +270,7 @@ function Netmap3DView.new(topbarCredits)
 				securityKey.CanQuery = false -- decorative: never blocks node hover raycasts
 				securityKey.Size = SECURITY_KEY_TEMPLATE.Size * kSecurityKeyScale
 				securityKey.CFrame = CFrame.new(cf.Position + kSecurityKeyOffset)
+				securityKey.Parent = mNetmapModel
 			end
 
 			mNodeView[id] = {
@@ -628,10 +634,6 @@ function Netmap3DView.new(topbarCredits)
 	local function applyNodeState(nodeView)
 		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
-		if nodeView.SecurityKey then
-			-- The key hangs around until the upgrade is claimed
-			nodeView.SecurityKey.Parent = (nodeView.Seen and not nodeView.Beaten) and mNetmapModel or nil
-		end
 		-- The enlarged hit cylinder only intercepts hovers/clicks once the
 		-- node is actually interactable (normalized: the and-chain can yield
 		-- nil, which is not assignable to a boolean property)
