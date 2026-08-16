@@ -54,10 +54,23 @@ type ViewerState = {
 	onWatch: () -> (),
 }
 
+-- Completed records carry Ended; without it, recent activity means the
+-- session is live right now, staleness means it ended without a final
+-- flush (crash / server death)
+local function statusTag(summary: any): string
+	if summary.Ended then
+		return ""
+	end
+	if summary.LastUpdate and os.time() - summary.LastUpdate < 90 then
+		return "  [LIVE]"
+	end
+	return "  [unfinished]"
+end
+
 local function sessionRow(summary: any, i: number, onPick: (key: string, title: string) -> ())
-	local title = string.format("%s  %s  (%d ev, %s)",
+	local title = string.format("%s  %s  (%d ev, %s)%s",
 		formatDate(summary.Start or 0), summary.Name or "?", summary.EventCount or 0,
-		formatClock(summary.Duration or 0))
+		formatClock(summary.Duration or 0), statusTag(summary))
 	return e("TextButton", {
 		LayoutOrder = i,
 		Size = UDim2.new(1, -18, 0, 20),

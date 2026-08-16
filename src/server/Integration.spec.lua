@@ -859,7 +859,22 @@ return function(t)
 			-- Garbage batches are ignored outright
 			remotes.JourneyEvents:FireServer_TEST(player, "not a table")
 			remotes.JourneyEvents:FireServer_TEST(player, { { "bad", 123 } })
+
+			-- Mid-session the stored record is marked ongoing (no Ended)
+			local midKey = nil
+			for _, key in pairs(DataStoreService:ListJourneyKeys(50)) do
+				local record = DataStoreService:GetJourney(key)
+				if record and record.UserId == 9000 then
+					midKey = key
+					t.expect(record.Ended).toBe(nil)
+					t.expect(record.LastUpdate ~= nil).toBeTruthy()
+				end
+			end
+			t.expect(midKey ~= nil).toBeTruthy()
+
 			playerLeaves(player) -- flushes the session to the store
+			-- ...and the final flush marks it completed
+			t.expect(DataStoreService:GetJourney(midKey).Ended ~= nil).toBeTruthy()
 
 			-- The viewer (and only the viewer) can list and read it
 			local outsider = makePlayer(9002, "Nosy")

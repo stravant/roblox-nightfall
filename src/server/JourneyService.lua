@@ -59,8 +59,15 @@ function JourneyService.install(remotes: any)
 		return session
 	end
 
-	local function saveSession(session)
+	-- ended: this is the session's FINAL save (player left / server closing).
+	-- Completed records carry Ended; ongoing ones only LastUpdate, so the
+	-- viewer can distinguish completed / live / cut-off-without-a-final-save.
+	local function saveSession(session, ended)
 		session.LastSave = os.clock()
+		session.Record.LastUpdate = os.time()
+		if ended then
+			session.Record.Ended = os.time()
+		end
 		DataStoreService:SaveJourney(session.Key, session.Record)
 	end
 
@@ -150,7 +157,7 @@ function JourneyService.install(remotes: any)
 		if session then
 			mSessions[player] = nil
 			if #session.Record.Events > 0 then
-				saveSession(session)
+				saveSession(session, true)
 			end
 		end
 	end)
@@ -162,7 +169,7 @@ function JourneyService.install(remotes: any)
 		game:BindToClose(function()
 			for _, session in pairs(mSessions) do
 				if #session.Record.Events > 0 then
-					saveSession(session)
+					saveSession(session, true)
 				end
 			end
 			DataStoreService:WaitForSavesToComplete()
