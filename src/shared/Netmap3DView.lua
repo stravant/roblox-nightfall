@@ -903,9 +903,9 @@ function Netmap3DView.new(topbarCredits)
 						for i, entry in pairs(parts) do
 							local phase = seed + i * 2.1
 							pushMove(entry.Part, entry.Base * CFrame.new(
-								math.sin(t * 0.7 + phase) * 0.15,
-								math.sin(t * 0.9 + phase * 1.7) * 0.1,
-								math.cos(t * 0.8 + phase) * 0.15))
+								math.sin(t * 1.1 + phase) * 0.15,
+								math.sin(t * 1.4 + phase * 1.7) * 0.1,
+								math.cos(t * 1.25 + phase) * 0.15))
 						end
 					elseif kind == 'lm' then
 						-- Sporadic sideways glances: smooth noise cubed, so
@@ -919,7 +919,7 @@ function Netmap3DView.new(topbarCredits)
 					elseif kind == 'ca' then
 						-- The globe turns about its axis
 						for _, entry in pairs(parts) do
-							pushMove(entry.Part, entry.Base * CFrame.Angles(0, t * 0.6, 0))
+							pushMove(entry.Part, entry.Base * CFrame.Angles(0, t * 0.25, 0))
 						end
 					elseif kind == 'dr' then
 						-- The whole donut floats up and down
