@@ -14,6 +14,7 @@ local MainMenuView = require(game.ReplicatedStorage.MainMenuView)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local OnboardingSteps = require(game.ReplicatedStorage.OnboardingSteps)
 local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
+local NightfallLighting = require(game.ReplicatedStorage.NightfallLighting)
 local JourneyViewerView = require(game.ReplicatedStorage.JourneyViewerView)
 local JourneyPlayback = require(game.ReplicatedStorage.JourneyPlayback)
 local React = require(game.ReplicatedStorage.Packages.React)
@@ -723,9 +724,10 @@ function MainView.new()
 				elseif f.Type == 'beginNightfall' then
 					LocalPlayerData:SetSecurityLevel(5)
 					mNetmapView:SetNodeBeaten('ph45') -- Special case, do this to show the access to the boss node
-					-- TODO:
+					-- The net goes dark until Dignity's node is beaten
+					NightfallLighting:SetActive(true)
 				elseif f.Type == 'endNightfall' then
-					-- TODO:
+					NightfallLighting:SetActive(false)
 				else
 					error("Bad function type: "..tostring(f.Type))
 				end
@@ -869,6 +871,9 @@ function MainView.new()
 	end)
 	
 	updateNextBattleButton()
+
+	-- Rejoining mid-nightfall: the net is already dark, no transition
+	NightfallLighting:SetActive(LocalPlayerData:IsNightfallActive(), true)
 
 	if not LocalPlayerData:HasBeatenNode('hq') then
 		spawn(function()

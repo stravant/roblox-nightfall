@@ -288,4 +288,12 @@ function LocalPlayerData:GetSecurityLevel()
 	return mSecurityLevel
 end
 
+-- Nightfall is live between the booby-trapped node springing it (the
+-- beginNightfall trigger raises the security level to 5) and Dignity's
+-- final node being beaten. Derived rather than stored, so it needs no
+-- save-data field and stays correct on rejoin.
+function LocalPlayerData:IsNightfallActive()
+	return mSecurityLevel >= 5 and not self:HasBeatenNode('end')
+end
+
 return LocalPlayerData

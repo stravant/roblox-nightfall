@@ -205,13 +205,15 @@ function ServerPlayerData.new(player, serialized)
 				mCredits = mCredits + f.Amount
 				ServerStatistics:CreditsEarned(player, f.Amount, mCredits, "StoryReward")
 			elseif f.Type == 'beginNightfall' then
-				-- Nightfall's arrival is the level 5 "upgrade"
+				-- Nightfall's arrival is the level 5 "upgrade". The nightfall
+				-- state itself needs no save field: it's derived from the
+				-- level + the final node's beaten flag (both saved here), see
+				-- LocalPlayerData:IsNightfallActive
 				mSecurityLevel = 5
 				ServerStatistics:SecurityLevelReached(player, 5)
 				BadgeAwarder:Award(player, "SecurityClearance5")
-				-- TODO:
 			elseif f.Type == 'endNightfall' then
-				-- TODO:
+				-- Ending nightfall is fully derived too ('end' becomes beaten)
 			else
 				error("Bad function type: "..tostring(f.Type))
 			end
