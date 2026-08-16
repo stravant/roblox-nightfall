@@ -202,6 +202,28 @@ function Netmap3DView.new(topbarCredits)
 			hitArea.Parent = mHitAreasContainer
 			mNodeModelToNodeIdMap[hitArea] = id
 
+			-- Idle-animation parts: whatever the designer placed under the
+			-- model's "Animate" folder, with rest poses captured post-pivot.
+			-- Sorted by X so sequenced animations (the shop's glint) have a
+			-- deterministic order.
+			local animateParts = nil
+			local animateFolder = visibleModel:FindFirstChild("Animate")
+			if animateFolder then
+				animateParts = {}
+				for _, part in pairs(animateFolder:GetDescendants()) do
+					if part:IsA("BasePart") then
+						table.insert(animateParts, {
+							Part = part,
+							Base = part.CFrame,
+							Material = part.Material,
+						})
+					end
+				end
+				table.sort(animateParts, function(a, b)
+					return a.Base.Position.X < b.Base.Position.X
+				end)
+			end
+
 			mNodeView[id] = {
 				Id = id;
 				CFrame = cf;
@@ -210,6 +232,8 @@ function Netmap3DView.new(topbarCredits)
 				VisibleModel = visibleModel;
 				DisabledModel = disabledModel;
 				HitArea = hitArea;
+				AnimateParts = animateParts;
+				AnimSeed = math.random() * 100;
 			}
 			ch:Destroy()
 		end
@@ -850,6 +874,79 @@ function Netmap3DView.new(topbarCredits)
 		end
 	end
 
+	-- Idle animations drawing attention to clickable nodes: each node TYPE
+	-- animates its "Animate" parts its own way while the node is interesting
+	-- (accessible warez, or accessible and unbeaten); rest poses restore the
+	-- moment it stops being. The final node keeps its particle effect and hq
+	-- has no Animate folder, so neither shows up here.
+	local kGlintCycle = 2.2 -- seconds per full shop glint sequence
+	local kGlintStagger = 0.45 -- offset between the three signs
+	local kGlintLength = 0.3 -- how long each sign glows
+	local function animateNodeIdles(t)
+		for id, nodeView in pairs(mNodeView) do
+			local parts = nodeView.AnimateParts
+			if parts then
+				if nodeView.Seen and isInterestingNode(nodeView) then
+					nodeView.AnimPlaying = true
+					local kind = id:sub(1, 2)
+					local seed = nodeView.AnimSeed
+					if kind == 'ph' then
+						-- The rings drift slightly, each on its own phase
+						for i, entry in pairs(parts) do
+							local phase = seed + i * 2.1
+							entry.Part.CFrame = entry.Base * CFrame.new(
+								math.sin(t * 0.7 + phase) * 0.15,
+								math.sin(t * 0.9 + phase * 1.7) * 0.1,
+								math.cos(t * 0.8 + phase) * 0.15)
+						end
+					elseif kind == 'lm' then
+						-- Sporadic sideways glances: smooth noise cubed, so
+						-- the head dwells facing forward and occasionally
+						-- swings aside
+						local noise = math.clamp(math.noise(t * 0.45, seed) * 2.5, -1, 1)
+						local angle = noise * noise * noise * math.rad(35)
+						for _, entry in pairs(parts) do
+							entry.Part.CFrame = entry.Base * CFrame.Angles(0, angle, 0)
+						end
+					elseif kind == 'ca' then
+						-- The globe turns about its axis
+						for _, entry in pairs(parts) do
+							entry.Part.CFrame = entry.Base * CFrame.Angles(0, t * 0.6, 0)
+						end
+					elseif kind == 'dr' then
+						-- The whole donut floats up and down
+						local bob = math.sin(t * 1.4 + seed) * 0.25
+						for _, entry in pairs(parts) do
+							entry.Part.CFrame = entry.Base + Vector3.new(0, bob, 0)
+						end
+					elseif kind == 'wz' then
+						-- The dollar signs glint one after the other
+						local cycle = (t + seed) % kGlintCycle
+						for i, entry in pairs(parts) do
+							local start = (i - 1) * kGlintStagger
+							local glinting = cycle >= start and cycle < start + kGlintLength
+							entry.Part.Material = if glinting then Enum.Material.Neon else entry.Material
+						end
+					elseif kind == 'pd' then
+						-- Only the gavel turns (the chair shares the folder)
+						for _, entry in pairs(parts) do
+							if entry.Part.Name == "Gavel" then
+								entry.Part.CFrame = entry.Base * CFrame.Angles(0, t * 0.9, 0)
+							end
+						end
+					end
+				elseif nodeView.AnimPlaying then
+					-- Restore the rest pose once when animation stops
+					nodeView.AnimPlaying = false
+					for _, entry in pairs(parts) do
+						entry.Part.CFrame = entry.Base
+						entry.Part.Material = entry.Material
+					end
+				end
+			end
+		end
+	end
+
 	local function update(dt)
 		updateHoveredNode()
 		updateTouchHighlights()
@@ -857,6 +954,7 @@ function Netmap3DView.new(topbarCredits)
 		local t = os.clock()
 		animatePopups(t)
 		animateBlinkenlights(t)
+		animateNodeIdles(t)
 	end
 	
 	local mVisible = false
