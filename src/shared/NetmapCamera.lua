@@ -361,7 +361,13 @@ local mCamera = workspace.CurrentCamera
 			end
 			-- Re-apply every frame so the handover back from the battle camera
 			-- takes effect immediately (its last top-down CFrame would
-			-- otherwise stick until the next pan)
+			-- otherwise stick until the next pan). Assert type/FOV too: the
+			-- battle camera's teardown restore can land AFTER our Install
+			-- (the netmap is shown before the battle view is destroyed), and
+			-- a non-Scriptable type lets the default camera controller stomp
+			-- our CFrame every frame
+			mCamera.CameraType = Enum.CameraType.Scriptable
+			mCamera.FieldOfView = 10
 			applyCamera()
 		end)
 	end
