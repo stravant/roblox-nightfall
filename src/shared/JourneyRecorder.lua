@@ -12,6 +12,10 @@ local RunService = game:GetService("RunService")
 
 local kFlushInterval = 8 -- seconds between batch uploads
 local kMaxDetail = 80 -- keep event details short (server enforces too)
+-- Stop recording entirely after this many events (slightly over the server's
+-- session cap): a marathon session shouldn't keep streaming batches the
+-- server is going to drop anyway
+local kMaxSessionEvents = 4200
 
 local JourneyRecorder = {}
 
@@ -47,10 +51,12 @@ local function flush()
 	end
 end
 
+local mRecordedCount = 0
 function JourneyRecorder:Record(event: string, detail: string?)
-	if not isLiveClient() or mSuppressed then
+	if not isLiveClient() or mSuppressed or mRecordedCount >= kMaxSessionEvents then
 		return
 	end
+	mRecordedCount += 1
 	if not mStartClock then
 		mStartClock = os.clock()
 	end

@@ -12,13 +12,18 @@ local PlayersService = Services:Get('Players')
 
 local DataStoreService = require(game.ServerScriptService.DataStoreService)
 
-local kMaxEventsPerSession = 4000
 local kMaxBatchSize = 200
 local kMaxDetailLength = 80
 local kSaveInterval = 30 -- seconds between persists of a live session
 local kMaxListedJourneys = 30
 
 local JourneyService = {}
+
+-- Size cutoff: events are capped WELL under the 4MB datastore value limit
+-- (4000 events at <=80-char strings is under ~1MB serialized). A marathon
+-- session just stops recording past this; a RecordingCapped marker shows
+-- the truncation in the viewer. Overridable for tests.
+JourneyService.MaxEventsPerSession = 4000
 
 -- Who may view journeys: the game's owner (or anyone in Studio). Injectable
 -- so tests can exercise both the allow and deny paths.
@@ -64,23 +69,33 @@ function JourneyService.install(remotes: any)
 			return
 		end
 		local session = sessionFor(player)
+		if session.Capped then
+			return -- size cutoff reached: everything further is dropped
+		end
 		local events = session.Record.Events
+		local appended = false
 		for _, entry in pairs(batch) do
-			if #events >= kMaxEventsPerSession then
-				break
-			end
 			if type(entry) == "table"
 				and type(entry[1]) == "number"
 				and type(entry[2]) == "string"
 				and (entry[3] == nil or type(entry[3]) == "string") then
+				if #events >= JourneyService.MaxEventsPerSession then
+					-- Cut off, with a marker so the viewer shows truncation
+					session.Capped = true
+					table.insert(events, { entry[1], "RecordingCapped" })
+					saveSession(session)
+					return
+				end
 				table.insert(events, {
 					entry[1],
 					entry[2]:sub(1, kMaxDetailLength),
 					if entry[3] then entry[3]:sub(1, kMaxDetailLength) else nil,
 				})
+				appended = true
 			end
 		end
-		if os.clock() - session.LastSave > kSaveInterval then
+		-- Only persist when something new actually landed
+		if appended and os.clock() - session.LastSave > kSaveInterval then
 			saveSession(session)
 		end
 	end)

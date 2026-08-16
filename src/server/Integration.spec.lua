@@ -1026,6 +1026,46 @@ return function(t)
 		t.expect(spamCount).toBe(10)
 	end)
 
+	t.test("a marathon journey is cut off with a marker, well under 4MB", function()
+		local JourneyService = require(game.ServerScriptService.JourneyService)
+		local MockDataStore = require(game.ServerScriptService.MockDataStore)
+		local originalCap = JourneyService.MaxEventsPerSession
+		JourneyService.MaxEventsPerSession = 5
+		local ok, err = pcall(function()
+			local player = makePlayer(9500, "MarathonJourneyer")
+			remotes.JourneyEvents:FireServer_TEST(player, {
+				{ 1, "A" }, { 2, "B" }, { 3, "C" }, { 4, "D" },
+			})
+			-- This batch crosses the cap: one more event lands, then the
+			-- truncation marker, then everything else is dropped
+			remotes.JourneyEvents:FireServer_TEST(player, {
+				{ 5, "E" }, { 6, "F" }, { 7, "G" },
+			})
+			remotes.JourneyEvents:FireServer_TEST(player, { { 8, "H" } })
+			playerLeaves(player)
+
+			-- Find the stored record via the store (the key embeds a random tail)
+			local found = nil
+			for _, key in pairs(DataStoreService:ListJourneyKeys(50)) do
+				local record = DataStoreService:GetJourney(key)
+				if record and record.UserId == 9500 then
+					found = record
+				end
+			end
+			t.expect(found ~= nil).toBeTruthy()
+			t.expect(#found.Events).toBe(6) -- 5 events + the marker
+			t.expect(found.Events[6][2]).toBe("RecordingCapped")
+			-- Nothing after the marker (the H batch was dropped)
+			for _, entry in pairs(found.Events) do
+				t.expect(entry[2] ~= "H").toBeTruthy()
+			end
+		end)
+		JourneyService.MaxEventsPerSession = originalCap
+		if not ok then
+			error(err, 0)
+		end
+	end)
+
 	t.test("leaving before loading counts as a bounce", function()
 		local ghost = makePlayer(4004, "Bouncer")
 		-- Never invokes Load: PlayerRemoving fires with no cached data
