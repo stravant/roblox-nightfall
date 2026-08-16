@@ -394,13 +394,16 @@ function MainView.new()
 	mNetmapView:GetGui().Parent = mGui
 
 	-- Next Battle: jump straight into the recommended next fight — the
-	-- accessible unbeaten battle node with the lowest security level. Hidden
-	-- when there is none (all beaten) and during battles; hq is excluded
-	-- (its battle is the scripted tutorial).
+	-- accessible unbeaten battle node with the lowest security level, but
+	-- never one BELOW the player's current security level (leftover nodes
+	-- from tiers they've already progressed past aren't "next"). Hidden
+	-- when nothing qualifies and during battles; hq is excluded (its battle
+	-- is the scripted tutorial).
 	local function findNextBattle()
 		local best = nil
 		for id, node in pairs(Netmap.ById) do
 			if id ~= 'hq' and not node.Warez
+				and node.Level >= LocalPlayerData:GetSecurityLevel()
 				and LocalPlayerData:CanAccessNode(id)
 				and not LocalPlayerData:HasBeatenNode(id) then
 				if not best
