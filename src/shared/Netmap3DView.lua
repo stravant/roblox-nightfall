@@ -38,6 +38,10 @@ for _, ch in pairs(NETMAP_NODE_MODELS:GetChildren()) do
 	ch.Base:Destroy()
 end
 
+-- Floats beside nodes whose win grants the next security level (a place
+-- asset, like the node models)
+local SECURITY_KEY_TEMPLATE = game.ReplicatedStorage.SecurityKey
+
 -- Node popup billboard size in pixels (the layout's authored size)
 local kPopupWidthPx = 132
 local kPopupHeightPx = kPopupWidthPx * 46 / 132
@@ -166,6 +170,12 @@ function Netmap3DView.new(topbarCredits)
 
 	local kNodeModelScale = 1
 
+	-- The authored SecurityKey mesh is ~12.6 studs long; shrink it to node
+	-- scale. It floats to the node's SCREEN-right: the netmap camera's yaw
+	-- is a fixed 45 degrees, so screen-right is the world (1, 0, -1) diagonal.
+	local kSecurityKeyScale = 0.45
+	local kSecurityKeyOffset = Vector3.new(1, 0, -1).Unit * 6 + Vector3.new(0, 3.8, 0)
+
 	-- Generous invisible hit cylinders so hovers/clicks can't miss a node.
 	-- They live in their own folder rather than inside the node models: the
 	-- hover/tutorial Highlights adorn the models, and a part inside the model
@@ -239,6 +249,24 @@ function Netmap3DView.new(topbarCredits)
 				end)
 			end
 
+			-- Nodes whose win grants the next security level float a key
+			-- beside them until claimed (upgradeSecurity nodes, plus the
+			-- booby-trapped beginNightfall node = the level-5 gate)
+			local securityKey = nil
+			local nodeFunction = Netmap.ById[id]
+				and Netmap.ById[id].Conversation
+				and Netmap.ById[id].Conversation.Function
+			if nodeFunction and (nodeFunction.Type == 'upgradeSecurity'
+				or nodeFunction.Type == 'beginNightfall') then
+				securityKey = SECURITY_KEY_TEMPLATE:Clone()
+				securityKey.Anchored = true
+				securityKey.CanCollide = false
+				securityKey.CanTouch = false
+				securityKey.CanQuery = false -- decorative: never blocks node hover raycasts
+				securityKey.Size = SECURITY_KEY_TEMPLATE.Size * kSecurityKeyScale
+				securityKey.CFrame = CFrame.new(cf.Position + kSecurityKeyOffset)
+			end
+
 			mNodeView[id] = {
 				Id = id;
 				CFrame = cf;
@@ -249,6 +277,8 @@ function Netmap3DView.new(topbarCredits)
 				HitArea = hitArea;
 				AnimateParts = animateParts;
 				AnimSeed = math.random() * 100;
+				SecurityKey = securityKey;
+				KeyRestPosition = securityKey and (cf.Position + kSecurityKeyOffset);
 			}
 			ch:Destroy()
 		end
@@ -598,6 +628,10 @@ function Netmap3DView.new(topbarCredits)
 	local function applyNodeState(nodeView)
 		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
+		if nodeView.SecurityKey then
+			-- The key hangs around until the upgrade is claimed
+			nodeView.SecurityKey.Parent = (nodeView.Seen and not nodeView.Beaten) and mNetmapModel or nil
+		end
 		-- The enlarged hit cylinder only intercepts hovers/clicks once the
 		-- node is actually interactable (normalized: the and-chain can yield
 		-- nil, which is not assignable to a boolean property)
@@ -939,6 +973,17 @@ function Netmap3DView.new(topbarCredits)
 		table.clear(mBulkParts)
 		table.clear(mBulkCFrames)
 		for id, nodeView in pairs(mNodeView) do
+			-- Security keys twirl upright and bob beside their node, derived
+			-- fresh from the stored rest position each frame
+			local key = nodeView.SecurityKey
+			if key and key.Parent then
+				local seed = nodeView.AnimSeed
+				pushMove(key, CFrame.new(
+						nodeView.KeyRestPosition
+						+ Vector3.new(0, math.sin(t * 1.2 + seed) * 0.35, 0))
+					* CFrame.Angles(0, t * 0.8 + seed, 0)
+					* CFrame.Angles(math.pi / 2, 0, 0))
+			end
 			local parts = nodeView.AnimateParts
 			if parts then
 				if nodeView.Seen then
