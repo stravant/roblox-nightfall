@@ -963,10 +963,11 @@ function Netmap3DView.new(topbarCredits)
 							end
 						end
 					elseif kind == 'pd' then
-						-- Only the gavel turns (the chair shares the folder)
+						-- Only the gavel turns (the chair shares the folder),
+						-- spinning about its LONG axis (the mesh's local Z)
 						for _, entry in pairs(parts) do
 							if entry.Part.Name == "Gavel" then
-								pushMove(entry.Part, entry.Base * CFrame.Angles(0, t * 0.9, 0))
+								pushMove(entry.Part, entry.Base * CFrame.Angles(0, 0, t * 0.9))
 							end
 						end
 					end
