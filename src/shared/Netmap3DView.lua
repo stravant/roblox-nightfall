@@ -264,16 +264,15 @@ function Netmap3DView.new(topbarCredits)
 		beam.Width1 = 0.5
 
 		-- Moving flow overlay on top of the solid line: energy streaks
-		-- scrolling from this (source) node toward the target. NOTE: this is
-		-- a built-in engine texture because Beam.TextureContent with an
+		-- scrolling from this (source) node toward the target. BEATEN links
+		-- only (showLinks enables it): the red hostile links stay static.
+		-- NOTE: a built-in engine texture because Beam.TextureContent with an
 		-- EditableImage silently renders as an UNTEXTURED solid beam (the
 		-- assignment succeeds; nothing draws) — verified empirically.
 		local flowBeam = Instance.new("Beam")
+		flowBeam.Enabled = false
 		flowBeam.Attachment0 = attach0
 		flowBeam.Attachment1 = attach1
-		flowBeam.Width0 = 1.1
-		flowBeam.Width1 = 1.1
-		flowBeam.Color = ColorSequence.new(Color3.new(1, 0.55, 0.45))
 		flowBeam.LightEmission = 1
 		-- Toward the camera, off the solid beam's plane: coplanar beams
 		-- z-fight, which reads as flickering that drowns the motion
@@ -284,7 +283,6 @@ function Netmap3DView.new(topbarCredits)
 		-- Longer than the sparkle is drawn: stretches the blobs into
 		-- directional streaks
 		flowBeam.TextureLength = 12
-		flowBeam.TextureSpeed = 5
 		flowBeam.Parent = mConnectionsContainer
 
 		nodeView.AdjacentLinks[adjId] = {
@@ -304,11 +302,13 @@ function Netmap3DView.new(topbarCredits)
 				beam.Width0 = 0.9
 				beam.Width1 = 0.9
 				if beamView.FlowBeam then
-					-- Calmer flow on beaten links: green tracers, ambling
+					-- The flow overlay is a beaten-link treat: green streaks
+					-- ambling along the reclaimed connection
 					beamView.FlowBeam.Color = ColorSequence.new(Color3.new(0.5, 1, 0.6))
 					beamView.FlowBeam.TextureSpeed = 1.5
 					beamView.FlowBeam.Width0 = 1.3
 					beamView.FlowBeam.Width1 = 1.3
+					beamView.FlowBeam.Enabled = true
 				end
 			end
 		end
