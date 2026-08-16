@@ -1,0 +1,6 @@
+{
+	"name": "NightfallDebugFlags",
+	"tree": {
+		"$path": "plugin/DebugFlagsPlugin.server.lua"
+	}
+}
