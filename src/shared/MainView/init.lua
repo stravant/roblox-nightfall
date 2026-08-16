@@ -726,8 +726,10 @@ function MainView.new()
 					mNetmapView:SetNodeBeaten('ph45') -- Special case, do this to show the access to the boss node
 					-- The net goes dark until Dignity's node is beaten
 					NightfallLighting:SetActive(true)
+					mNetmapView:SetNightfall(true)
 				elseif f.Type == 'endNightfall' then
 					NightfallLighting:SetActive(false)
+					mNetmapView:SetNightfall(false)
 				else
 					error("Bad function type: "..tostring(f.Type))
 				end

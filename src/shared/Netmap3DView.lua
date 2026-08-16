@@ -197,6 +197,15 @@ function Netmap3DView.new(topbarCredits)
 			local disabledModel = NETMAP_NODE_MODELS[id:sub(1, 2)..'_disabled']:Clone()
 			disabledModel:ScaleTo(kNodeModelScale)
 			disabledModel:PivotTo(cf)
+			-- Node FX stay bright under the nightfall lighting dim (the end
+			-- node's particle effect especially)
+			for _, model in pairs({ visibleModel, disabledModel }) do
+				for _, desc in pairs(model:GetDescendants()) do
+					if desc:IsA("ParticleEmitter") then
+						desc.LightInfluence = 0
+					end
+				end
+			end
 			-- Only the live (seen) model is clickable; undiscovered nodes show
 			-- the disabled model purely as scenery
 			mNodeModelToNodeIdMap[visibleModel] = id
@@ -342,25 +351,43 @@ function Netmap3DView.new(topbarCredits)
 		}
 	end
 	
-	-- Beaten links restyle to an ethereal green
+	-- While Dignity's nightfall script is live the whole net reads hostile:
+	-- every link red, no flow streaks (matches the lighting dim, see
+	-- NightfallLighting). Initialized from the save; MainView flips it via
+	-- SetNightfall when the story triggers fire.
+	local mNightfall = LocalPlayerData:IsNightfallActive()
+
+	-- Beaten links restyle to an ethereal green with flow streaks - except
+	-- under nightfall, where they fall back to the hostile red of unbeaten
+	-- links
+	local function applyLinkStyle(beamView)
+		local beam = beamView.Beam
+		if beamView.Active and not mNightfall then
+			beam.Color = ColorSequence.new(Color3.new(0, 1, 0.3))
+			beam.Transparency = NumberSequence.new(0.55)
+			beam.Width0 = 0.9
+			beam.Width1 = 0.9
+			-- The flow overlay is a beaten-link treat: green streaks
+			-- ambling along the reclaimed connection
+			beamView.FlowBeam.Color = ColorSequence.new(Color3.new(0.5, 1, 0.6))
+			beamView.FlowBeam.TextureSpeed = 1.5
+			beamView.FlowBeam.Width0 = 1.3
+			beamView.FlowBeam.Width1 = 1.3
+			beamView.FlowBeam.Enabled = true
+		else
+			beam.Color = ColorSequence.new(Color3.new(1, 0, 0))
+			beam.Transparency = NumberSequence.new(0)
+			beam.Width0 = 0.5
+			beam.Width1 = 0.5
+			beamView.FlowBeam.Enabled = false
+		end
+	end
+
 	local function showLinks(nodeView)
 		for adjId, beamView in pairs(nodeView.AdjacentLinks) do
 			if not beamView.Active then
 				beamView.Active = true
-				local beam = beamView.Beam
-				beam.Color = ColorSequence.new(Color3.new(0, 1, 0.3))
-				beam.Transparency = NumberSequence.new(0.55)
-				beam.Width0 = 0.9
-				beam.Width1 = 0.9
-				if beamView.FlowBeam then
-					-- The flow overlay is a beaten-link treat: green streaks
-					-- ambling along the reclaimed connection
-					beamView.FlowBeam.Color = ColorSequence.new(Color3.new(0.5, 1, 0.6))
-					beamView.FlowBeam.TextureSpeed = 1.5
-					beamView.FlowBeam.Width0 = 1.3
-					beamView.FlowBeam.Width1 = 1.3
-					beamView.FlowBeam.Enabled = true
-				end
+				applyLinkStyle(beamView)
 			end
 		end
 	end
@@ -782,6 +809,19 @@ function Netmap3DView.new(topbarCredits)
 
 	function this:GetGui()
 		return mGui
+	end
+
+	-- Restyle every link for the nightfall state (all red while active)
+	function this:SetNightfall(active)
+		if mNightfall == active then
+			return
+		end
+		mNightfall = active
+		for _, nodeView in pairs(mNodeView) do
+			for _, beamView in pairs(nodeView.AdjacentLinks) do
+				applyLinkStyle(beamView)
+			end
+		end
 	end
 
 	function this:SetNodeBeaten(id)
