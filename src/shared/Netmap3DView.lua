@@ -938,6 +938,10 @@ function Netmap3DView.new(topbarCredits)
 								gui.Name = "Glint"
 								gui.Size = UDim2.new(3, 0, 3, 0)
 								gui.StudsOffset = Vector3.new(0.3, 0.6, 0)
+								-- Pushed a full extent toward the camera so the
+								-- sparkle draws in FRONT of the sign instead of
+								-- z-fighting inside its geometry
+								gui.ExtentsOffset = Vector3.new(0, 0, 1)
 								gui.LightInfluence = 0
 								gui.Parent = entry.Part
 								local image = Instance.new("ImageLabel")
