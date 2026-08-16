@@ -114,6 +114,15 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	-- Units on the board
 	local mUnitSet = {}
 	local mUnitList = {}
+
+	-- Fire UnitUpdated only for still-live units: some paths (marking the
+	-- previous mover Done, undo actions) can reach a unit that already fired
+	-- UnitRemoved, and view code drops its per-unit state on UnitRemoved.
+	local function fireUnitUpdated(unit)
+		if mUnitSet[unit] then
+			this.UnitUpdated:fire(unit)
+		end
+	end
 	
 	-- Last unit that the user moved, unit to mark as done if they start moving
 	-- a different unit or use an action
@@ -180,7 +189,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		for _, unit in pairs(mUnitList) do
 			if not unit.Enemy then
 				unit.Done = false
-				this.UnitUpdated:fire(unit)
+				fireUnitUpdated(unit)
 			end		
 		end
 		
@@ -236,7 +245,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			end
 			unit.Done = false
 			unit.MoveLeft = unit.Move
-			this.UnitUpdated:fire(unit)
+			fireUnitUpdated(unit)
 		else
 			-- Otherwise, we need to recreate it
 			createUnit(unit.Definition, unit.Enemy, tail, unit)
@@ -273,7 +282,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		if mLastMovedUnit and mLastMovedUnit ~= unit and not mLastMovedUnit.Done then
 			if not mLastMovedUnit.Enemy then
 				mLastMovedUnit.Done = true
-				this.UnitUpdated:fire(mLastMovedUnit)
+				fireUnitUpdated(mLastMovedUnit)
 			end
 		end
 		-- ALWAYS track the mover (this used to only happen in the else branch,
@@ -325,7 +334,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		end		
 		
 		-- Update the UI
-		this.UnitUpdated:fire(unit)
+		fireUnitUpdated(unit)
 		
 		-- For sounds
 		this.UnitMoved:fire(unit)
@@ -346,7 +355,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 				end
 				this.UnitRemoved:fire(unit)
 			else
-				this.UnitUpdated:fire(unit)
+				fireUnitUpdated(unit)
 			end
 			this.SectorDeleted:fire(coord.x, coord.y, unit.Color)
 			delayFunc('DeleteSector')
@@ -375,7 +384,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 					if square and square.Filled and not square.Unit and not square.Pickup then
 						square.Unit = unit
 						table.insert(unit.Tail, {x = x, y = y})
-						this.UnitUpdated:fire(unit)
+						fireUnitUpdated(unit)
 						this.SectorAdded:fire(x, y, unit.Color)
 						delayFunc('GrowSector')
 						return
@@ -397,7 +406,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		if not target and command.Type ~= 'zero' and command.Type ~= 'one' then
 			-- Done
 			unit.Done = true
-			this.UnitUpdated:fire(unit)
+			fireUnitUpdated(unit)
 			return
 		end		
 		
@@ -425,11 +434,11 @@ function GameState.new(placeData, unitInventory, delayFunc)
 				local originalMaxSize = target.MaxSize
 				historyEntry.UndoAction = function()
 					target.MaxSize = originalMaxSize
-					this.UnitUpdated:fire(target)
+					fireUnitUpdated(target)
 				end
 			end
 			target.MaxSize = target.MaxSize + command.Amount
-			this.UnitUpdated:fire(target)
+			fireUnitUpdated(target)
 		elseif command.Type == 'speedMod' then
 			if not mIsEnemyTurn then
 				local historyEntry = mThisTurnHistory[#mThisTurnHistory]
@@ -438,14 +447,14 @@ function GameState.new(placeData, unitInventory, delayFunc)
 				historyEntry.UndoAction = function()
 					target.Move = originalMove
 					target.MoveLeft = originalMoveLeft
-					this.UnitUpdated:fire(target)
+					fireUnitUpdated(target)
 				end
 			end
 			target.Move = math.min(10, math.max(0, target.Move + command.Amount))
 			-- Also adjust the movement remaining THIS turn, so a boost is
 			-- usable immediately (and a slow takes effect immediately)
 			target.MoveLeft = math.min(10, math.max(0, target.MoveLeft + command.Amount))
-			this.UnitUpdated:fire(target)
+			fireUnitUpdated(target)
 		elseif command.Type == 'zero' then
 			if mBoard[x][y].Filled then
 				if not mIsEnemyTurn then
@@ -498,10 +507,8 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			unit.Done = true
 		end
 		-- The cost may have consumed the unit entirely (deleteSector already
-		-- fired UnitRemoved); don't fire an update for a dead unit
-		if #unit.Tail > 0 then
-			this.UnitUpdated:fire(unit)
-		end
+		-- fired UnitRemoved); fireUnitUpdated skips dead units
+		fireUnitUpdated(unit)
 	end
 	
 	-- Start the player's turn (Refresh their units)
@@ -513,7 +520,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			if not unit.Enemy then
 				unit.Done = false
 				unit.MoveLeft = unit.Move
-				this.UnitUpdated:fire(unit)
+				fireUnitUpdated(unit)
 			end
 		end
 	end

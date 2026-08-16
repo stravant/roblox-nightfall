@@ -255,6 +255,51 @@ return function(t)
 		end
 	end)
 
+	t.test("UnitUpdated never fires for a removed unit", function()
+		-- Regression: friendly-fire killing the last-moved (not yet Done)
+		-- unit, then moving another unit, fired UnitUpdated for the dead
+		-- unit. UnitsView drops its per-unit state on UnitRemoved, so that
+		-- fire crashed updateTail ("attempt to index nil with number").
+		local gs = GameState.new(Places.L13, makeInventory(), GameState.ServerDelayFunc)
+
+		-- Track liveness exactly the way views do: state exists only
+		-- between UnitAdded and UnitRemoved
+		local live = {}
+		for unit in pairs(gs:GetUnits()) do
+			live[unit] = true
+		end
+		gs.UnitAdded:connect(function(unit) live[unit] = true end)
+		gs.UnitRemoved:connect(function(unit) live[unit] = nil end)
+		local deadFires = 0
+		gs.UnitUpdated:connect(function(unit)
+			if not live[unit] then
+				deadFires = deadFires + 1
+			end
+		end)
+
+		-- L13 upload zones: (5,7) (5,8) (6,7) (6,8)
+		gs:UploadUnit(5, 7, Scripts.hack)
+		gs:UploadUnit(6, 7, Scripts.heisenbug)
+		gs:UploadUnit(6, 8, Scripts.hack)
+		local mover = gs:GetUnit(5, 7)
+		local killer = gs:GetUnit(6, 7)
+		local third = gs:GetUnit(6, 8)
+		gs:StartGame()
+
+		-- Move A so it's the last-moved unit (still not Done), then kill it
+		-- with B's Quantum Glitch (damage 6 covers A's 3 sectors)
+		gs:UnitMove(mover, 6, 6)
+		t.expect(gs:GetUnit(6, 6)).toBe(mover)
+		gs:UnitExecute(killer, "qglitch", 6, 6)
+		t.expect(gs:GetUnit(6, 6)).toBe(nil)
+
+		-- Moving a third unit marks the last-moved unit Done — which is the
+		-- dead one. That must not reach UnitUpdated listeners.
+		gs:UnitMove(third, 7, 8)
+		t.expect(gs:HasErrors()).toBeFalsy()
+		t.expect(deadFires).toBe(0)
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]
