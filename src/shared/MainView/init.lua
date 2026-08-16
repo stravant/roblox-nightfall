@@ -77,6 +77,9 @@ function MainView.new()
 	end
 	-- The feedback prompt yields until dismissed; one at a time
 	local mFeedbackPrompting = false
+	-- Assigned below once the netmap plumbing exists (the topbar root is
+	-- created first)
+	local mOnNextBattle = nil
 	local mTopbarRoot = StatefulRoot.create(mTopbarGui, function(props)
 		-- One flex row: the node-name title sizes to its content on the left,
 		-- Start Databattle / Done Turn float centered between the two fill
@@ -131,6 +134,16 @@ function MainView.new()
 					FlexMode = Enum.UIFlexMode.Fill,
 				}),
 			}),
+			NextBattleButton = if props.nextBattleVisible
+				then e(WindowsButton, {
+					Name = "NextBattleButton",
+					LayoutOrder = 3,
+					Size = UDim2.new(0, 110, 0, 36),
+					OnClick = props.onNextBattleClick,
+				}, {
+					TextLabel = topbarButtonLabel("Next Battle"),
+				})
+				else nil,
 			AutoPlaceButton = if props.autoPlaceVisible
 				then e(WindowsButton, {
 					Name = "AutoPlaceButton",
@@ -278,6 +291,7 @@ function MainView.new()
 		battleTitle = nil,
 		startVisible = false,
 		autoPlaceVisible = false,
+		nextBattleVisible = false,
 		leaveVisible = false,
 		doneTurnVisible = false,
 		undoVisible = false,
@@ -285,6 +299,11 @@ function MainView.new()
 		creditsHidden = false,
 		onStartClick = nil,
 		onAutoPlaceClick = nil,
+		onNextBattleClick = function()
+			if mOnNextBattle then
+				mOnNextBattle()
+			end
+		end,
 		onLeaveClick = nil,
 		onDoneTurnClick = nil,
 		onUndoClick = nil,
@@ -324,6 +343,9 @@ function MainView.new()
 	end
 	function mTopbarBattleInterface:SetOnStart(callback)
 		mTopbarRoot.setState({ onStartClick = callback or StatefulRoot.None })
+	end
+	function mTopbarBattleInterface:SetNextBattleVisible(visible)
+		mTopbarRoot.setState({ nextBattleVisible = visible })
 	end
 	function mTopbarBattleInterface:SetAutoPlaceVisible(visible)
 		mTopbarRoot.setState({ autoPlaceVisible = visible })
@@ -370,6 +392,39 @@ function MainView.new()
 	local mNetmapView = Netmap3DView.new(mTopbarCredits)
 	mNetmapView:GetGui().Position = UDim2.new(0.5, 0, 0.5, 0)
 	mNetmapView:GetGui().Parent = mGui
+
+	-- Next Battle: jump straight into the recommended next fight — the
+	-- accessible unbeaten battle node with the lowest security level. Hidden
+	-- when there is none (all beaten) and during battles; hq is excluded
+	-- (its battle is the scripted tutorial).
+	local function findNextBattle()
+		local best = nil
+		for id, node in pairs(Netmap.ById) do
+			if id ~= 'hq' and not node.Warez
+				and LocalPlayerData:CanAccessNode(id)
+				and not LocalPlayerData:HasBeatenNode(id) then
+				if not best
+					or node.Level < Netmap.ById[best].Level
+					or (node.Level == Netmap.ById[best].Level and id < best) then
+					best = id
+				end
+			end
+		end
+		return best
+	end
+	local function updateNextBattleButton()
+		mTopbarBattleInterface:SetNextBattleVisible(findNextBattle() ~= nil)
+	end
+	mOnNextBattle = function()
+		if ModalManager:IsModal() then
+			return
+		end
+		local nodeId = findNextBattle()
+		if nodeId then
+			JourneyRecorder:Record("NextBattleButton", nodeId)
+			this:PlayGame(Netmap.ById[nodeId].PlaceId, nodeId)
+		end
+	end
 
 	-- DEV: the session journey viewer, bottom-left of the netmap. Only for
 	-- the game's owner (or anyone in Studio); the server enforces the same
@@ -516,6 +571,7 @@ function MainView.new()
 	-- a list of {x, y, Id} pre-placed on the upload zones without starting.
 	function this:PlayGame(placeId, nodeId, initialPlacement)
 		JourneyRecorder:Record("BattleEnter", nodeId .. (if initialPlacement then " (retry)" else ""))
+		mTopbarBattleInterface:SetNextBattleVisible(false)
 		-- Onboarding funnel: entered a first real battle (server dedupes)
 		game.ReplicatedStorage.Remotes.FunnelStep:FireServer(OnboardingSteps.NodeChosen)
 		ModalManager:SetModal(true)
@@ -597,6 +653,7 @@ function MainView.new()
 			end
 			gameCompletedConnection:Disconnect()
 			ModalManager:SetModal(false)
+			updateNextBattleButton()
 
 			-- Fail screen Retry: straight back in with the same setup
 			-- pre-placed (but not started, so it can be adjusted)
@@ -629,6 +686,7 @@ function MainView.new()
 		-- Update the state
 		LocalPlayerData:SetNodeBeaten(nodeId)
 		mNetmapView:SetNodeBeaten(nodeId)
+		updateNextBattleButton()
 		
 		-- Handle the win-triggers
 		local conversation = Netmap.ById[nodeId].Conversation
@@ -807,6 +865,8 @@ function MainView.new()
 		handleError("A SERVER ERROR OCURRED - Please screenshot this and send it to Stravant", message)
 	end)
 	
+	updateNextBattleButton()
+
 	if not LocalPlayerData:HasBeatenNode('hq') then
 		spawn(function()
 			this:PlayTutorial()
