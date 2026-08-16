@@ -212,6 +212,21 @@ function Netmap3DView.new(topbarCredits)
 				animateParts = {}
 				for _, part in pairs(animateFolder:GetDescendants()) do
 					if part:IsA("BasePart") then
+						-- Hover/click should treat animated parts as parked at
+						-- their rest pose: a static invisible stand-in takes
+						-- over query duty (the folder nesting also hides them
+						-- from the raycast's Instance.Parent id lookup)
+						part.CanQuery = false
+						local queryProxy = Instance.new("Part")
+						queryProxy.Name = id .. "_AnimateHit"
+						queryProxy.Transparency = 1
+						queryProxy.Anchored = true
+						queryProxy.CanCollide = false
+						queryProxy.CanTouch = false
+						queryProxy.Size = part.Size
+						queryProxy.CFrame = part.CFrame
+						queryProxy.Parent = mHitAreasContainer
+						mNodeModelToNodeIdMap[queryProxy] = id
 						table.insert(animateParts, {
 							Part = part,
 							Base = part.CFrame,
