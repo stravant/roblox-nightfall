@@ -56,15 +56,19 @@ type ViewerState = {
 
 -- Completed records carry Ended; without it, recent activity means the
 -- session is live right now, staleness means it ended without a final
--- flush (crash / server death)
+-- flush (crash / server death). Records from before the status fields
+-- existed have neither field and can't be classified.
 local function statusTag(summary: any): string
 	if summary.Ended then
-		return ""
+		return "  [done]"
 	end
-	if summary.LastUpdate and os.time() - summary.LastUpdate < 90 then
+	if summary.LastUpdate == nil then
+		return "  [old]"
+	end
+	if os.time() - summary.LastUpdate < 90 then
 		return "  [LIVE]"
 	end
-	return "  [unfinished]"
+	return "  [cut off]"
 end
 
 local function sessionRow(summary: any, i: number, onPick: (key: string, title: string) -> ())
