@@ -203,6 +203,12 @@ function BattleCamera.new(config: Config)
 	function this:Install()
 		mSavedFieldOfView = mCamera.FieldOfView
 		mSavedCameraType = mCamera.CameraType
+		if mSavedCameraType == Enum.CameraType.Scriptable then
+			-- Never restore to Scriptable: a session that died mid-battle
+			-- (e.g. an erroring test run in the edit place) leaves the camera
+			-- Scriptable, and faithfully restoring that would wedge it forever
+			mSavedCameraType = Enum.CameraType.Custom
+		end
 		mCamera.CameraType = Enum.CameraType.Scriptable
 		mCamera.FieldOfView = kFieldOfView
 		applyCamera()
