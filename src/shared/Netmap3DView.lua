@@ -67,29 +67,32 @@ local mFlowContent: any = nil
 local function getFlowContent()
 	if mFlowContent == nil then
 		local ok, result = pcall(function()
+			-- NOTE orientation: beams map the image's VERTICAL axis along the
+			-- beam length (drawing the gradient horizontally makes the whole
+			-- beam pulse instead of scroll), so the comet runs down the image
 			local image = game:GetService("AssetService"):CreateEditableImage({
-				Size = Vector2.new(64, 16),
+				Size = Vector2.new(16, 64),
 			})
-			local buf = buffer.create(64 * 16 * 4)
-			for y = 0, 15 do
-				local v = (y - 7.5) / 7.5
-				local widthFade = math.exp(-v * v * 3)
-				for x = 0, 63 do
-					local intensity
-					if x <= 48 then
-						local u = x / 48
-						intensity = u * u
-					else
-						intensity = math.max(0, 1 - (x - 48) / 6)
-					end
-					local index = (y * 64 + x) * 4
+			local buf = buffer.create(16 * 64 * 4)
+			for y = 0, 63 do
+				local intensity
+				if y <= 48 then
+					local u = y / 48
+					intensity = u * u
+				else
+					intensity = math.max(0, 1 - (y - 48) / 6)
+				end
+				for x = 0, 15 do
+					local v = (x - 7.5) / 7.5
+					local widthFade = math.exp(-v * v * 3)
+					local index = (y * 16 + x) * 4
 					buffer.writeu8(buf, index, 255)
 					buffer.writeu8(buf, index + 1, 255)
 					buffer.writeu8(buf, index + 2, 255)
 					buffer.writeu8(buf, index + 3, math.floor(intensity * widthFade * 255 + 0.5))
 				end
 			end
-			image:WritePixelsBuffer(Vector2.zero, Vector2.new(64, 16), buf)
+			image:WritePixelsBuffer(Vector2.zero, Vector2.new(16, 64), buf)
 			return Content.fromObject(image)
 		end)
 		-- false = unavailable (old engine / budget): links stay static
