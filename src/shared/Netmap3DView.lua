@@ -659,6 +659,12 @@ function Netmap3DView.new(topbarCredits)
 	local function applyNodeState(nodeView)
 		nodeView.DisabledModel.Parent = (not nodeView.Seen) and mNetmapModel or nil
 		nodeView.VisibleModel.Parent = nodeView.Seen and mNetmapModel or nil
+		if nodeView.SecurityKey then
+			-- A claimed key turns beaten-green (matching the reclaimed links)
+			nodeView.SecurityKey.Color = if nodeView.Beaten
+				then Color3.new(0, 1, 0.3)
+				else SECURITY_KEY_TEMPLATE.Color
+		end
 		-- The enlarged hit cylinder only intercepts hovers/clicks once the
 		-- node is actually interactable (normalized: the and-chain can yield
 		-- nil, which is not assignable to a boolean property)
