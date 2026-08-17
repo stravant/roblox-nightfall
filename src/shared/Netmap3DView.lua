@@ -174,10 +174,10 @@ function Netmap3DView.new(topbarCredits)
 	-- scale. It floats to the node's SCREEN-right: the netmap camera's yaw
 	-- is a fixed 45 degrees, so screen-right is the world (1, 0, -1) diagonal.
 	local kSecurityKeyScale = 0.9
-	-- Far enough right that the doubled key's spin sweep clears the node
-	-- geometry, and high enough that the teeth clear the ground at the
-	-- bottom of the bob
-	local kSecurityKeyOffset = Vector3.new(1, 0, -1).Unit * 7.5 + Vector3.new(0, 6.4, 0)
+	-- Close enough to the node to read as attached to it (the spin sweep
+	-- may brush the widest node geometry, which is fine), and high enough
+	-- that the teeth clear the ground at the bottom of the bob
+	local kSecurityKeyOffset = Vector3.new(1, 0, -1).Unit * 5.5 + Vector3.new(0, 6.4, 0)
 
 	-- Generous invisible hit cylinders so hovers/clicks can't miss a node.
 	-- They live in their own folder rather than inside the node models: the
