@@ -58,17 +58,23 @@ return function(t)
 			local column = gui.LeftColumn
 			t.expect(column.InfoWindow.WindowTitle.Text).toBe(Scripts.hack.Name)
 			t.expect(column.InfoWindow.Inset.FlavorText.Text).toBe(Scripts.hack.Desc)
-			-- During setup (programs list visible) NO command buttons show
+			-- During setup (programs list visible) the command buttons show
+			-- for comparison, greyed out as display-only
+			local kDisabledGrey = Color3.new(0.55, 0.55, 0.55)
 			for _, command in pairs(Scripts.hack.CommandList) do
-				t.expect(column.CommandRow:FindFirstChild(command.Id)).toBe(nil)
+				local button = column.CommandRow:FindFirstChild(command.Id)
+				t.expect(button ~= nil).toBeTruthy()
+				t.expect(button.ImageColor3).toBe(kDisabledGrey)
 			end
-			-- Once the game starts (list hidden) the commands appear
+			-- Once the game starts (list hidden) they become live
 			ReactRoblox.act(function()
 				hud:SetProgramListVisible(false)
 			end)
 			t.expect(column.CommandRow:FindFirstChild("move")).toBe(nil)
 			for _, command in pairs(Scripts.hack.CommandList) do
-				t.expect(column.CommandRow:FindFirstChild(command.Id) ~= nil).toBeTruthy()
+				local button = column.CommandRow:FindFirstChild(command.Id)
+				t.expect(button ~= nil).toBeTruthy()
+				t.expect(button.ImageColor3 ~= kDisabledGrey).toBeTruthy()
 			end
 		end)
 	end)

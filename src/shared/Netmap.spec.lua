@@ -27,6 +27,26 @@ return function(t)
 		end
 	end)
 
+	t.test("GetProgramValue ranks programs by shop price / story grant level", function()
+		t.expect(Netmap.GetProgramValue("hack")).toBe(500)
+		t.expect(Netmap.GetProgramValue("golemstone")).toBe(5000)
+		-- Story-granted programs (never sold) are valued from the granting
+		-- node's level (hog: ca312 = level 3, wizard: lm43 = level 4)
+		t.expect(Netmap.GetProgramValue("hog")).toBe(3750)
+		t.expect(Netmap.GetProgramValue("wizard")).toBe(5000)
+		t.expect(Netmap.GetProgramValue("nosuchprogram")).toBe(0)
+		-- Every friendly program is obtainable somewhere, so it has a value.
+		-- Known exception: drpro is defined but currently sold/granted
+		-- nowhere in the netmap data.
+		for id, def in pairs(Scripts) do
+			if not def.Enemy and id ~= "drpro" then
+				if Netmap.GetProgramValue(id) <= 0 then
+					error("Program " .. id .. " has no shop price or story grant")
+				end
+			end
+		end
+	end)
+
 	t.test("every node's entry Sound exists in the SoundManager", function()
 		local SoundManager = require(game.ReplicatedStorage.SoundManager)
 		local checked = 0

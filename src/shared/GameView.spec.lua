@@ -140,6 +140,13 @@ return function(t)
 			for _, zone in pairs(gameState:GetUploadZones()) do
 				t.expect(gameState:GetUnit(zone.x, zone.y) ~= nil).toBeTruthy()
 			end
+			-- Strongest first: with the whole catalog in the inventory, the
+			-- zones get high-value damage dealers, not cheap starters
+			local Netmap = require(game.ReplicatedStorage.Netmap)
+			for _, zone in pairs(gameState:GetUploadZones()) do
+				local unit = gameState:GetUnit(zone.x, zone.y)
+				t.expect(Netmap.GetProgramValue(unit.Definition.Id) >= 4000).toBeTruthy()
+			end
 			t.expect(topbar.autoPlaceVisible).toBeFalsy()
 			-- Placement only: the battle was not started
 			t.expect(gameState:IsGameStarted()).toBeFalsy()

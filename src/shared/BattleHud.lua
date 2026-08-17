@@ -224,10 +224,18 @@ local function BattleHudContent(props: HudState)
 			Padding = UDim.new(0, 8),
 		}),
 	}
-	if not props.programsVisible then
-		for _, entry in props.commands do
-			commandItems[entry.Key] = commandButton(entry, props.selectedCommandId == entry.Key, props.onCommandClick)
+	-- During setup (programs window up) the commands aren't usable yet, but
+	-- they still show - greyed and inert - so players can compare scripts'
+	-- attacks while placing them
+	for _, entry in props.commands do
+		local shownEntry = entry
+		local onClick = props.onCommandClick
+		if props.programsVisible then
+			shownEntry = table.clone(entry)
+			shownEntry.Disabled = true
+			onClick = function() end
 		end
+		commandItems[entry.Key] = commandButton(shownEntry, props.selectedCommandId == entry.Key, onClick)
 	end
 
 	-- Programs window rows, inside a capped-height scrolling list so the unit
@@ -359,9 +367,8 @@ local function BattleHudContent(props: HudState)
 	-- The unit info window stacks on the left with its commands below it.
 	-- The Programs window floats at the TOP RIGHT during setup: most players
 	-- are right handed, and dragging scripts out of a left-edge list meant
-	-- crossing the board with the hand covering it. During setup the command
-	-- buttons are hidden: they're not usable yet.
-	local commandCount = if props.programsVisible then 0 else #props.commands
+	-- crossing the board with the hand covering it.
+	local commandCount = #props.commands
 	local commandRowHeight = commandCount * 54 + math.max(0, commandCount - 1) * 8
 
 	return e(React.Fragment, nil, {

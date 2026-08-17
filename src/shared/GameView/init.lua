@@ -11,6 +11,7 @@
 
 local Places = require(game.ReplicatedStorage.Places)
 local Scripts = require(game.ReplicatedStorage.Scripts)
+local Netmap = require(game.ReplicatedStorage.Netmap)
 local BattleHud = require(game.ReplicatedStorage.BattleHud)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
 local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
@@ -985,6 +986,12 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			local rankA, rankB = definitionAutoRank(Scripts[a]), definitionAutoRank(Scripts[b])
 			if rankA ~= rankB then
 				return rankA < rankB
+			end
+			-- Within a role, strongest first: the highest-level (most
+			-- valuable) programs the player owns get placed
+			local valueA, valueB = Netmap.GetProgramValue(a), Netmap.GetProgramValue(b)
+			if valueA ~= valueB then
+				return valueA > valueB
 			end
 			return a < b -- deterministic within a rank
 		end)

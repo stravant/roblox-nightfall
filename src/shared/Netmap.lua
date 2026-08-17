@@ -149,6 +149,35 @@ function Netmap.GetNodeDisplayName(id)
 	return (kNodeFamilyNames[id:sub(1, 2)] or "Node") .. " - " .. id
 end
 
+-- How "late-game" a program is: the highest price any warez shop asks for
+-- it; story-granted programs (never sold) get a value from the granting
+-- node's level, matching the price band of shops at that level. Used to
+-- pick the strongest available loadout (Auto Place).
+local mProgramValue = nil
+function Netmap.GetProgramValue(id)
+	if not mProgramValue then
+		mProgramValue = {}
+		local storyValue = {}
+		for _, node in pairs(Netmap.ById) do
+			if node.Warez then
+				for programId, price in pairs(node.Warez) do
+					mProgramValue[programId] = math.max(mProgramValue[programId] or 0, price)
+				end
+			end
+			local f = node.Conversation and node.Conversation.Function
+			if f and f.Type == 'getProgram' then
+				storyValue[f.Id] = math.max(storyValue[f.Id] or 0, node.Level * 1250)
+			end
+		end
+		for programId, value in pairs(storyValue) do
+			if not mProgramValue[programId] then
+				mProgramValue[programId] = value
+			end
+		end
+	end
+	return mProgramValue[id] or 0
+end
+
 Netmap.TutorialCallout = conversation{
 	User = 'superphreak';
 	Parts = {
