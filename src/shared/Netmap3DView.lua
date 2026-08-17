@@ -171,13 +171,11 @@ function Netmap3DView.new(topbarCredits)
 	local kNodeModelScale = 1
 
 	-- The authored SecurityKey mesh is ~12.6 studs long; shrink it to node
-	-- scale. It floats to the node's SCREEN-right: the netmap camera's yaw
-	-- is a fixed 45 degrees, so screen-right is the world (1, 0, -1) diagonal.
+	-- scale. It hovers directly ABOVE the node (a side placement got
+	-- partially covered by the status popup billboard), high enough that
+	-- the flat spin clears the tallest node geometry.
 	local kSecurityKeyScale = 0.9
-	-- Close enough to the node to read as attached to it (the spin sweep
-	-- may brush the widest node geometry, which is fine), and high enough
-	-- that the teeth clear the ground at the bottom of the bob
-	local kSecurityKeyOffset = Vector3.new(1, 0, -1).Unit * 5.5 + Vector3.new(0, 6.4, 0)
+	local kSecurityKeyOffset = Vector3.new(0, 9.5, 0)
 
 	-- Generous invisible hit cylinders so hovers/clicks can't miss a node.
 	-- They live in their own folder rather than inside the node models: the
@@ -1015,8 +1013,10 @@ function Netmap3DView.new(topbarCredits)
 		table.clear(mBulkParts)
 		table.clear(mBulkCFrames)
 		for id, nodeView in pairs(mNodeView) do
-			-- Security keys twirl upright and bob beside their node, derived
-			-- fresh from the stored rest position each frame
+			-- Security keys lie flat above their node, spinning horizontally
+			-- with a gentle bob, derived fresh from the stored rest position
+			-- each frame (the trailing roll lays the mesh's thin axis
+			-- vertical)
 			local key = nodeView.SecurityKey
 			if key and key.Parent then
 				local seed = nodeView.AnimSeed
@@ -1024,7 +1024,7 @@ function Netmap3DView.new(topbarCredits)
 						nodeView.KeyRestPosition
 						+ Vector3.new(0, math.sin(t * 1.2 + seed) * 0.35, 0))
 					* CFrame.Angles(0, t * 0.8 + seed, 0)
-					* CFrame.Angles(math.pi / 2, 0, 0))
+					* CFrame.Angles(0, 0, math.pi / 2))
 			end
 			local parts = nodeView.AnimateParts
 			if parts then
