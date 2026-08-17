@@ -1013,18 +1013,17 @@ function Netmap3DView.new(topbarCredits)
 		table.clear(mBulkParts)
 		table.clear(mBulkCFrames)
 		for id, nodeView in pairs(mNodeView) do
-			-- Security keys lie flat above their node, spinning horizontally
+			-- Security keys hover above their node spinning horizontally
+			-- (shaft level, teeth hanging down - the mesh's natural pose)
 			-- with a gentle bob, derived fresh from the stored rest position
-			-- each frame (the trailing roll lays the mesh's thin axis
-			-- vertical)
+			-- each frame
 			local key = nodeView.SecurityKey
 			if key and key.Parent then
 				local seed = nodeView.AnimSeed
 				pushMove(key, CFrame.new(
 						nodeView.KeyRestPosition
 						+ Vector3.new(0, math.sin(t * 1.2 + seed) * 0.35, 0))
-					* CFrame.Angles(0, t * 0.8 + seed, 0)
-					* CFrame.Angles(0, 0, math.pi / 2))
+					* CFrame.Angles(0, t * 0.8 + seed, 0))
 			end
 			local parts = nodeView.AnimateParts
 			if parts then
