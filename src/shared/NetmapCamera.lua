@@ -13,14 +13,15 @@ local DRAG_THRESHOLD_PX = 14
 
 -- A moderately wide FOV keeps the camera CLOSE to the map: the old FOV-10
 -- telephoto look needed 200-500 studs of distance, far enough that low-end
--- devices culled netmap geometry when zoomed out. The zoom range scales by
--- tan(5)/tan(15) to preserve the same on-screen framing.
-local kFieldOfView = 30
-local kDefaultZoom = 98 -- was 300 at FOV 10
-local MIN_ZOOM = 65 -- was 200
-local MAX_ZOOM = 163 -- was 500
+-- devices culled netmap geometry when zoomed out. FOV 30 read as too much
+-- perspective, so this splits the difference. The zoom range scales by
+-- tan(5)/tan(10) to preserve the same on-screen framing.
+local kFieldOfView = 20
+local kDefaultZoom = 149 -- was 300 at FOV 10
+local MIN_ZOOM = 99 -- was 200
+local MAX_ZOOM = 248 -- was 500
 -- Wheel studs per notch, scaled with the zoom range (was 80)
-local kWheelZoomStep = 26
+local kWheelZoomStep = 40
 
 function NetmapCamera.new()
 	local this = {}
