@@ -44,7 +44,7 @@ type WarezState = {
 	purchaseVisible: boolean,
 	insufficientVisible: boolean,
 	ownedCounts: { [string]: number },
-	bigScreen: boolean,
+	windowScale: number,
 	programs: { ProgramEntryData },
 	onSelect: (id: string) -> (),
 	onPurchase: () -> (),
@@ -295,7 +295,7 @@ local function WarezContent(props: WarezState)
 			SliceCenter = kWindowSliceCenter,
 			ImageRectSize = kWindowImageRectSize,
 		}, {
-			UIScale = if props.bigScreen then e("UIScale", { Scale = 1.5 }) else nil,
+			UIScale = e("UIScale", { Scale = props.windowScale }),
 			WindowTitle = e("TextLabel", {
 				Position = UDim2.new(0, 6, 0, 2),
 				Size = UDim2.new(1, -12, 0, 18),
@@ -491,7 +491,13 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		purchaseVisible = false,
 		insufficientVisible = false,
 		ownedCounts = ownedCounts(),
-		bigScreen = DeviceInfo.ScreenHeight > 500,
+		-- Scale continuously with the viewport (windows/desktops get a
+		-- roomier shop) but never past 2x: larger reads awkwardly. The
+		-- margins keep a phone at ~1x and the old >500px "big screen" tier
+		-- at its familiar ~1.5x.
+		windowScale = math.clamp(math.min(
+			(DeviceInfo.ScreenWidth - 80) / 380,
+			(DeviceInfo.ScreenHeight - 180) / 210), 1, 2),
 		programs = mPrograms,
 		onSelect = function(id: string)
 			JourneyRecorder:Record("ShopSelect", id)
