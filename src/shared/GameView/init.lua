@@ -77,7 +77,9 @@ local function GameViewChrome(props)
 				AnchorPoint = Vector2.new(0, 1),
 				Position = UDim2.new(0, 12, 1, -12),
 				AutomaticSize = Enum.AutomaticSize.Y,
-				Size = UDim2.new(0, 300, 0, 0),
+				-- Narrow enough to read roughly square once the text wraps:
+				-- there's free height down here but width eats into the board
+				Size = UDim2.new(0, 210, 0, 0),
 				BackgroundColor3 = Color3.new(0, 0, 0),
 				BackgroundTransparency = 0.45,
 				BorderSizePixel = 0,
