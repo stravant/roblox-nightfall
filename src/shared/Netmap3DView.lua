@@ -714,16 +714,17 @@ function Netmap3DView.new(topbarCredits)
 					else
 						lockedText = "\u{1F512} No Link\nEstablished"
 					end
-					ensureNodePopup(nodeView, "locked:" .. lockedText, name,
-						"\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0), true, lockedText)
+					-- The warning icon leads the TITLE bar, like a classic popup
+					ensureNodePopup(nodeView, "locked:" .. lockedText, "\u{26A0}\u{FE0F} " .. name,
+						"Infected!", Color3.fromRGB(200, 0, 0), true, lockedText)
 				end
 			elseif isWarez then
 				-- Warez nodes are shops: advertise, don't alarm
 				ensureNodePopup(nodeView, "new", name,
 					"New!", Color3.fromRGB(0, 90, 20), true)
 			else
-				ensureNodePopup(nodeView, "infected", name,
-					"\u{26A0}\u{FE0F} Infected!", Color3.fromRGB(200, 0, 0), true)
+				ensureNodePopup(nodeView, "infected", "\u{26A0}\u{FE0F} " .. name,
+					"Infected!", Color3.fromRGB(200, 0, 0), true)
 			end
 		else
 			removeNodePopup(nodeView)
