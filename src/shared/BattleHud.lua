@@ -456,7 +456,9 @@ local function BattleHudContent(props: HudState)
 					Name = "ProgramsWindow",
 					AnchorPoint = Vector2.new(1, 0),
 					Position = UDim2.new(1, -12, 0, 12),
-					Size = UDim2.new(0, 160, 0, listHeight + (if props.dragHintProminent then 58 else 36)),
+					-- 176: the full title ("Scripts - Click or Drag to Place")
+					-- just overflowed the previous 160
+					Size = UDim2.new(0, 176, 0, listHeight + (if props.dragHintProminent then 58 else 36)),
 					ZIndex = 3,
 				},
 				programItems
