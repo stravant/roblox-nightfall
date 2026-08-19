@@ -292,6 +292,9 @@ local function WarezContent(props: WarezState)
 			[React.Event.MouseButton1Click] = props.onDone,
 		}),
 		MainBox = e("ImageLabel", {
+			-- Active: clicks on the window body must sink here, NOT fall
+			-- through to the backdrop (which exits the shop)
+			Active = true,
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
 			-- 380x210 fits a phone screen; larger viewports stretch the

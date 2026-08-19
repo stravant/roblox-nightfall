@@ -341,6 +341,9 @@ local function MainMenuContent(props: MainMenuState)
 	return e("ImageLabel", {
 		-- Menu window
 		Name = "Menu",
+		-- Active: clicks on the window body must sink here, NOT fall
+		-- through to the backdrop (which closes the menu)
+		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		Size = UDim2.new(0, 400, 0, 250),
@@ -536,6 +539,11 @@ function MainMenuView.new(container: Instance)
 	mGui.Image = ""
 	mGui.AutoButtonColor = false
 	mGui.Visible = false
+	-- Clicking the dimmed backdrop outside the menu window closes it (the
+	-- window body itself is Active, so its clicks never reach this)
+	mGui.MouseButton1Click:Connect(function()
+		this:Hide()
+	end)
 
 	-- Forward-declared so the slider adapters (whose callbacks are wired up
 	-- during create) can setState; assigned right after StatefulRoot.create.
