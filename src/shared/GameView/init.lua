@@ -1087,9 +1087,10 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	-- Shared drag session: a ghost icon follows the pointer; releasing over an
 	-- upload zone uploads the program there, anywhere else leaves it in the
 	-- inventory. Used both for dragging out of the Programs window and for
-	-- dragging an already-placed unit back off its upload zone.
+	-- dragging an already-placed unit back off its upload zone (sourceZone is
+	-- then that zone, letting a drop on an occupied zone SWAP the two units).
 	local UserInputService = game:GetService('UserInputService')
-	local function startDragSession(id, screenPos)
+	local function startDragSession(id, screenPos, sourceZone)
 		mDraggingProgram = true
 		-- Show what's being dragged in the info window right away
 		mUnitInfoView:SetSelectedUnitDefinition(id)
@@ -1100,7 +1101,15 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		ghost.Name = "DragGhost"
 		ghost.AnchorPoint = Vector2.new(0.5, 0.5)
 		ghost.Size = UDim2.new(0, 48, 0, 48)
-		ghost.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
+		-- Clamped: the ScreenGui clips at the screen edges, and a ghost
+		-- centered on a pointer near the bottom would render cut off
+		local function ghostPosition(px, py)
+			local view = mGui.AbsoluteSize
+			return UDim2.new(
+				0, math.clamp(px, 24, math.max(24, view.X - 24)),
+				0, math.clamp(py, 24, math.max(24, view.Y - 24)))
+		end
+		ghost.Position = ghostPosition(screenPos.X, screenPos.Y)
 		ghost.BackgroundColor3 = def.Color
 		ghost.BackgroundTransparency = 0.3
 		ghost.BorderColor3 = Color3.new(0, 0, 0)
@@ -1113,7 +1122,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		moveCn = UserInputService.InputChanged:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement
 				or input.UserInputType == Enum.UserInputType.Touch then
-				ghost.Position = UDim2.new(0, input.Position.X, 0, input.Position.Y)
+				ghost.Position = ghostPosition(input.Position.X, input.Position.Y)
 			end
 		end)
 		endCn = UserInputService.InputEnded:Connect(function(input)
@@ -1131,10 +1140,24 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 				return
 			end
 			local x, y = uploadZoneDropTarget(Vector2.new(input.Position.X, input.Position.Y))
-			if x and y and tryUploadProgram(id, x, y) then
-				SoundManager:Play('SelectUnit')
-				mUnitInfoView:SetSelectedUnitDefinition(id)
-				reportPlacementMethod('drag')
+			if x and y then
+				-- A unit already on the target zone gets displaced back to
+				-- the inventory by the upload...
+				local occupant = gameState:GetUnit(x, y)
+				local displacedId = if occupant and not occupant.Enemy
+					then occupant.Definition.Id
+					else nil
+				if tryUploadProgram(id, x, y) then
+					SoundManager:Play('SelectUnit')
+					mUnitInfoView:SetSelectedUnitDefinition(id)
+					reportPlacementMethod('drag')
+					-- ...and when the drag came off another zone, lands
+					-- there instead: zone-to-zone drops swap the two units
+					if displacedId and sourceZone
+						and not (sourceZone.x == x and sourceZone.y == y) then
+						tryUploadProgram(displacedId, sourceZone.x, sourceZone.y)
+					end
+				end
 			end
 		end)
 	end
@@ -1182,7 +1205,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		if not hasPlayerUnits() then
 			mTopbar:SetStartVisible(false)
 		end
-		startDragSession(id, screenPos)
+		startDragSession(id, screenPos, { x = x, y = y })
 		return true
 	end)
 	mUnitInfoView.CommandSelected:connect(function(commandId)

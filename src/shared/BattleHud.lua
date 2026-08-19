@@ -558,6 +558,21 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 	local function findProgramScroll(): ScrollingFrame?
 		return mGui:FindFirstChild("ProgramScroll", true) :: ScrollingFrame?
 	end
+	local function beginProgramDrag(pos: Vector2)
+		local id = (mProgramPress :: any).Id
+		mProgramPress = nil
+		mDragActive = true
+		mPressBecameDrag = true
+		local scroll = findProgramScroll()
+		if scroll then
+			-- Fully inert while the drag is out: no touch scrolling, and
+			-- the Win95 scrollbar ignores the transiting pointer too
+			scroll.ScrollingEnabled = false
+			scroll:SetAttribute("SuppressScrollbar", true)
+			mScrollDisabled = scroll
+		end
+		this.ProgramDragBegan:fire(id, pos)
+	end
 	table.insert(mConnections, UserInputService.InputChanged:Connect(function(input: InputObject)
 		if not mProgramPress then
 			return
@@ -569,22 +584,27 @@ function BattleHud.new(container: Instance, availablePrograms: { any })
 		local pos = Vector2.new(input.Position.X, input.Position.Y)
 		local delta = pos - mProgramPress.Start
 		if math.abs(delta.Y) >= kProgramDragThresholdPx and math.abs(delta.Y) > math.abs(delta.X) then
-			-- Vertical first: it's a scroll, not a drag
-			mProgramPress = nil
-		elseif math.abs(delta.X) >= kProgramDragThresholdPx then
-			local id = mProgramPress.Id
-			mProgramPress = nil
-			mDragActive = true
-			mPressBecameDrag = true
+			-- Vertical first: normally a scroll - but a downward pull with
+			-- the list already at the bottom (or upward at the top) can't be
+			-- meant as one, so treat it as the unit drag directly. When the
+			-- list isn't at that extreme, never hijack a scroll gesture.
 			local scroll = findProgramScroll()
+			local atExtreme = false
 			if scroll then
-				-- Fully inert while the drag is out: no touch scrolling, and
-				-- the Win95 scrollbar ignores the transiting pointer too
-				scroll.ScrollingEnabled = false
-				scroll:SetAttribute("SuppressScrollbar", true)
-				mScrollDisabled = scroll
+				local maxScroll = math.max(0, scroll.AbsoluteCanvasSize.Y - scroll.AbsoluteSize.Y)
+				if delta.Y > 0 then
+					atExtreme = scroll.CanvasPosition.Y >= maxScroll - 0.5
+				else
+					atExtreme = scroll.CanvasPosition.Y <= 0.5
+				end
 			end
-			this.ProgramDragBegan:fire(id, pos)
+			if atExtreme then
+				beginProgramDrag(pos)
+			else
+				mProgramPress = nil
+			end
+		elseif math.abs(delta.X) >= kProgramDragThresholdPx then
+			beginProgramDrag(pos)
 		end
 	end))
 	table.insert(mConnections, UserInputService.InputEnded:Connect(function(input: InputObject)
