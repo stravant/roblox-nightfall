@@ -57,6 +57,8 @@ local kPopupHeightPx = kPopupWidthPx * 46 / 132
 -- viewport, where the placement was already right.
 local kPopupPullStuds = 16
 local kPopupDownStuds = 4.5
+-- How far behind the billboard the opaque backing sits (along the sight ray)
+local kBackingDepthStuds = 0.75
 -- Reference point on the node the popup hangs beneath (above the base pivot)
 local kPopupNodeCenterY = 6
 -- The window chrome texture has a little transparent margin around it, so the
@@ -552,6 +554,16 @@ function Netmap3DView.new(topbarCredits)
 			lockText.Parent = overlay
 		end
 
+		-- Desktop hover: a border around the popup rect completes the node's
+		-- hover highlight (the popup is part of the hover target, and the
+		-- outline alone reads as incomplete). Toggled by updateHoveredNode
+		-- with the highlight's color.
+		local hoverStroke = Instance.new("UIStroke")
+		hoverStroke.Thickness = 2
+		hoverStroke.Color = Color3.new(1, 0, 0)
+		hoverStroke.Enabled = false
+		hoverStroke.Parent = window
+
 		-- Invisible button spanning the popup: hovering highlights the node,
 		-- clicking enters it (exactly matches the billboard's screen size)
 		local clickButton = Instance.new("ImageButton")
@@ -582,6 +594,7 @@ function Netmap3DView.new(topbarCredits)
 			-- version of it (transparency flashing reads badly with the stroke)
 			FlashColor = statusColor:Lerp(Color3.new(1, 1, 1), 0.5),
 			BaseColor = statusColor,
+			HoverStroke = hoverStroke,
 		}
 	end
 	removeNodePopup = function(nodeView)
@@ -623,22 +636,25 @@ function Netmap3DView.new(topbarCredits)
 					+ nodeToCam.Unit * kPopupPullStuds
 					- camCF.UpVector * kPopupDownStuds
 				popup.Adornee.CFrame = CFrame.new(anchorPos)
-				local dist = (anchorPos - camCF.Position).Magnitude
-				local worldPerPixel = dist * worldPerPixelPerStud
-				-- Additionally pulled in a stud per side: the depth offset
-				-- makes the backing project slightly larger than the billboard
-				-- (perspective), and the highlight only ever overlaps the
-				-- popup towards the middle anyway
-				local w = (kPopupWidthPx - kBackingWidthTrimPx) * worldPerPixel - 2
-				-- Shrinking h moves only the bottom edge: the top edge is
-				-- center + h/2 = the anchor point regardless of h
+				-- The backing hangs kBackingDepthStuds BEHIND the billboard
+				-- (so the billboard depth-tests in front of it), pushed along
+				-- the anchor's own sight ray: its screen projection stays
+				-- exactly under the billboard, and it's sized for pixel
+				-- coverage at its own depth. (It used to be pushed along the
+				-- camera LookVector with a fixed 2-stud width fudge, which
+				-- drifted it toward screen center for off-axis nodes and ate
+				-- 2-3x more of the cover on desktop, where a stud is worth
+				-- more pixels - the hover highlight leaked around the popup.)
+				local camPos = camCF.Position
+				local anchorOffset = anchorPos - camPos
+				local backingDist = anchorOffset.Magnitude + kBackingDepthStuds
+				local worldPerPixel = backingDist * worldPerPixelPerStud
+				local w = (kPopupWidthPx - kBackingWidthTrimPx) * worldPerPixel
+				-- Shrinking h moves only the bottom edge: the top edge stays
+				-- anchor-aligned, matching the billboard's SizeOffset (0, -0.5)
 				local h = (kPopupHeightPx - kBackingHeightTrimPx) * worldPerPixel
-				-- Matches the billboard's SizeOffset (0, -0.5) top-edge
-				-- anchoring; pushed slightly away from the camera so the
-				-- billboard depth-tests in front of the backing
-				local center = anchorPos
+				local center = camPos + anchorOffset.Unit * backingDist
 					- camCF.UpVector * (h / 2)
-					+ camCF.LookVector * 0.75
 				popup.Backing.Size = Vector3.new(w, h, 0.05)
 				popup.Backing.CFrame = CFrame.new(center) * camCF.Rotation
 			end
@@ -786,6 +802,7 @@ function Netmap3DView.new(topbarCredits)
 		if not id and mPopupHoveredId and LocalPlayerData:CanAccessNode(mPopupHoveredId) then
 			id = mPopupHoveredId
 		end
+		local highlightedId = nil
 		if not ModalManager:IsModal() and id then
 			-- The highlight doubles as a "something to do here" hint: beaten
 			-- battle nodes don't get it, warez shops always do. Red for
@@ -797,11 +814,24 @@ function Netmap3DView.new(topbarCredits)
 					else Color3.new(1, 0, 0)
 				mHoverHighlight.Adornee = mNodeView[id].VisibleModel
 				mHoverHighlight.Enabled = true
+				highlightedId = id
 			else
 				mHoverHighlight.Enabled = false
 			end
 		else
 			mHoverHighlight.Enabled = false
+		end
+		-- The popup is part of the hover target: border it in the highlight
+		-- color while its node is highlighted
+		for _, nodeView in pairs(mNodeView) do
+			local popup = nodeView.Popup
+			if popup and popup.HoverStroke then
+				local on = nodeView.Id == highlightedId
+				if on then
+					popup.HoverStroke.Color = mHoverHighlight.OutlineColor
+				end
+				popup.HoverStroke.Enabled = on
+			end
 		end
 	end
 	
