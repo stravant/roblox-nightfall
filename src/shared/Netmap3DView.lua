@@ -527,10 +527,14 @@ function Netmap3DView.new(topbarCredits)
 		label.Font = Enum.Font.SourceSansBold
 		label.TextSize = 16
 		label.TextColor3 = statusColor
-		label.TextStrokeColor3 = Color3.new(0, 0, 0)
-		label.TextStrokeTransparency = 0
 		label.Text = statusText
 		label.Parent = inset
+		-- UIStroke, not the legacy TextStroke: it renders a clean crisp
+		-- outline (white reads better than black against the dark inset)
+		local labelStroke = Instance.new("UIStroke")
+		labelStroke.Color = Color3.new(1, 1, 1)
+		labelStroke.Thickness = 1.5
+		labelStroke.Parent = label
 
 		-- Locked nodes show the normal popup dimmed under a translucent black
 		-- overlay with the lock notice filling it
