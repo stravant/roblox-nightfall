@@ -647,14 +647,24 @@ function Netmap3DView.new(topbarCredits)
 				-- more pixels - the hover highlight leaked around the popup.)
 				local camPos = camCF.Position
 				local anchorOffset = anchorPos - camPos
-				local backingDist = anchorOffset.Magnitude + kBackingDepthStuds
-				local worldPerPixel = backingDist * worldPerPixelPerStud
+				-- Perspective scale follows Z-DEPTH along the camera look
+				-- axis, not radial ray distance: off-axis the two differ by
+				-- 1/cos(angle off axis), which desynced the backing from the
+				-- pixel-sized billboard by ~8px at the screen edges. Push
+				-- along the anchor's own sight ray (projection-invariant)
+				-- far enough to gain exactly kBackingDepthStuds of Z-depth,
+				-- and size for pixel coverage at that Z-depth.
+				local rayDir = anchorOffset.Unit
+				local rayCos = rayDir:Dot(camCF.LookVector)
+				local backingZ = anchorOffset:Dot(camCF.LookVector) + kBackingDepthStuds
+				local backingAnchor = camPos
+					+ rayDir * (anchorOffset.Magnitude + kBackingDepthStuds / rayCos)
+				local worldPerPixel = backingZ * worldPerPixelPerStud
 				local w = (kPopupWidthPx - kBackingWidthTrimPx) * worldPerPixel
 				-- Shrinking h moves only the bottom edge: the top edge stays
 				-- anchor-aligned, matching the billboard's SizeOffset (0, -0.5)
 				local h = (kPopupHeightPx - kBackingHeightTrimPx) * worldPerPixel
-				local center = camPos + anchorOffset.Unit * backingDist
-					- camCF.UpVector * (h / 2)
+				local center = backingAnchor - camCF.UpVector * (h / 2)
 				popup.Backing.Size = Vector3.new(w, h, 0.05)
 				popup.Backing.CFrame = CFrame.new(center) * camCF.Rotation
 			end
