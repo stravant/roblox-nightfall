@@ -559,7 +559,7 @@ function Netmap3DView.new(topbarCredits)
 		-- outline alone reads as incomplete). Toggled by updateHoveredNode
 		-- with the highlight's color.
 		local hoverStroke = Instance.new("UIStroke")
-		hoverStroke.Thickness = 2
+		hoverStroke.Thickness = 3
 		hoverStroke.Color = Color3.new(1, 0, 0)
 		hoverStroke.Enabled = false
 		hoverStroke.Parent = window
@@ -770,10 +770,12 @@ function Netmap3DView.new(topbarCredits)
 			if want and not nodeView.TouchHighlight then
 				local highlight = Instance.new("Highlight")
 				highlight.FillTransparency = 1
-				-- Red for infected nodes, white for warez shops
+				-- Green for infected nodes (matching the desktop hover:
+				-- these are tap hints, red read as "can't tap"), white for
+				-- warez shops
 				highlight.OutlineColor = if Netmap.ById[nodeView.Id].Warez ~= nil
 					then Color3.new(1, 1, 1)
-					else Color3.new(1, 0, 0)
+					else Color3.new(0, 1, 0.3)
 				highlight.OutlineTransparency = 0
 				highlight.DepthMode = Enum.HighlightDepthMode.Occluded
 				highlight.Adornee = nodeView.VisibleModel
