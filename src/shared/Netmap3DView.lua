@@ -805,13 +805,14 @@ function Netmap3DView.new(topbarCredits)
 		local highlightedId = nil
 		if not ModalManager:IsModal() and id then
 			-- The highlight doubles as a "something to do here" hint: beaten
-			-- battle nodes don't get it, warez shops always do. Red for
-			-- infected nodes, white for warez shops.
+			-- battle nodes don't get it, warez shops always do. Green for
+			-- infected nodes (red suggested "can't click"), white for warez
+			-- shops.
 			local isWarez = Netmap.ById[id].Warez ~= nil
 			if isWarez or not mNodeView[id].Beaten then
 				mHoverHighlight.OutlineColor = if isWarez
 					then Color3.new(1, 1, 1)
-					else Color3.new(1, 0, 0)
+					else Color3.new(0, 1, 0.3)
 				mHoverHighlight.Adornee = mNodeView[id].VisibleModel
 				mHoverHighlight.Enabled = true
 				highlightedId = id
