@@ -44,7 +44,8 @@ export type BattleContext = {
 }
 
 type MainMenuState = {
-	menuScale: number,
+	menuWidth: number,
+	menuHeight: number,
 	soundValue: number,
 	musicValue: number,
 	skipsAvailableText: string,
@@ -346,7 +347,10 @@ local function MainMenuContent(props: MainMenuState)
 		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(0, 400, 0, 250),
+		-- 400x250 fits a phone; larger viewports stretch the window (the
+		-- tab panel is edge-relative, so tab content gets real extra room
+		-- at native UI size rather than scaling up)
+		Size = UDim2.new(0, props.menuWidth, 0, props.menuHeight),
 		ZIndex = 2,
 		BackgroundTransparency = 1,
 		Image = kWindowImage,
@@ -354,9 +358,6 @@ local function MainMenuContent(props: MainMenuState)
 		SliceCenter = kWindowSliceCenter,
 		ImageRectSize = kWindowImageRectSize,
 	}, {
-		UIScale = e("UIScale", {
-			Scale = props.menuScale,
-		}),
 		WindowTitle = e("TextLabel", {
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.new(0, 6, 0, 12),
@@ -715,7 +716,18 @@ function MainMenuView.new(container: Instance)
 		-- Remount the tab view so the default tab re-applies on each open
 		mSession += 1
 		if mRoot then
-			mRoot.setState({ menuSession = mSession })
+			-- Size like the warez shop: height up to 2x the base on larger
+			-- viewports with the width growing in proportion, read LIVE at
+			-- open (the viewport isn't settled at construction time)
+			local viewport = workspace.CurrentCamera.ViewportSize
+			local menuHeight = math.clamp(viewport.Y - 180, 250, 500)
+			mRoot.setState({
+				menuSession = mSession,
+				menuHeight = menuHeight,
+				menuWidth = math.clamp(math.min(
+					viewport.X - 120,
+					400 + (menuHeight - 250) * 4 / 5), 400, 600),
+			})
 		end
 		mGui.Visible = true
 	end
@@ -772,7 +784,8 @@ function MainMenuView.new(container: Instance)
 	local mSoundSlider = makeSliderAdapter("soundValue")
 
 	mRoot = StatefulRoot.create(mGui, MainMenuContent, {
-		menuScale = if DeviceInfo.ScreenHeight > 400 then 1.2 else 1,
+		menuWidth = 400,
+		menuHeight = 250,
 		soundValue = 0,
 		musicValue = 0,
 		-- Template placeholder text, replaced once player data is available
