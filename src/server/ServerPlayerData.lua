@@ -112,7 +112,9 @@ function ServerPlayerData.new(player, serialized)
 		{ Key = "MusicVolume", Min = 0, Max = 3 },
 		{ Key = "NetmapX", Min = -1000, Max = 1000 },
 		{ Key = "NetmapZ", Min = -1000, Max = 1000 },
-		{ Key = "NetmapZoom", Min = 100, Max = 1000 },
+		-- Range covers the FOV-30 zoom band (65-163) with slack; old FOV-10
+		-- era saves (200-500) still pass and get clamped client-side
+		{ Key = "NetmapZoom", Min = 40, Max = 500 },
 	}
 	function this:ProcessSaveSettings(settings)
 		if type(settings) ~= "table" then

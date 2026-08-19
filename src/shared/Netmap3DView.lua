@@ -54,7 +54,7 @@ local kPopupHeightPx = kPopupWidthPx * 46 / 132
 -- on-screen size instead of sitting too low zoomed out / too high zoomed in.
 local kPopupPullStuds = 16
 local kPopupDownPx = 34
-local kPopupDownReferenceDist = 300 -- the netmap camera's default zoom
+local kPopupDownReferenceDist = 98 -- the netmap camera's default zoom
 -- Reference point on the node the popup hangs beneath (above the base pivot)
 local kPopupNodeCenterY = 6
 -- The window chrome texture has a little transparent margin around it, so the

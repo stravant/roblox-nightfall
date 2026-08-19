@@ -11,6 +11,17 @@ local BIND_NAME = "NetmapCameraBind"
 -- Dead zone: presses that move less than this stay clicks (no pan)
 local DRAG_THRESHOLD_PX = 14
 
+-- A moderately wide FOV keeps the camera CLOSE to the map: the old FOV-10
+-- telephoto look needed 200-500 studs of distance, far enough that low-end
+-- devices culled netmap geometry when zoomed out. The zoom range scales by
+-- tan(5)/tan(15) to preserve the same on-screen framing.
+local kFieldOfView = 30
+local kDefaultZoom = 98 -- was 300 at FOV 10
+local MIN_ZOOM = 65 -- was 200
+local MAX_ZOOM = 163 -- was 500
+-- Wheel studs per notch, scaled with the zoom range (was 80)
+local kWheelZoomStep = 26
+
 function NetmapCamera.new()
 	local this = {}
 	
@@ -21,11 +32,9 @@ function NetmapCamera.new()
 	
 local mCamera = workspace.CurrentCamera
 	mCamera.CameraType = Enum.CameraType.Scriptable
-	mCamera.FieldOfView = 10
-	
-	local mZoomLevel = 300
-	local MIN_ZOOM = 200
-	local MAX_ZOOM = 500
+	mCamera.FieldOfView = kFieldOfView
+
+	local mZoomLevel = kDefaultZoom
 	
 	local mCurrentPosition = Vector3.new()
 	local LAST_POSITION_COUNT = 30
@@ -119,7 +128,7 @@ local mCamera = workspace.CurrentCamera
 		if not mInstalled or ModalManager:IsModal() then
 			return
 		end
-		mZoomLevel -= delta * 80
+		mZoomLevel -= delta * kWheelZoomStep
 		mZoomLevel = math.clamp(mZoomLevel, MIN_ZOOM, MAX_ZOOM)
 		setPosition(mCurrentPosition)
 		recordZoomSettled()
@@ -339,7 +348,7 @@ local mCamera = workspace.CurrentCamera
 		-- Re-assert the camera state: the battle camera changes type/FOV/CFrame
 		-- while a databattle is up
 		mCamera.CameraType = Enum.CameraType.Scriptable
-		mCamera.FieldOfView = 10
+		mCamera.FieldOfView = kFieldOfView
 		setPosition(mCurrentPosition)
 		local lastTime = os.clock()
 		RunService:BindToRenderStep(BIND_NAME, Enum.RenderPriority.Camera.Value - 1, function()
@@ -367,7 +376,7 @@ local mCamera = workspace.CurrentCamera
 			-- a non-Scriptable type lets the default camera controller stomp
 			-- our CFrame every frame
 			mCamera.CameraType = Enum.CameraType.Scriptable
-			mCamera.FieldOfView = 10
+			mCamera.FieldOfView = kFieldOfView
 			applyCamera()
 		end)
 	end
