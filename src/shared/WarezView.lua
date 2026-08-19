@@ -43,7 +43,7 @@ type WarezState = {
 	purchaseVisible: boolean,
 	insufficientVisible: boolean,
 	ownedCounts: { [string]: number },
-	windowScale: number,
+	windowHeight: number,
 	programs: { ProgramEntryData },
 	onSelect: (id: string) -> (),
 	onPurchase: () -> (),
@@ -285,8 +285,10 @@ local function WarezContent(props: WarezState)
 		MainBox = e("ImageLabel", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
-			-- Short and narrow enough to fit a phone screen at 1x scale
-			Size = UDim2.new(0, 380, 0, 210),
+			-- 380x210 fits a phone screen; taller viewports stretch the
+			-- window (the list and detail pane are height-relative, so this
+			-- shows MORE rows at native UI size rather than scaling up)
+			Size = UDim2.new(0, 380, 0, props.windowHeight),
 			ZIndex = 2,
 			BackgroundTransparency = 1,
 			Image = kWindowImage,
@@ -294,7 +296,6 @@ local function WarezContent(props: WarezState)
 			SliceCenter = kWindowSliceCenter,
 			ImageRectSize = kWindowImageRectSize,
 		}, {
-			UIScale = e("UIScale", { Scale = props.windowScale }),
 			WindowTitle = e("TextLabel", {
 				Position = UDim2.new(0, 6, 0, 2),
 				Size = UDim2.new(1, -12, 0, 18),
@@ -490,14 +491,11 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		purchaseVisible = false,
 		insufficientVisible = false,
 		ownedCounts = ownedCounts(),
-		-- Scale continuously with the viewport (windows/desktops get a
-		-- roomier shop) but never past 2x: larger reads awkwardly. The
-		-- margins keep a phone at ~1x and the old >500px "big screen" tier
-		-- at its familiar ~1.5x. Read LIVE at shop open: DeviceInfo captures
-		-- the viewport at require time, before the window has settled.
-		windowScale = math.clamp(math.min(
-			(workspace.CurrentCamera.ViewportSize.X - 80) / 380,
-			(workspace.CurrentCamera.ViewportSize.Y - 180) / 210), 1, 2),
+		-- Taller viewports get a taller window (more shop rows visible at
+		-- native size), capped at 2x the base height. Read LIVE at shop
+		-- open: the viewport isn't settled at module require time.
+		windowHeight = math.clamp(
+			workspace.CurrentCamera.ViewportSize.Y - 180, 210, 420),
 		programs = mPrograms,
 		onSelect = function(id: string)
 			JourneyRecorder:Record("ShopSelect", id)
