@@ -599,6 +599,7 @@ function Netmap3DView.new(topbarCredits)
 			FlashColor = statusColor:Lerp(Color3.new(1, 1, 1), 0.5),
 			BaseColor = statusColor,
 			HoverStroke = hoverStroke,
+			LabelStroke = labelStroke,
 		}
 	end
 	removeNodePopup = function(nodeView)
@@ -679,7 +680,12 @@ function Netmap3DView.new(topbarCredits)
 		for _, nodeView in pairs(mNodeView) do
 			local popup = nodeView.Popup
 			if popup and popup.FlashLabel then
+				-- Fill and outline swap together: base color with a white
+				-- border, then the lightened color with a black border
 				popup.FlashLabel.TextColor3 = flash and popup.BaseColor or popup.FlashColor
+				if popup.LabelStroke then
+					popup.LabelStroke.Color = flash and Color3.new(1, 1, 1) or Color3.new(0, 0, 0)
+				end
 			end
 		end
 	end
