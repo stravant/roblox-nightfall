@@ -73,12 +73,12 @@ return scripts{
 		ScriptColors.LightBlue, 'rbxassetid://1338007329',
         "Top of the line hacking script.",
         command('slice', "Slice", 'damage', 0, 0, 1, 2),
-        command('mutilate', "Mutilate", 'damage', 4, 0, 1, 4));
+        command('mutilate', "Shred", 'damage', 4, 0, 1, 4));
 
     script('golemmud', "Golem.mud", 1, 5,
 		ScriptColors.Cyan, 'rbxassetid://1338016455',
         "Slow and steady attack script.",
-        command('thump', "Thump", 'damage', 0, 0, 1, 3));        
+        command('thump', "Thump", 'damage', 0, 0, 1, 3));
     
     script('golemclay', "Golem.clay", 2, 6,
 		ScriptColors.Cyan, 'rbxassetid://1338016453',
@@ -119,19 +119,19 @@ return scripts{
 
     script('heisenbug', "HeisenBug", 5, 1,
 		ScriptColors.LightGreen, 'rbxassetid://1338017917',
-        "They can't kill what they can't catch!",
+        "They can't fix what they can't catch!",
         command('qglitch', "Quantum Glitch", 'damage', 0, 0, 1, 6));
 
     script('buzzbomb', "BuzzBomb", 8, 2,
 		ScriptColors.DarkBlue, 'rbxassetid://1338010617',
         "Fast an annoying. Bzzzt!",
         command('sting', "Sting", 'damage', 0, 0, 1, 1),
-        command('kamikazee', "Kamikazee", 'damage', 0, 1337, 1, 5));
+        command('kamikazee', "Blitz", 'damage', 0, 1337, 1, 5));
 
     script('logicbomb', "LogicBomb", 3, 6,
 		ScriptColors.DarkBlue, 'rbxassetid://1338017916',
         "Self-Destructing attack script.",
-        command('selfdestruct', "Self-Destruct", 'damage', 6, 1337, 1, 10));
+        command('selfdestruct', "System Hang", 'damage', 6, 1337, 1, 10));
     
     script('fiddle', "Fiddle", 3, 3,
 		ScriptColors.DarkBlue, 'rbxassetid://1338014721',
