@@ -767,7 +767,7 @@ function Netmap3DView.new(topbarCredits)
 	-- A whisper of fill in the outline's color keeps the highlight from
 	-- getting lost when zoomed in on large node geometry.
 	local mHoverHighlight = Instance.new("Highlight")
-	mHoverHighlight.FillTransparency = 0.85
+	mHoverHighlight.FillTransparency = 0.7
 	mHoverHighlight.OutlineColor = Color3.new(1, 1, 1)
 	mHoverHighlight.OutlineTransparency = 0
 	-- Occluded (not AlwaysOnTop) so the opaque popup parts can cover it
