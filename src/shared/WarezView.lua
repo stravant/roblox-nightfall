@@ -12,7 +12,6 @@ local Signal = require(game.ReplicatedStorage.Signal)
 local Scripts = require(game.ReplicatedStorage.Scripts)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
-local DeviceInfo = require(game.ReplicatedStorage.DeviceInfo)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
 local WindowsButton = require(game.ReplicatedStorage.Components.WindowsButton)
@@ -494,10 +493,11 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		-- Scale continuously with the viewport (windows/desktops get a
 		-- roomier shop) but never past 2x: larger reads awkwardly. The
 		-- margins keep a phone at ~1x and the old >500px "big screen" tier
-		-- at its familiar ~1.5x.
+		-- at its familiar ~1.5x. Read LIVE at shop open: DeviceInfo captures
+		-- the viewport at require time, before the window has settled.
 		windowScale = math.clamp(math.min(
-			(DeviceInfo.ScreenWidth - 80) / 380,
-			(DeviceInfo.ScreenHeight - 180) / 210), 1, 2),
+			(workspace.CurrentCamera.ViewportSize.X - 80) / 380,
+			(workspace.CurrentCamera.ViewportSize.Y - 180) / 210), 1, 2),
 		programs = mPrograms,
 		onSelect = function(id: string)
 			JourneyRecorder:Record("ShopSelect", id)
