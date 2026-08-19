@@ -210,7 +210,7 @@ local function MainMenuContent(props: MainMenuState)
 		for i, badge in pairs(rows or {}) do
 			items["Badge" .. i] = e("Frame", {
 				LayoutOrder = i,
-				Size = UDim2.new(1, -18, 0, 34),
+				Size = UDim2.new(1, -18, 0, 48),
 				BackgroundTransparency = 1,
 			}, {
 				Icon = e("ImageLabel", {
@@ -231,15 +231,19 @@ local function MainMenuContent(props: MainMenuState)
 					TextXAlignment = Enum.TextXAlignment.Left,
 					Text = badge.Name,
 				}),
+				-- Two wrapped lines (truncating the tail) instead of one
+				-- clipped line: badge descriptions rarely fit a single row
 				DescriptionLabel = e("TextLabel", {
 					Position = UDim2.new(0, 36, 0, 17),
-					Size = UDim2.new(1, -36, 0, 13),
+					Size = UDim2.new(1, -36, 0, 28),
 					BackgroundTransparency = 1,
 					Font = Enum.Font.SourceSans,
 					TextSize = 12,
 					TextColor3 = if dimmed then Color3.new(0.55, 0.55, 0.55) else Color3.new(0.35, 0.35, 0.35),
+					TextWrapped = true,
 					TextTruncate = Enum.TextTruncate.AtEnd,
 					TextXAlignment = Enum.TextXAlignment.Left,
+					TextYAlignment = Enum.TextYAlignment.Top,
 					Text = badge.Description,
 				}),
 			})
@@ -267,7 +271,7 @@ local function MainMenuContent(props: MainMenuState)
 			}, badgeRowItems(rows, placeholder, dimmed)),
 			Scrollbar = e(Win95Scrollbar, {
 				scrollRef = scrollRef,
-				lineScroll = 35,
+				lineScroll = 49,
 			}),
 		})
 	end
@@ -340,11 +344,9 @@ local function MainMenuContent(props: MainMenuState)
 	end
 
 	return e("ImageLabel", {
-		-- Menu window
+		-- Menu window (the ClickSink child keeps window-body clicks from
+		-- reaching the backdrop, which closes the menu)
 		Name = "Menu",
-		-- Active: clicks on the window body must sink here, NOT fall
-		-- through to the backdrop (which closes the menu)
-		Active = true,
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.5, 0),
 		-- 400x250 fits a phone; larger viewports stretch the window (the
@@ -358,6 +360,18 @@ local function MainMenuContent(props: MainMenuState)
 		SliceCenter = kWindowSliceCenter,
 		ImageRectSize = kWindowImageRectSize,
 	}, {
+		-- Swallows clicks on the window body: the backdrop host is an
+		-- ANCESTOR button (children can't sink input away from their own
+		-- ancestor - Active on the window did nothing), so an inert button
+		-- over the window's extent must claim them. ZIndex 0 keeps it under
+		-- every real control.
+		ClickSink = e("ImageButton", {
+			Size = UDim2.new(1, 0, 1, 0),
+			ZIndex = 0,
+			BackgroundTransparency = 1,
+			Image = "",
+			AutoButtonColor = false,
+		}),
 		WindowTitle = e("TextLabel", {
 			AnchorPoint = Vector2.new(0, 0.5),
 			Position = UDim2.new(0, 6, 0, 12),
