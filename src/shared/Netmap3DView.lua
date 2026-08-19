@@ -763,9 +763,11 @@ function Netmap3DView.new(topbarCredits)
 		end
 	end
 	
-	-- Hover highlight: outline on the hovered node's model (desktop only)
+	-- Hover highlight: outline on the hovered node's model (desktop only).
+	-- A whisper of fill in the outline's color keeps the highlight from
+	-- getting lost when zoomed in on large node geometry.
 	local mHoverHighlight = Instance.new("Highlight")
-	mHoverHighlight.FillTransparency = 1
+	mHoverHighlight.FillTransparency = 0.85
 	mHoverHighlight.OutlineColor = Color3.new(1, 1, 1)
 	mHoverHighlight.OutlineTransparency = 0
 	-- Occluded (not AlwaysOnTop) so the opaque popup parts can cover it
@@ -851,6 +853,7 @@ function Netmap3DView.new(topbarCredits)
 				mHoverHighlight.OutlineColor = if isWarez
 					then Color3.new(1, 1, 1)
 					else Color3.new(0, 1, 0.3)
+				mHoverHighlight.FillColor = mHoverHighlight.OutlineColor
 				mHoverHighlight.Adornee = mNodeView[id].VisibleModel
 				mHoverHighlight.Enabled = true
 				highlightedId = id
