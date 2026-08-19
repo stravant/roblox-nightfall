@@ -785,6 +785,21 @@ function Netmap3DView.new(topbarCredits)
 				nodeView.TouchHighlight:Destroy()
 				nodeView.TouchHighlight = nil
 			end
+			-- The popup border joins the tap-hint outlines (same look as the
+			-- desktop hover border). Only written in touch mode: the hover
+			-- path owns the strokes for mouse input (it runs first, so in
+			-- touch mode this override wins).
+			if touchMode then
+				local popup = nodeView.Popup
+				if popup and popup.HoverStroke then
+					if want then
+						popup.HoverStroke.Color = if Netmap.ById[nodeView.Id].Warez ~= nil
+							then Color3.new(1, 1, 1)
+							else Color3.new(0, 1, 0.3)
+					end
+					popup.HoverStroke.Enabled = want
+				end
+			end
 		end
 	end
 
