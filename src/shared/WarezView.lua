@@ -44,6 +44,7 @@ type WarezState = {
 	insufficientVisible: boolean,
 	ownedCounts: { [string]: number },
 	windowHeight: number,
+	windowWidth: number,
 	programs: { ProgramEntryData },
 	onSelect: (id: string) -> (),
 	onPurchase: () -> (),
@@ -256,9 +257,9 @@ local function WarezContent(props: WarezState)
 			props.ownedCounts[data.Id] or 0, props.onSelect, i)
 	end
 
-	local function columnHeading(name: string, x: number, width: number, alignment: Enum.TextXAlignment)
+	local function columnHeading(name: string, x: number, width: number, alignment: Enum.TextXAlignment, xScale: number?)
 		return e("TextLabel", {
-			Position = UDim2.new(0, x, 0, 0),
+			Position = UDim2.new(xScale or 0, x, 0, 0),
 			Size = UDim2.new(0, width, 1, 0),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSansBold,
@@ -268,6 +269,11 @@ local function WarezContent(props: WarezState)
 			Text = name,
 		})
 	end
+
+	-- Extra width over the 380 base splits between the shop list (40%: more
+	-- room for names) and the detail pane (60%)
+	local listWidth = 190 + math.floor((props.windowWidth - 380) * 0.4)
+	local detailX = 6 + listWidth + 6
 
 	return e(React.Fragment, nil, {
 		MouseCatcher = e("ImageButton", {
@@ -281,14 +287,17 @@ local function WarezContent(props: WarezState)
 			BackgroundTransparency = 0.5,
 			BorderSizePixel = 0,
 			Image = "",
+			-- Clicking the dimmed netmap outside the window leaves the shop
+			-- (nice on desktop, where most of the netmap stays visible)
+			[React.Event.MouseButton1Click] = props.onDone,
 		}),
 		MainBox = e("ImageLabel", {
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			Position = UDim2.new(0.5, 0, 0.5, 0),
-			-- 380x210 fits a phone screen; taller viewports stretch the
-			-- window (the list and detail pane are height-relative, so this
+			-- 380x210 fits a phone screen; larger viewports stretch the
+			-- window (the list and detail pane are edge-relative, so this
 			-- shows MORE rows at native UI size rather than scaling up)
-			Size = UDim2.new(0, 380, 0, props.windowHeight),
+			Size = UDim2.new(0, props.windowWidth, 0, props.windowHeight),
 			ZIndex = 2,
 			BackgroundTransparency = 1,
 			Image = kWindowImage,
@@ -310,16 +319,19 @@ local function WarezContent(props: WarezState)
 			-- inside the scroll frame: 4px scroll inset + row offsets)
 			ShopHeadings = e("Frame", {
 				Position = UDim2.new(0, 6, 0, 26),
-				Size = UDim2.new(0, 190, 0, 16),
+				Size = UDim2.new(0, listWidth, 0, 16),
 				BackgroundTransparency = 1,
 			}, {
 				HeadingCost = columnHeading("Cost", 6, 40, Enum.TextXAlignment.Right),
 				HeadingName = columnHeading("Name", 76, 80, Enum.TextXAlignment.Left),
-				HeadingOwned = columnHeading("Owned", 132, 48, Enum.TextXAlignment.Right),
+				-- Tracks the right edge (the rows' Owned column is
+				-- right-anchored too); -58 lands at the original x=132 at
+				-- the base 190 list width
+				HeadingOwned = columnHeading("Owned", -58, 48, Enum.TextXAlignment.Right, 1),
 			}),
 			ShopInset = e("ImageLabel", {
 				Position = UDim2.new(0, 6, 0, 44),
-				Size = UDim2.new(0, 190, 1, -90),
+				Size = UDim2.new(0, listWidth, 1, -90),
 				BackgroundTransparency = 1,
 				Image = kInsetImage,
 				ScaleType = Enum.ScaleType.Slice,
@@ -351,8 +363,8 @@ local function WarezContent(props: WarezState)
 				}),
 			}),
 			DetailInset = e("ImageLabel", {
-				Position = UDim2.new(0, 202, 0, 26),
-				Size = UDim2.new(1, -208, 1, -72),
+				Position = UDim2.new(0, detailX, 0, 26),
+				Size = UDim2.new(1, -(detailX + 6), 1, -72),
 				-- The shallow pane can't fit the longest description texts;
 				-- clip rather than paint over the buttons below
 				ClipsDescendants = true,
@@ -491,11 +503,17 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		purchaseVisible = false,
 		insufficientVisible = false,
 		ownedCounts = ownedCounts(),
-		-- Taller viewports get a taller window (more shop rows visible at
-		-- native size), capped at 2x the base height. Read LIVE at shop
-		-- open: the viewport isn't settled at module require time.
+		-- Larger viewports get a larger window (more shop rows visible at
+		-- native size), height capped at 2x the base with the width growing
+		-- in proportion (380 -> 560 at full height) so the window doesn't
+		-- read tall-and-narrow. Read LIVE at shop open: the viewport isn't
+		-- settled at module require time.
 		windowHeight = math.clamp(
 			workspace.CurrentCamera.ViewportSize.Y - 180, 210, 420),
+		windowWidth = math.clamp(math.min(
+			workspace.CurrentCamera.ViewportSize.X - 120,
+			380 + (math.clamp(workspace.CurrentCamera.ViewportSize.Y - 180, 210, 420) - 210) * 6 / 7
+		), 380, 560),
 		programs = mPrograms,
 		onSelect = function(id: string)
 			JourneyRecorder:Record("ShopSelect", id)
