@@ -49,12 +49,14 @@ local kPopupHeightPx = kPopupWidthPx * 46 / 132
 -- (in front of the node/ground without introducing parallax — and since the
 -- ray rises toward the camera, pull is also what buys ground clearance), and
 -- how far below the node's center the popup's top edge hangs. The down
--- offset is measured in pixels AT THE DEFAULT ZOOM but applied as a
--- world-space (camera-plane) offset, so the gap scales with the node's
--- on-screen size instead of sitting too low zoomed out / too high zoomed in.
+-- offset is a WORLD (camera-plane) distance so the gap tracks the node's
+-- on-screen size on every viewport. It used to be specced in pixels and
+-- converted through the viewport height, which silently shrank the world
+-- gap 2-3x on tall desktop viewports — popups parked over the node body.
+-- 4.5 studs reproduces what the pixel math produced on a phone-sized
+-- viewport, where the placement was already right.
 local kPopupPullStuds = 16
-local kPopupDownPx = 34
-local kPopupDownReferenceDist = 149 -- the netmap camera's default zoom
+local kPopupDownStuds = 4.5
 -- Reference point on the node the popup hangs beneath (above the base pivot)
 local kPopupNodeCenterY = 6
 -- The window chrome texture has a little transparent margin around it, so the
@@ -619,7 +621,7 @@ function Netmap3DView.new(topbarCredits)
 				end
 				local anchorPos = popup.NodeCenter
 					+ nodeToCam.Unit * kPopupPullStuds
-					- camCF.UpVector * (kPopupDownPx * kPopupDownReferenceDist * worldPerPixelPerStud)
+					- camCF.UpVector * kPopupDownStuds
 				popup.Adornee.CFrame = CFrame.new(anchorPos)
 				local dist = (anchorPos - camCF.Position).Magnitude
 				local worldPerPixel = dist * worldPerPixelPerStud
