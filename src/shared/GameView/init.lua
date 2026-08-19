@@ -1396,7 +1396,9 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		table.insert(mUploadZoneTiles, { x = coord.x, y = coord.y, Gui = tile })
 	end
 	mPulseCn = RunService.RenderStepped:Connect(function()
-		local pulse = 0.15 + 0.5 * (0.5 + 0.5 * math.sin(os.clock() * 4))
+		-- Full-swing flash (solid to nearly gone) so the zones read
+		-- unmistakably as "put things here" during setup
+		local pulse = 0.85 * (0.5 + 0.5 * math.sin(os.clock() * 5))
 		for _, entry in mUploadZoneTiles do
 			if entry.Gui.Parent then
 				if gameState:GetUnit(entry.x, entry.y) then
