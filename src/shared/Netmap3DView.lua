@@ -1167,10 +1167,14 @@ function Netmap3DView.new(topbarCredits)
 	setupLinks()
 	setupNodes()
 
-	-- Keep the node popups in sync with whether the netmap is actually on
-	-- screen. Watching the gui's Visible property covers both SetVisible and
-	-- the tutorial's direct Visible toggling.
+	-- Keep the full view state in sync with whether the netmap is actually
+	-- on screen. Watching the gui's Visible property covers both SetVisible
+	-- and the tutorial's direct Visible toggling - the tutorial path MUST
+	-- reach SetVisible too, or the netmap camera stays installed through the
+	-- tutorial databattle and its per-frame FOV/type asserts fight the
+	-- battle camera (the tutorial board rendered at the netmap's FOV).
 	mGui:GetPropertyChangedSignal("Visible"):Connect(function()
+		this:SetVisible(mGui.Visible)
 		for _, nodeView in pairs(mNodeView) do
 			if nodeView.Popup then
 				nodeView.Popup.Billboard.Enabled = mGui.Visible
