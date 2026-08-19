@@ -118,6 +118,11 @@ function BattleBoard3D.new(backgroundImage: string)
 		end
 	end)
 
+	-- Edge-panning during placement drags
+	function this:PanBy(deltaX: number, deltaZ: number)
+		mCamera:PanBy(deltaX, deltaZ)
+	end
+
 	-- Which grid square an InputObject.Position (GUI/screen space) is over
 	-- (nil if off the board)
 	function this:GridAtScreen(screenPos: Vector2): (number?, number?)

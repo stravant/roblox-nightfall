@@ -191,6 +191,13 @@ function BattleCamera.new(config: Config)
 		applyCamera()
 	end
 
+	-- Shift the focus by a world-space delta (clamped to the pan extents
+	-- like any other pan). Used for edge-panning during placement drags.
+	function this:PanBy(deltaX: number, deltaZ: number)
+		setFocus(mFocus + Vector2.new(deltaX, deltaZ))
+		applyCamera()
+	end
+
 	function this:GetMouseHit(): Vector3
 		return mouseHit()
 	end

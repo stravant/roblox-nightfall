@@ -1118,10 +1118,31 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		ghost.ZIndex = 10
 		ghost.Parent = mGui
 
+		-- Holding the ghost near a screen edge pans the map toward it,
+		-- scroll-at-edge style (full speed at the edge, easing in across
+		-- the margin). Screen-up is world -Z on the top-down battle camera.
+		local kEdgePanMarginPx = 48
+		local kEdgePanSpeedStuds = 50 -- per second at the very edge
+		local lastPointer = Vector2.new(screenPos.X, screenPos.Y)
+		local function edgeStrength(distFromEdge)
+			return math.clamp((kEdgePanMarginPx - distFromEdge) / kEdgePanMarginPx, 0, 1)
+		end
+		local panCn = RunService.RenderStepped:Connect(function(dt)
+			local view = mGui.AbsoluteSize
+			local panX = edgeStrength(view.X - lastPointer.X) - edgeStrength(lastPointer.X)
+			local panZ = edgeStrength(view.Y - lastPointer.Y) - edgeStrength(lastPointer.Y)
+			if panX ~= 0 or panZ ~= 0 then
+				mBattleBoard:PanBy(
+					panX * kEdgePanSpeedStuds * dt,
+					panZ * kEdgePanSpeedStuds * dt)
+			end
+		end)
+
 		local moveCn, endCn
 		moveCn = UserInputService.InputChanged:Connect(function(input)
 			if input.UserInputType == Enum.UserInputType.MouseMovement
 				or input.UserInputType == Enum.UserInputType.Touch then
+				lastPointer = Vector2.new(input.Position.X, input.Position.Y)
 				ghost.Position = ghostPosition(input.Position.X, input.Position.Y)
 			end
 		end)
@@ -1132,6 +1153,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			end
 			moveCn:Disconnect()
 			endCn:Disconnect()
+			panCn:Disconnect()
 			ghost:Destroy()
 			mDraggingProgram = false
 			if mDestroyed then
