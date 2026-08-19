@@ -307,7 +307,18 @@ local function BattleHudContent(props: HudState)
 			}),
 		})
 	end
-	local visibleRows = math.clamp(#props.programs, 1, kMaxVisibleProgramRows)
+	-- Base cap: 4 rows. Non-tutorial battles have nothing parked beneath the
+	-- scripts window (the tutorial keeps its chat box down there), so the
+	-- list may grow into the free screen height - but no more than 4x the
+	-- base, past which the tall list reads awkwardly.
+	local maxRows = kMaxVisibleProgramRows
+	if not props.dragHintProminent then
+		-- 12px top margin + ~36px window chrome + 12px bottom clearance
+		local viewportY = workspace.CurrentCamera.ViewportSize.Y
+		local fitRows = math.floor((viewportY - 60) / 26)
+		maxRows = math.clamp(fitRows, kMaxVisibleProgramRows, kMaxVisibleProgramRows * 4)
+	end
+	local visibleRows = math.clamp(#props.programs, 1, maxRows)
 	-- Rows + inter-row gaps + 1px top/bottom padding
 	local listHeight = visibleRows * 24 + (visibleRows - 1) * 2 + 2
 	local programItems: { [string]: any } = {
