@@ -128,7 +128,9 @@ local function sessionRow(summary: any, i: number, onPick: (key: string, title: 
 	return e("TextButton", {
 		LayoutOrder = i,
 		Size = UDim2.new(1, -18, 0, 20),
-		BackgroundTransparency = 1,
+		-- Subtle zebra striping so the eye can track a row across columns
+		BackgroundColor3 = Color3.fromRGB(235, 236, 240),
+		BackgroundTransparency = if i % 2 == 0 then 0 else 1,
 		BorderSizePixel = 0,
 		Text = "",
 		[React.Event.MouseButton1Click] = function()
