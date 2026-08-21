@@ -500,6 +500,9 @@ node{
 		medic = 1000;
 		turbo = 1000;
 	};
+	-- Explicit shop ordering (default is cheapest first): lead with the
+	-- straight attack upgrade, support toward the bottom
+	WarezOrder = { 'hack2', 'turbo', 'golemmud', 'seeker', 'medic', 'wolfspider', 'tower' };
 }
 
 node{
