@@ -921,12 +921,12 @@ return function(t)
 		t.expect(loaded.Settings.SoundVolume).toBe(1)
 		t.expect(loaded.Settings.MusicVolume).toBe(1)
 
-		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = 0.25, MusicVolume = 2 })
+		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = 0.25, MusicVolume = 2, GameSpeed = 2 })
 		-- A partial payload (netmap camera only) merges rather than clobbers
 		remotes.SaveSettings:FireServer_TEST(player, { NetmapX = 120, NetmapZ = -40, NetmapZoom = 350 })
 		-- Garbage and out-of-range input is rejected or clamped
 		remotes.SaveSettings:FireServer_TEST(player, "junk")
-		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = "loud" })
+		remotes.SaveSettings:FireServer_TEST(player, { SoundVolume = "loud", GameSpeed = 99 })
 		playerLeaves(player)
 
 		local rejoined = remotes.Load:InvokeServer_TEST(makePlayer(9100, "AudioTweaker"))
@@ -935,6 +935,8 @@ return function(t)
 		t.expect(rejoined.Settings.NetmapX).toBe(120)
 		t.expect(rejoined.Settings.NetmapZ).toBe(-40)
 		t.expect(rejoined.Settings.NetmapZoom).toBe(350)
+		-- GameSpeed saved; the out-of-range 99 was clamped to the max
+		t.expect(rejoined.Settings.GameSpeed).toBe(2)
 	end)
 
 	t.test("a frozen legacy save (pre-Settings format) still loads and plays", function()

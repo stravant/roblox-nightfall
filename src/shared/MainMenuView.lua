@@ -13,6 +13,7 @@
 
 local Signal = require(game.ReplicatedStorage.Signal)
 local SoundManager = require(game.ReplicatedStorage.SoundManager)
+local GameSpeed = require(game.ReplicatedStorage.GameSpeed)
 local LocalPlayerData = require(game.ReplicatedStorage.LocalPlayerData)
 local BuyLevelSkipView = require(game.ReplicatedStorage.BuyLevelSkipView)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
@@ -46,6 +47,7 @@ export type BattleContext = {
 type MainMenuState = {
 	menuWidth: number,
 	menuHeight: number,
+	speedValue: number,
 	soundValue: number,
 	musicValue: number,
 	skipsAvailableText: string,
@@ -66,6 +68,7 @@ type MainMenuState = {
 	onBuy: () -> (),
 	onSoundChanged: (value: number) -> (),
 	onMusicChanged: (value: number) -> (),
+	onSpeedChanged: (value: number) -> (),
 }
 
 -- Windows button with a tinted body and bold white label (the template's
@@ -421,6 +424,15 @@ local function MainMenuContent(props: MainMenuState)
 							LeftLabel = "Muted",
 							RightLabel = "DAT BASS",
 							OnChanged = props.onMusicChanged,
+						}),
+						GameSpeedLabel = sectionLabel("Gameplay Speed", UDim2.new(0, 10, 0, 77)),
+						GameSpeed = e(WindowsSlider, {
+							Position = UDim2.new(0.4, 0, 0, 77),
+							Size = UDim2.new(0.6, -6, 0, 36),
+							Value = props.speedValue,
+							LeftLabel = "Slow",
+							RightLabel = "Fast",
+							OnChanged = props.onSpeedChanged,
 						}),
 					},
 				},
@@ -796,10 +808,12 @@ function MainMenuView.new(container: Instance)
 
 	local mMusicSlider = makeSliderAdapter("musicValue")
 	local mSoundSlider = makeSliderAdapter("soundValue")
+	local mSpeedSlider = makeSliderAdapter("speedValue")
 
 	mRoot = StatefulRoot.create(mGui, MainMenuContent, {
 		menuWidth = 400,
 		menuHeight = 250,
+		speedValue = 0,
 		soundValue = 0,
 		musicValue = 0,
 		-- Template placeholder text, replaced once player data is available
@@ -831,12 +845,21 @@ function MainMenuView.new(container: Instance)
 		onMusicChanged = function(value: number)
 			mMusicSlider:Set(value)
 		end,
+		onSpeedChanged = function(value: number)
+			-- Three stops: snap the continuous slider to -1 / 0 / 1
+			mSpeedSlider:Set(math.round(value))
+		end,
 	})
 	local root = mRoot :: StatefulRoot.StatefulRoot
 
 	-- Sound stuff
 	SoundManager:AddSoundSlider(mSoundSlider)
 	SoundManager:AddMusicSlider(mMusicSlider)
+	-- Gameplay speed: slider stops -1/0/1 map to GameSpeed 0/1/2
+	mSpeedSlider:Set(GameSpeed:Get() - 1)
+	mSpeedSlider.Changed:connect(function(value: number)
+		GameSpeed:Set(value + 1)
+	end)
 
 	-- Skips stuff
 	local function updateSkipsText()

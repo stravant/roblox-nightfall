@@ -23,16 +23,21 @@ if not LocalPlayerData:Load() then
 
 end
 
--- Volume settings live in the save data. Apply BEFORE MainView builds the
--- menu (the sliders read the current volumes when added), and persist
--- changes throttled so slider drags coalesce into one send.
+-- Volume and gameplay-speed settings live in the save data. Apply BEFORE
+-- MainView builds the menu (the sliders read the current values when
+-- added), and persist changes throttled so slider drags coalesce into one
+-- send.
 do
+	local GameSpeed = require(game.ReplicatedStorage.GameSpeed)
 	local settings = LocalPlayerData:GetSettings()
 	if settings and settings.SoundVolume and settings.MusicVolume then
 		SoundManager:SetVolumes(settings.SoundVolume, settings.MusicVolume)
 	end
+	if settings and settings.GameSpeed then
+		GameSpeed:Set(settings.GameSpeed)
+	end
 	local pendingSend = false
-	SoundManager.VolumesChanged:connect(function()
+	local function queueSettingsSave()
 		if pendingSend then
 			return
 		end
@@ -43,9 +48,12 @@ do
 			game.ReplicatedStorage.Remotes.SaveSettings:FireServer({
 				SoundVolume = sound,
 				MusicVolume = music,
+				GameSpeed = GameSpeed:Get(),
 			})
 		end)
-	end)
+	end
+	SoundManager.VolumesChanged:connect(queueSettingsSave)
+	GameSpeed.Changed:connect(queueSettingsSave)
 end
 
 -- Debug checkpoint picker: jump straight to the first entry of a security

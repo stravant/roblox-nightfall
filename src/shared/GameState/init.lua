@@ -19,7 +19,8 @@ GameState.ClientDelays = {
 }
 
 function GameState.ClientDelayFunc(which)
-	wait(GameState.ClientDelays[which])
+	local GameSpeed = require(game.ReplicatedStorage.GameSpeed)
+	wait(GameState.ClientDelays[which] * GameSpeed:GetDelayScale())
 end
 
 function GameState.new(placeData, unitInventory, delayFunc)

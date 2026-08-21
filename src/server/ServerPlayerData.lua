@@ -115,6 +115,8 @@ function ServerPlayerData.new(player, serialized)
 		-- Range covers the FOV-30 zoom band (65-163) with slack; old FOV-10
 		-- era saves (200-500) still pass and get clamped client-side
 		{ Key = "NetmapZoom", Min = 40, Max = 500 },
+		-- Battle pacing: 0 slow (original), 1 medium, 2 fast
+		{ Key = "GameSpeed", Min = 0, Max = 2 },
 	}
 	function this:ProcessSaveSettings(settings)
 		if type(settings) ~= "table" then
