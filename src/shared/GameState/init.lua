@@ -613,31 +613,30 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		local attackSquares = this:GetCommandRange(unit, attack.Id)
 		this.ShowEnemyIntention:fire(attackSquares, attack.Type)
 		
-		-- Do an attack if able
+		-- Find where to attack, if able. The distance field can claim
+		-- in-range with no attackable target: the flood fill seeds from
+		-- player squares regardless of Filled, while the command range only
+		-- covers filled squares (e.g. a player unit standing on a tile
+		-- Bit-Man zeroed out from under it) — so never trust the distance
+		-- alone, attack only when a target actually exists.
+		local targetCoord = nil
 		if finalBestDistance and finalBestDistance <= attack.Range and #unit.Tail >= attack.SizeReq then
-			-- Find where to attack
-			local targetCoord;
 			for _, coord in pairs(attackSquares) do
 				local sq = getBoard(coord)
-				local unit = sq.Unit
-				if unit and not unit.Enemy then
+				local target = sq.Unit
+				if target and not target.Enemy then
 					targetCoord = coord
 					break
 				end
 			end
-			
-			-- Wait a bit
-			delayFunc('AttackIntent')
-			this.ShowEnemyIntention:fire({}) --> clear the intention
-			
-			-- Do the attack
+		end
+
+		-- Wait a bit before clearing the intention either way: even without
+		-- an attack it reminds the player how much range the unit has
+		delayFunc('AttackIntent')
+		this.ShowEnemyIntention:fire({}) --> clear the intention
+		if targetCoord then
 			unitExecuteImpl(unit, attack, targetCoord.x, targetCoord.y)
-		else
-			-- Even if we aren't actually attacking, wait a bit before clearing the intention
-			-- this reminds the player how much range the unit has, what's going to be in range
-			-- next turn
-			delayFunc('AttackIntent')
-			this.ShowEnemyIntention:fire({}) --> clear the intention			
 		end
 	end
 	
