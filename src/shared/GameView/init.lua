@@ -738,8 +738,14 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 				mLastUsedCommandId[unit.Definition.Id] = mSelectedCommand
 				JourneyRecorder:Record("Attack", unit.Definition.Id .. " " .. mSelectedCommand
 					.. " " .. unit.Tail[1].x .. "," .. unit.Tail[1].y .. ">" .. x .. "," .. y)
-				controller:UnitExecute(unit, mSelectedCommand, x, y)
+				-- Cleared BEFORE the execute: it yields through the damage
+				-- animation, and a click landing mid-animation re-entered
+				-- here with the stale squares and a now-Done unit (an
+				-- INVALID warn plus a bogus journey Attack record per spam
+				-- click). The tap handler's mActionableSquares guard
+				-- deflects those clicks now.
 				mActionableSquares = nil
+				controller:UnitExecute(unit, mSelectedCommand, x, y)
 				doAutoSelectNextUnit()
 			end
 		else
