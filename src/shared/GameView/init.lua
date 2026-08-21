@@ -1437,16 +1437,32 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	local mUploadZoneTiles = {}
 	for _, coord in pairs(mUploadZones) do
 		local tile = TileTemplates.UploadOverlay()
-		-- Counter-phase border: fades IN as the main image flashes out, so
-		-- the zone is never just an empty square mid-flash. The pulse loop
-		-- tints the whole tile (image + border) steel blue while selected.
+		-- Counter-phase borders: fade IN as the main image flashes out, so
+		-- the zone is never just an empty square mid-flash. Two variants
+		-- distinguish selection without any tinting: non-selected zones
+		-- flash an INSET border, the selected zone an OUTSET one (a stroke
+		-- always draws outward from its host, so the inset variant lives on
+		-- a shrunken inner frame).
 		local border = Instance.new("UIStroke")
 		border.Color = Color3.new(1, 1, 1)
 		border.Thickness = 2
 		border.Transparency = 1
 		border.Parent = tile
+		local insetFrame = Instance.new("Frame")
+		insetFrame.BackgroundTransparency = 1
+		insetFrame.Position = UDim2.new(0, 3, 0, 3)
+		insetFrame.Size = UDim2.new(1, -6, 1, -6)
+		insetFrame.Parent = tile
+		local insetBorder = Instance.new("UIStroke")
+		insetBorder.Color = Color3.new(1, 1, 1)
+		insetBorder.Thickness = 2
+		insetBorder.Transparency = 1
+		insetBorder.Parent = insetFrame
 		mUploadView:Set(coord.x, coord.y, tile)
-		table.insert(mUploadZoneTiles, { x = coord.x, y = coord.y, Gui = tile, Border = border })
+		table.insert(mUploadZoneTiles, {
+			x = coord.x, y = coord.y, Gui = tile,
+			Border = border, InsetBorder = insetBorder,
+		})
 	end
 	mPulseCn = RunService.RenderStepped:Connect(function()
 		-- Full-swing flash (solid to nearly gone) so the zones read
@@ -1456,26 +1472,22 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			if entry.Gui.Parent then
 				if gameState:GetUnit(entry.x, entry.y) then
 					entry.Gui.ImageTransparency = 0
-					entry.Gui.ImageColor3 = Color3.new(1, 1, 1)
 					entry.Border.Transparency = 1
+					entry.InsetBorder.Transparency = 1
 				else
 					-- The SELECTED zone keeps its image solid (only the
 					-- border keeps flashing): it's the click-flow target,
-					-- dimming it read as deselection
+					-- dimming it read as deselection. Its border draws
+					-- OUTSET; non-selected zones flash the INSET one.
 					local selected = mSelectionType == 'upload'
 						and mSelection ~= nil
 						and mSelection.x == entry.x and mSelection.y == entry.y
 					entry.Gui.ImageTransparency = if selected then 0 else pulse
 					-- Counter-phase: strongest exactly when the image is
 					-- most faded (pulse peaks at 0.85)
-					entry.Border.Transparency = 1 - pulse / 0.85
-					-- The whole selected tile tints a fully saturated
-					-- blue-cyan; the rest stay white
-					local tint = if selected
-						then Color3.fromRGB(0, 170, 255)
-						else Color3.new(1, 1, 1)
-					entry.Gui.ImageColor3 = tint
-					entry.Border.Color = tint
+					local borderTransparency = 1 - pulse / 0.85
+					entry.Border.Transparency = if selected then borderTransparency else 1
+					entry.InsetBorder.Transparency = if selected then 1 else borderTransparency
 				end
 			end
 		end
