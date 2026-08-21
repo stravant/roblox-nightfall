@@ -213,14 +213,20 @@ end
 -- DataStoreService:GetFailedReplay and re-run it in a spec), field 2 = the
 -- first failure reason from the re-simulation, field 3 = play context
 -- (place, how far it got, replay size).
+-- AnalyticsService rejects custom field values containing , " or '
+-- (failure reasons carry coordinates like "MissingUnit 7,4")
+local function sanitizeField(value: string): string
+	return (value:gsub("[,\"']", ";")):sub(1, 60)
+end
+
 function ServerStatistics:PlayerCheated(playerOrId: any, replayId: string?, reason: string?, contextInfo: string?)
 	local player = resolve(playerOrId)
 	if player then
 		try("InvalidReplay", function()
 			AnalyticsService:LogCustomEvent(player, "InvalidReplay", 1, {
-				[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = (replayId or "none"):sub(1, 60),
-				[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = (reason or "Unknown"):sub(1, 60),
-				[Enum.AnalyticsCustomFieldKeys.CustomField03.Name] = (contextInfo or ""):sub(1, 60),
+				[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = sanitizeField(replayId or "none"),
+				[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = sanitizeField(reason or "Unknown"),
+				[Enum.AnalyticsCustomFieldKeys.CustomField03.Name] = sanitizeField(contextInfo or ""),
 			})
 		end)
 	end
