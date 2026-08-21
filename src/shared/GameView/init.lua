@@ -1438,11 +1438,10 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	for _, coord in pairs(mUploadZones) do
 		local tile = TileTemplates.UploadOverlay()
 		-- Counter-phase border: fades IN as the main image flashes out, so
-		-- the zone is never just an empty square mid-flash. The light steel
-		-- blue matches the upload marker's on-board look (the sprite itself
-		-- is white - its blue comes from the board art underneath)
+		-- the zone is never just an empty square mid-flash. The pulse loop
+		-- tints the whole tile (image + border) steel blue while selected.
 		local border = Instance.new("UIStroke")
-		border.Color = Color3.fromRGB(140, 180, 230)
+		border.Color = Color3.new(1, 1, 1)
 		border.Thickness = 2
 		border.Transparency = 1
 		border.Parent = tile
@@ -1457,6 +1456,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			if entry.Gui.Parent then
 				if gameState:GetUnit(entry.x, entry.y) then
 					entry.Gui.ImageTransparency = 0
+					entry.Gui.ImageColor3 = Color3.new(1, 1, 1)
 					entry.Border.Transparency = 1
 				else
 					-- The SELECTED zone keeps its image solid (only the
@@ -1469,6 +1469,13 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 					-- Counter-phase: strongest exactly when the image is
 					-- most faded (pulse peaks at 0.85)
 					entry.Border.Transparency = 1 - pulse / 0.85
+					-- The whole selected tile tints steel blue (matching
+					-- the marker's on-board look); the rest stay white
+					local tint = if selected
+						then Color3.fromRGB(140, 180, 230)
+						else Color3.new(1, 1, 1)
+					entry.Gui.ImageColor3 = tint
+					entry.Border.Color = tint
 				end
 			end
 		end
