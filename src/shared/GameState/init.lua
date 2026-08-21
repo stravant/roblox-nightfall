@@ -1037,6 +1037,19 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	end
 	
 	function this:UnitMove(unit, x, y)
+		-- Actions during the ENEMY turn are dropped, not recorded: on the
+		-- client the enemy turn plays out over real time, and an action
+		-- slipped between enemy moves executes against a half-finished
+		-- board. It would record into the next turn's replay entries, but
+		-- the server re-simulates enemy turns atomically, so its enemies
+		-- react to different player positions and the sims diverge
+		-- (ReplayChecker's "Missing unit at" rejections). Not counted as an
+		-- invalid action: it's a legitimate UI race, and this guard can
+		-- only ever fire client-side.
+		if mIsEnemyTurn then
+			print("Ignored: move during the enemy turn")
+			return
+		end
 		-- Valid action check, can only move our units
 		if unit.Enemy then
 			print("INVALID: Move enemy unit "..unit.Definition.Id.." to "..x..", "..y)
@@ -1088,6 +1101,11 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	end
 	
 	function this:UnitExecute(unit, commandId, x, y)
+		-- See UnitMove: mid-enemy-turn actions desync the replay
+		if mIsEnemyTurn then
+			print("Ignored: command during the enemy turn")
+			return
+		end
 		local command = unit.Definition.Commands[commandId]
 
 		-- Valid action check, the command must belong to this unit (replays
@@ -1197,7 +1215,14 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	end
 	
 	-- Passes things off to the enemy AI turn and lets it proceed
-	function this:EndTurn()		
+	function this:EndTurn()
+		-- A second End Turn while the enemy turn is still animating would
+		-- nest a whole extra AI turn and serialize a spurious empty turn
+		-- into the replay
+		if mIsEnemyTurn then
+			print("Ignored: end turn during the enemy turn")
+			return
+		end
 		-- Finish the player turn
 		finishPlayerTurn()
 		

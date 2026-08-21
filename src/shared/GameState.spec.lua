@@ -300,6 +300,52 @@ return function(t)
 		t.expect(deadFires).toBe(0)
 	end)
 
+	t.test("actions during the enemy turn are dropped", function()
+		-- Regression: on the client the enemy turn plays out over real time
+		-- and nothing blocked player actions mid-turn. They executed against
+		-- the half-finished board and recorded into the next turn's replay
+		-- entries, which the server's ATOMIC re-simulation never matches -
+		-- the live "ReplayChecker | Missing unit at" rejections.
+		local gs
+		local function delayFunc(which)
+			-- Yield only on enemy pacing so the test can interleave actions
+			-- mid-enemy-turn, the way the real client's waits do
+			if which == 'MoveEnemy' or which == 'AttackIntent' then
+				coroutine.yield()
+			end
+		end
+		gs = GameState.new(Places.L13, makeInventory(), delayFunc)
+		gs:UploadUnit(5, 7, Scripts.hack)
+		local unit = gs:GetUnit(5, 7)
+		gs:StartGame()
+
+		-- Run the enemy turn in a coroutine: it parks at the first pacing
+		-- delay, mid-turn
+		local turn = coroutine.create(function()
+			gs:EndTurn()
+		end)
+		assert(coroutine.resume(turn))
+		t.expect(gs:IsEnemyTurn()).toBeTruthy()
+
+		-- All three action entry points must ignore the attempt entirely
+		gs:UnitMove(unit, 5, 6)
+		t.expect(unit.Tail[1].x).toBe(5)
+		t.expect(unit.Tail[1].y).toBe(7)
+		gs:UnitExecute(unit, "slice", 5, 6)
+		t.expect(unit.Done).toBeFalsy()
+		gs:EndTurn() -- would nest a second AI turn inside the first
+
+		-- Let the enemy turn finish
+		while coroutine.status(turn) ~= "dead" do
+			assert(coroutine.resume(turn))
+		end
+		t.expect(gs:IsEnemyTurn()).toBeFalsy()
+		t.expect(gs:HasErrors()).toBeFalsy()
+		-- Exactly one turn marker made it into the replay
+		local _, turnEnds = gs:GetReplay():gsub("E", "")
+		t.expect(turnEnds).toBe(1)
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]
