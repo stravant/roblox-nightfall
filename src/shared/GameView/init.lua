@@ -1437,8 +1437,15 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	local mUploadZoneTiles = {}
 	for _, coord in pairs(mUploadZones) do
 		local tile = TileTemplates.UploadOverlay()
+		-- Counter-phase border: fades IN as the main image flashes out, so
+		-- the zone is never just an empty square mid-flash
+		local border = Instance.new("UIStroke")
+		border.Color = Color3.fromRGB(255, 255, 255)
+		border.Thickness = 2
+		border.Transparency = 1
+		border.Parent = tile
 		mUploadView:Set(coord.x, coord.y, tile)
-		table.insert(mUploadZoneTiles, { x = coord.x, y = coord.y, Gui = tile })
+		table.insert(mUploadZoneTiles, { x = coord.x, y = coord.y, Gui = tile, Border = border })
 	end
 	mPulseCn = RunService.RenderStepped:Connect(function()
 		-- Full-swing flash (solid to nearly gone) so the zones read
@@ -1448,8 +1455,12 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			if entry.Gui.Parent then
 				if gameState:GetUnit(entry.x, entry.y) then
 					entry.Gui.ImageTransparency = 0
+					entry.Border.Transparency = 1
 				else
 					entry.Gui.ImageTransparency = pulse
+					-- Counter-phase: strongest exactly when the image is
+					-- most faded (pulse peaks at 0.85)
+					entry.Border.Transparency = 1 - pulse / 0.85
 				end
 			end
 		end
