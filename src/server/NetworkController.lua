@@ -87,7 +87,9 @@ function NetworkController.install(remotes)
 				ServerStatistics:PlayerQuitLevelEarly(player, result.NodeId)
 			end
 		else
-			ServerStatistics:PlayerCheated(player)
+			ServerStatistics:PlayerCheated(player, result.FailedReplayKey, result.FailureReason,
+				string.format("%s turns=%s len=%d",
+					tostring(result.PlaceId), tostring(result.TurnCount), #tostring(replayStr)))
 		end
 	
 		-- Let the client know we finished processing it

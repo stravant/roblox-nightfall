@@ -267,45 +267,47 @@ end
 local JOURNEY_DATASTORE = 'journeys_v1'
 DataStoreService.JourneyStoreName = JOURNEY_DATASTORE
 
--- Journeys deliberately BYPASS UseMockData when the real service works:
--- sessions recorded in Studio playtests must survive the playtest (the
--- in-memory mock dies with the server), and Studio can then also browse
--- the LIVE game's journeys. Falls back to the mock when the real service
--- is unavailable (integration tests via the Services mock; Studio without
--- API access enabled).
-local mJourneyStore
-do
+-- Diagnostics stores (journeys, failed replays) deliberately BYPASS
+-- UseMockData when the real service works: records from Studio playtests
+-- must survive the playtest (the in-memory mock dies with the server), and
+-- Studio can then also browse the LIVE game's records. Falls back to the
+-- mock when the real service is unavailable (integration tests via the
+-- Services mock; Studio without API access enabled).
+local function openDiagnosticsStore(name)
 	local raw = Services:Get('DataStoreService')
 	if typeof(raw) == "Instance" then
 		local st, store = pcall(function()
-			return raw:GetDataStore(JOURNEY_DATASTORE)
+			return raw:GetDataStore(name)
 		end)
 		if st then
-			mJourneyStore = store
-		else
-			warn("DataStoreService | Journeys using the in-memory mock (enable"
-				.. " 'Studio Access to API Services' to persist them): " .. tostring(store))
-			mJourneyStore = MockDataStore:GetDataStore(JOURNEY_DATASTORE)
+			return store
 		end
-	else
-		mJourneyStore = DataStore:GetDataStore(JOURNEY_DATASTORE)
+		warn("DataStoreService | " .. name .. " using the in-memory mock (enable"
+			.. " 'Studio Access to API Services' to persist it): " .. tostring(store))
+		return MockDataStore:GetDataStore(name)
 	end
+	return DataStore:GetDataStore(name)
 end
+local mJourneyStore = openDiagnosticsStore(JOURNEY_DATASTORE)
 
--- Fire-and-forget (journeys are diagnostics, not player data), but tracked
--- so WaitForSavesToComplete can drain them at shutdown
-local mJourneySavesInFlight = 0
-function DataStoreService:SaveJourney(key, record)
-	mJourneySavesInFlight += 1
+-- Fire-and-forget (diagnostics, not player data), but tracked so
+-- WaitForSavesToComplete can drain them at shutdown
+local mDiagnosticSavesInFlight = 0
+local function saveDiagnostic(store, kind, key, record)
+	mDiagnosticSavesInFlight += 1
 	task.spawn(function()
 		local st, err = pcall(function()
-			mJourneyStore:SetAsync(key, record)
+			store:SetAsync(key, record)
 		end)
-		mJourneySavesInFlight -= 1
+		mDiagnosticSavesInFlight -= 1
 		if not st then
-			warn("DataStoreService | Failed to save journey "..key.." because `"..tostring(err).."`.")
+			warn("DataStoreService | Failed to save "..kind.." "..key.." because `"..tostring(err).."`.")
 		end
 	end)
+end
+
+function DataStoreService:SaveJourney(key, record)
+	saveDiagnostic(mJourneyStore, "journey", key, record)
 end
 
 function DataStoreService:GetJourney(key)
@@ -315,11 +317,12 @@ function DataStoreService:GetJourney(key)
 	return if st then result else nil
 end
 
--- Newest-first journey keys, capped
-function DataStoreService:ListJourneyKeys(maxCount)
+-- Newest-first diagnostics keys, capped. Keys embed a zero-padded time:
+-- reverse lexicographic = newest first.
+local function listDiagnosticKeys(store, kind, prefix, maxCount)
 	local keys = {}
 	local st, err = pcall(function()
-		local pages = mJourneyStore:ListKeysAsync("j_", 100)
+		local pages = store:ListKeysAsync(prefix, 100)
 		while true do
 			for _, item in pairs(pages:GetCurrentPage()) do
 				table.insert(keys, item.KeyName)
@@ -331,9 +334,8 @@ function DataStoreService:ListJourneyKeys(maxCount)
 		end
 	end)
 	if not st then
-		warn("DataStoreService | Failed to list journeys because `"..tostring(err).."`.")
+		warn("DataStoreService | Failed to list "..kind.." because `"..tostring(err).."`.")
 	end
-	-- Keys embed a zero-padded start time: reverse lexicographic = newest first
 	table.sort(keys, function(a, b)
 		return a > b
 	end)
@@ -341,6 +343,41 @@ function DataStoreService:ListJourneyKeys(maxCount)
 		table.remove(keys)
 	end
 	return keys
+end
+
+function DataStoreService:ListJourneyKeys(maxCount)
+	return listDiagnosticKeys(mJourneyStore, "journeys", "j_", maxCount)
+end
+
+--------------------------------------------------------------------------------
+-- Failed replays: replays the server re-simulation REJECTED, kept with the
+-- failure reason so the divergence can be re-run and diagnosed offline
+-- (ReplayChecker is deterministic: the stored string reproduces the failure
+-- in a spec). Same rolling-diagnostics-log character as the journeys.
+--------------------------------------------------------------------------------
+
+local FAILED_REPLAY_DATASTORE = 'failed_replays_v1'
+DataStoreService.FailedReplayStoreName = FAILED_REPLAY_DATASTORE
+local mFailedReplayStore = openDiagnosticsStore(FAILED_REPLAY_DATASTORE)
+
+-- record: { Replay, Reason, UserId, Name, Time }. Returns the generated
+-- key (the "replay id" stamped onto the InvalidReplay analytics event).
+function DataStoreService:SaveFailedReplay(record)
+	-- Time-prefixed like journey keys: reverse-lexicographic = newest first
+	local key = string.format("fr_%012d_%04d", os.time(), math.random(0, 9999))
+	saveDiagnostic(mFailedReplayStore, "failed replay", key, record)
+	return key
+end
+
+function DataStoreService:GetFailedReplay(key)
+	local st, result = pcall(function()
+		return mFailedReplayStore:GetAsync(key)
+	end)
+	return if st then result else nil
+end
+
+function DataStoreService:ListFailedReplayKeys(maxCount)
+	return listDiagnosticKeys(mFailedReplayStore, "failed replays", "fr_", maxCount)
 end
 
 -- Save a replay
@@ -364,7 +401,7 @@ end
 function DataStoreService:WaitForSavesToComplete()
 	local deadline = os.clock() + 20
 	while os.clock() < deadline do
-		local busy = mJourneySavesInFlight > 0
+		local busy = mDiagnosticSavesInFlight > 0
 		for _, state in pairs(mSaveStates) do
 			if state.Pending ~= nil or state.Writing then
 				busy = true

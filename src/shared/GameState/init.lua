@@ -143,6 +143,18 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	
 	-- Have invalid actions been attempted? (Cheating detection)
 	local mInvalidActionCount = 0
+	-- The FIRST invalid reason: when the server re-simulation rejects a
+	-- replay, this is the diagnostic that explains why (surfaced through
+	-- ReplayChecker into the InvalidReplay analytics event). warn rather
+	-- than print so live server error reports capture it.
+	local mFirstInvalidReason = nil
+	local function invalidAction(message)
+		warn("INVALID: " .. message)
+		mInvalidActionCount = mInvalidActionCount + 1
+		if not mFirstInvalidReason then
+			mFirstInvalidReason = message
+		end
+	end
 
 	-- Play statistics (mirrors what ReplayChecker computes server-side)
 	local mPlayTurnCount = 0
@@ -702,6 +714,19 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	function this:HasErrors()
 		return mInvalidActionCount > 0
 	end
+
+	-- The first rejected action's reason, for replay-failure diagnostics
+	function this:GetFirstInvalidReason()
+		return mFirstInvalidReason
+	end
+
+	-- DEBUG (invalid-replay pipeline testing): splice an action the server
+	-- re-simulation must reject into the replay's current turn. The local
+	-- sim is untouched - the divergence only exists in the serialized
+	-- replay, exactly like a real client/server desync.
+	function this:DebugCorruptReplay()
+		mReplay = mReplay .. "U1,1Mn"
+	end
 	
 	function this:IsGameStarted()
 		return mGameStarted
@@ -710,8 +735,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	function this:UploadUnit(x, y, unitData)
 		-- Unknown program id in a replay reaches here as a nil definition
 		if not unitData then
-			print("INVALID: Upload of unknown unit at "..tostring(x)..", "..tostring(y))
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Upload of unknown unit at "..tostring(x)..", "..tostring(y))
 			return
 		end
 		-- Check that it's a valid upload zone
@@ -723,8 +747,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			end
 		end
 		if not isValid then
-			print("INVALID: Upload "..unitData.Id.." at "..x..", "..y)
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Upload "..unitData.Id.." at "..x..", "..y)
 			return
 		end
 		
@@ -739,8 +762,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			end
 		end
 		if not haveUnitToUploadFlag then
-			print("INVALID: Upload "..unitData.Id.." when none available")
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Upload "..unitData.Id.." when none available")
 			return
 		end
 		
@@ -1053,8 +1075,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		end
 		-- Valid action check, can only move our units
 		if unit.Enemy then
-			print("INVALID: Move enemy unit "..unit.Definition.Id.." to "..x..", "..y)
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Move enemy unit "..unit.Definition.Id.." to "..x..", "..y)
 			return
 		end
 		
@@ -1062,8 +1083,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		--local x = unit.Tail[1].x + dx
 		--local y = unit.Tail[1].y + dy
 		if x < 1 or x > Places.PlaceWidth or y < 1 or y > Places.PlaceHeight then
-			print("INVALID: Move unit out of bounds")
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Move unit out of bounds")
 			return
 		end
 		
@@ -1072,8 +1092,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		this:GetMovementAndCommandRange(unit)
 		local targetSq = mBoard[x][y]
 		if not targetSq.Filled or targetSq.Nonce ~= mNonce then
-			print("INVALID: Attempt to move `"..unit.Definition.Id.."` to non-movable square ("..x..","..y..")")
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Attempt to move `"..unit.Definition.Id.."` to non-movable square ("..x..","..y..")")
 			return
 		end
 		
@@ -1112,30 +1131,26 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		-- Valid action check, the command must belong to this unit (replays
 		-- can name arbitrary command ids)
 		if not command then
-			print("INVALID: Unknown command "..tostring(commandId).." for "..unit.Definition.Id)
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Unknown command "..tostring(commandId).." for "..unit.Definition.Id)
 			return
 		end
 
 		-- Valid action check, can only move our units
 		if unit.Enemy then
-			print("INVALID: Activate command of enemy unit "..unit.Definition.Id.." targeting "..x..", "..y)
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Activate command of enemy unit "..unit.Definition.Id.." targeting "..x..", "..y)
 			return
 		end
 		
 		-- Valid action check, attack in range
 		local range = math.abs(x - unit.Tail[1].x) + math.abs(y - unit.Tail[1].y)		
 		if range > command.Range then
-			print("INVALID: Attack out of range ("..range.." > "..command.Range..")")
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Attack out of range ("..range.." > "..command.Range..")")
 			return
 		end
 
 		-- Valid action check, unit is ready and big enough
 		if unit.Done or #unit.Tail < command.SizeReq then
-			print("INVALID: Attack with Done = "..tostring(unit.Done)..", size="..#unit.Tail.." vs req "..command.SizeReq)
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Attack with Done = "..tostring(unit.Done)..", size="..#unit.Tail.." vs req "..command.SizeReq)
 			return
 		end
 
@@ -1143,15 +1158,13 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		-- EXCEPT deliberate suicide commands (Kamikazee / Self-Destruct),
 		-- marked by a cost the unit could never satisfy (>= its max size).
 		if #unit.Tail <= command.Cost and command.Cost < unit.Definition.MaxSize then
-			print("INVALID: Attack costs "..command.Cost.." sectors but the unit only has "..#unit.Tail)
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Attack costs "..command.Cost.." sectors but the unit only has "..#unit.Tail)
 			return
 		end
 		
 		-- Valid action check, in bounds
 		if x < 1 or x > Places.PlaceWidth or y < 1 or y > Places.PlaceHeight then
-			print("INVALID: Attack square out of bounds")
-			mInvalidActionCount = mInvalidActionCount + 1
+			invalidAction("Attack square out of bounds")
 			return
 		end
 		

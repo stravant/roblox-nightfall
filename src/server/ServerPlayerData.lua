@@ -335,7 +335,7 @@ function ServerPlayerData.new(player, serialized)
 		end)
 		if not st then
 			warn("ServerPlayerData | Replay from "..mPlayerLabel.." threw while checking: "..tostring(result))
-			return { Valid = false }
+			result = { Valid = false, FailureReason = "Threw: " .. tostring(result) }
 		end
 		if result.Valid then
 			-- The security level the battle was fought at (a winning node's
@@ -358,8 +358,24 @@ function ServerPlayerData.new(player, serialized)
 			-- for the player and the node overall
 			processStats(replayString, result, securityLevelAtBattle)
 		else
-			warn("ServerPlayerData | Got invalid replay from "..mPlayerLabel)
-			print(replayString)
+			-- Persist the failing replay: the checker is deterministic, so
+			-- the stored string re-runs the exact divergence in a spec. The
+			-- key doubles as the replay id on the InvalidReplay analytics
+			-- event (see NetworkController). warn (not print) both lines so
+			-- live error reports capture the repro.
+			-- Lazy require, matching processStats above (DataStoreService is
+			-- deliberately not a module-level require here)
+			local DataStoreService = require(game.ServerScriptService.DataStoreService)
+			result.FailedReplayKey = DataStoreService:SaveFailedReplay({
+				Replay = replayString,
+				Reason = result.FailureReason or "Unknown",
+				UserId = player.UserId,
+				Name = player.Name,
+				Time = os.time(),
+			})
+			warn("ServerPlayerData | Got invalid replay from "..mPlayerLabel
+				.." ("..tostring(result.FailureReason)..") saved as "..result.FailedReplayKey)
+			warn(replayString)
 		end
 		return result
 	end

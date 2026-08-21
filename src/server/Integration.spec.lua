@@ -511,6 +511,15 @@ return function(t)
 		remotes.ProcessReplay:FireServer_TEST(player, "L99;;;garbage")
 		local refusal = remotes.ProcessReplay.FiredToClients[#remotes.ProcessReplay.FiredToClients]
 		t.expect(refusal.Args[1]).toBe(false)
+		-- ...and persisted to the failed-replay diagnostics store with the
+		-- failure reason, ready to re-run offline
+		task.wait(0.1) -- the diagnostic write is fire-and-forget
+		local failedKeys = DataStoreService:ListFailedReplayKeys(10)
+		t.expect(#failedKeys >= 1).toBeTruthy()
+		local failedRecord = DataStoreService:GetFailedReplay(failedKeys[1])
+		t.expect(failedRecord.Replay).toBe("L99;;;garbage")
+		t.expect(failedRecord.Reason).toBe("MissingPlace L99")
+		t.expect(failedRecord.UserId).toBe(player.UserId)
 
 		-- They buy a script at the warez shop
 		local beforeBuy = remotes.Load:InvokeServer_TEST(player).Credits

@@ -71,6 +71,24 @@ local function GameViewChrome(props)
 				[React.Event.MouseButton1Click] = props.onDebugWin,
 			})
 			else nil,
+		-- Debug: poison the outgoing replay with an action the server must
+		-- reject, to exercise the invalid-replay analytics/store end to end
+		-- (finish the battle afterwards so the replay gets submitted)
+		DebugInvalidButton = if props.debugWinVisible
+			then e("TextButton", {
+				Active = true,
+				AnchorPoint = Vector2.new(0.5, 1),
+				Position = UDim2.new(0.5, 150, 1, -12),
+				Size = UDim2.new(0, 130, 0, 32),
+				BackgroundColor3 = Color3.fromRGB(140, 0, 20),
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 16,
+				TextColor3 = Color3.new(1, 1, 1),
+				Text = "DEBUG: Bad Replay",
+				ZIndex = 5,
+				[React.Event.MouseButton1Click] = props.onDebugInvalid,
+			})
+			else nil,
 		-- The node's mission text, shown until the player starts uploading
 		MissionBox = if props.missionText and props.missionVisible
 			then e("Frame", {
@@ -358,6 +376,11 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		debugWinVisible = DebugFlags:ShowDebugUI(),
 		onDebugWin = function()
 			handleGameEnded(--[[wonGame=]] true, 0)
+		end,
+		onDebugInvalid = function()
+			gameState:DebugCorruptReplay()
+			print("DEBUG: spliced an invalid action into the replay; finish"
+				.. " the battle to submit it")
 		end,
 		endGameOverlayVisible = false,
 		endGameWon = nil,

@@ -114,13 +114,19 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		UnitsLost = 0; -- friendly units that didn't survive
 		UsedSuicideCommand = false; -- Kamikazee / Self-Destruct fired
 		UsedCommandTypes = {}; -- set of command Type strings used
+		-- Diagnostics for invalid replays (see the InvalidReplay analytics
+		-- event / the failed-replay store)
+		PlaceId = nil;
+		FailureReason = nil; -- set whenever Valid comes back false
 	}
-	
+
 	-- Get the place
 	local placeId, rest = getPlaceId(replay)
+	result.PlaceId = placeId
 	local place = Places[placeId]
 	if not place then
 		warn("ReplayChecker | Missing place "..placeId)
+		result.FailureReason = "MissingPlace " .. placeId
 		return result
 	end
 	
@@ -136,6 +142,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		result.NodeId = foundInNode
 	else
 		warn("ReplayChecker | Missing node with place "..placeId.." in it.")
+		result.FailureReason = "MissingNode " .. placeId
 		return result
 	end
 	
@@ -151,6 +158,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 	local uploads, gameplay = getUploadsGameplay(rest)
 	if not uploads then
 		warn("ReplayChecker | Failed to parse uploads.")
+		result.FailureReason = "ParseUploads"
 		return result
 	end
 	
@@ -170,6 +178,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 	end
 	if gameState:HasErrors() then
 		warn("ReplayChecker | Errors after uploading units.")
+		result.FailureReason = "UploadErrors: " .. (gameState:GetFirstInvalidReason() or "unknown")
 		return result
 	end
 	
@@ -189,11 +198,14 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		for _, unitMove in pairs(unitMoves) do
 			if not inBounds(unitMove.X, unitMove.Y) then
 				warn("ReplayChecker | Out of bounds unit location "..unitMove.X..", "..unitMove.Y)
+				result.FailureReason = "OutOfBoundsUnit " .. unitMove.X .. "," .. unitMove.Y
 				return result
 			end
 			local unit = gameState:GetUnit(unitMove.X, unitMove.Y)
 			if not unit then
 				warn("ReplayChecker | Missing unit at "..unitMove.X..", "..unitMove.Y)
+				result.FailureReason = "MissingUnit " .. unitMove.X .. "," .. unitMove.Y
+					.. " turn " .. result.TurnCount
 				return result
 			end
 			if unitMove.MoveData then
@@ -206,6 +218,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 			if unitMove.CommandData then
 				if not inBounds(unitMove.CommandData.X, unitMove.CommandData.Y) then
 					warn("ReplayChecker | Out of bounds target for command "..unitMove.CommandData.X..", "..unitMove.CommandData.Y)
+					result.FailureReason = "OutOfBoundsTarget " .. unitMove.CommandData.X .. "," .. unitMove.CommandData.Y
 					return result
 				end
 				-- Track what kinds of commands the play used (badge signals)
@@ -237,7 +250,10 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 
 	if gameState:HasErrors() then
 		warn("ReplayChecker | Play had internal errors")
-		-- nothing to do, default result is for having errors
+		-- The first rejected action is the diagnostic that matters: it
+		-- marks where the re-simulation diverged from the client's play
+		result.FailureReason = "Sim: " .. (gameState:GetFirstInvalidReason() or "unknown")
+			.. " (turn " .. result.TurnCount .. ")"
 	elseif gameState:HasWon() then
 		result.Valid = true
 		result.Won = true

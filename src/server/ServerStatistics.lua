@@ -208,11 +208,20 @@ end
 -- Health / abuse signals
 --------------------------------------------------------------------------------
 
-function ServerStatistics:PlayerCheated(playerOrId: any)
+-- An invalid replay, with everything needed to diagnose it remotely:
+-- field 1 = the failed-replay store key (pull the full replay string with
+-- DataStoreService:GetFailedReplay and re-run it in a spec), field 2 = the
+-- first failure reason from the re-simulation, field 3 = play context
+-- (place, how far it got, replay size).
+function ServerStatistics:PlayerCheated(playerOrId: any, replayId: string?, reason: string?, contextInfo: string?)
 	local player = resolve(playerOrId)
 	if player then
 		try("InvalidReplay", function()
-			AnalyticsService:LogCustomEvent(player, "InvalidReplay", 1)
+			AnalyticsService:LogCustomEvent(player, "InvalidReplay", 1, {
+				[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = (replayId or "none"):sub(1, 60),
+				[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = (reason or "Unknown"):sub(1, 60),
+				[Enum.AnalyticsCustomFieldKeys.CustomField03.Name] = (contextInfo or ""):sub(1, 60),
+			})
 		end)
 	end
 end
