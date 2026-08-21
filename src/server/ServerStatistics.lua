@@ -214,9 +214,10 @@ end
 -- first failure reason from the re-simulation, field 3 = play context
 -- (place, how far it got, replay size).
 -- AnalyticsService rejects custom field values containing , " or '
--- (failure reasons carry coordinates like "MissingUnit 7,4")
+-- (failure reasons carry coordinates like "MissingUnit 7,4") and values
+-- longer than 50 characters
 local function sanitizeField(value: string): string
-	return (value:gsub("[,\"']", ";")):sub(1, 60)
+	return (value:gsub("[,\"']", ";")):sub(1, 50)
 end
 
 -- One event per unit fielded in a finished battle, split by unit id and

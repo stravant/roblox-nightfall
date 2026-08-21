@@ -17,15 +17,16 @@ return function(t)
 	local analyticsLog = {}
 	-- Mirror the real AnalyticsService's restrictions so tests catch what
 	-- the live service would reject: custom field values must not contain
-	-- comma or quote characters. Violations accumulate and a final test
-	-- asserts none happened anywhere in the run.
+	-- comma or quote characters, and must be at most 50 characters long.
+	-- Violations accumulate and a final test asserts none happened anywhere
+	-- in the run.
 	local analyticsViolations = {}
 	local function logEvent(kind)
 		return function(_self, player, ...)
 			for _, arg in pairs({ ... }) do
 				if type(arg) == "table" then
 					for key, value in pairs(arg) do
-						if type(value) == "string" and value:find("[,\"']") then
+						if type(value) == "string" and (value:find("[,\"']") or #value > 50) then
 							table.insert(analyticsViolations,
 								kind .. " " .. tostring(key) .. " = `" .. value .. "`")
 						end
