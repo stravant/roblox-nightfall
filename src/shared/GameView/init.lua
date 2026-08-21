@@ -1469,10 +1469,10 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 					-- Counter-phase: strongest exactly when the image is
 					-- most faded (pulse peaks at 0.85)
 					entry.Border.Transparency = 1 - pulse / 0.85
-					-- The whole selected tile tints steel blue (matching
-					-- the marker's on-board look); the rest stay white
+					-- The whole selected tile tints a fully saturated
+					-- blue-cyan; the rest stay white
 					local tint = if selected
-						then Color3.fromRGB(140, 180, 230)
+						then Color3.fromRGB(0, 170, 255)
 						else Color3.new(1, 1, 1)
 					entry.Gui.ImageColor3 = tint
 					entry.Border.Color = tint
