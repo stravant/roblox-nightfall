@@ -15,8 +15,23 @@ return function(t)
 	----------------------------------------------------------------------
 
 	local analyticsLog = {}
+	-- Mirror the real AnalyticsService's restrictions so tests catch what
+	-- the live service would reject: custom field values must not contain
+	-- comma or quote characters. Violations accumulate and a final test
+	-- asserts none happened anywhere in the run.
+	local analyticsViolations = {}
 	local function logEvent(kind)
 		return function(_self, player, ...)
+			for _, arg in pairs({ ... }) do
+				if type(arg) == "table" then
+					for key, value in pairs(arg) do
+						if type(value) == "string" and value:find("[,\"']") then
+							table.insert(analyticsViolations,
+								kind .. " " .. tostring(key) .. " = `" .. value .. "`")
+						end
+					end
+				end
+			end
 			table.insert(analyticsLog, { Kind = kind, Player = player, Args = { ... } })
 		end
 	end
@@ -520,6 +535,14 @@ return function(t)
 		t.expect(failedRecord.Replay).toBe("L99;;;garbage")
 		t.expect(failedRecord.Reason).toBe("MissingPlace L99")
 		t.expect(failedRecord.UserId).toBe(player.UserId)
+
+		-- A DESYNCED replay (valid shape, impossible action) is refused too.
+		-- Its reason carries a coordinate comma ("MissingUnit 1,1"), so this
+		-- also exercises the analytics field sanitizer (the violations test
+		-- at the end of the spec catches any forbidden characters)
+		remotes.ProcessReplay:FireServer_TEST(player, (kL12WinningReplay:gsub("S;", "S;U1,1Mn", 1)))
+		local desyncRefusal = remotes.ProcessReplay.FiredToClients[#remotes.ProcessReplay.FiredToClients]
+		t.expect(desyncRefusal.Args[1]).toBe(false)
 
 		-- They buy a script at the warez shop
 		local beforeBuy = remotes.Load:InvokeServer_TEST(player).Credits
@@ -1108,5 +1131,14 @@ return function(t)
 			end
 		end
 		t.expect(sawBounce).toBeTruthy()
+	end)
+
+	-- LAST on purpose: sweeps every analytics event the whole spec fired.
+	-- The real AnalyticsService rejects custom field values containing
+	-- comma/quote characters; the mock records violations instead.
+	t.test("no analytics event carried forbidden field characters", function()
+		if #analyticsViolations > 0 then
+			error("Analytics field violations: " .. table.concat(analyticsViolations, " | "))
+		end
 	end)
 end
