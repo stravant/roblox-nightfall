@@ -118,6 +118,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		-- event / the failed-replay store)
 		PlaceId = nil;
 		FailureReason = nil; -- set whenever Valid comes back false
+		UnitsUsed = {}; -- uploaded unit ids, duplicates included
 	}
 
 	-- Get the place
@@ -173,8 +174,9 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 	-- Upload the units
 	for _, upload in pairs(uploads) do
 		gameState:UploadUnit(upload.X, upload.Y, Scripts[upload.Id])
-		-- Add upload to count tracking
+		-- Add upload to count tracking (ids kept for the UnitUsed analytics)
 		result.UnitCount = result.UnitCount + 1
+		table.insert(result.UnitsUsed, upload.Id)
 	end
 	if gameState:HasErrors() then
 		warn("ReplayChecker | Errors after uploading units.")

@@ -514,6 +514,19 @@ return function(t)
 		t.expect(reply.Args[1]).toBe(true)
 		t.expect(countAnalytics("progressionComplete", player)).toBe(1)
 		t.expect(countAnalytics("economy", player) >= 1).toBeTruthy() -- battle reward
+		-- One UnitUsed event per fielded unit (the winning replay uploads
+		-- two golemstone), tagged with the unit and the outcome
+		local unitUsed = {}
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Player == player and event.Args[1] == "UnitUsed" then
+				table.insert(unitUsed, event.Args[3])
+			end
+		end
+		t.expect(#unitUsed).toBe(2)
+		for _, fields in pairs(unitUsed) do
+			t.expect(fields[Enum.AnalyticsCustomFieldKeys.CustomField01.Name]).toBe("golemstone")
+			t.expect(fields[Enum.AnalyticsCustomFieldKeys.CustomField02.Name]).toBe("win")
+		end
 
 		-- The first win archived the winning replay under the (mock) GUID —
 		-- read it back straight out of the mock datastore

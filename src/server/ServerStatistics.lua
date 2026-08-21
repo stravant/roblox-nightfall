@@ -219,6 +219,21 @@ local function sanitizeField(value: string): string
 	return (value:gsub("[,\"']", ";")):sub(1, 60)
 end
 
+-- One event per unit fielded in a finished battle, split by unit id and
+-- outcome: which scripts do players actually take into battle, and which
+-- ones carry wins
+function ServerStatistics:UnitUsed(playerOrId: any, unitId: string, won: boolean)
+	local player = resolve(playerOrId)
+	if player then
+		try("UnitUsed", function()
+			AnalyticsService:LogCustomEvent(player, "UnitUsed", 1, {
+				[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = sanitizeField(unitId),
+				[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = if won then "win" else "loss",
+			})
+		end)
+	end
+end
+
 function ServerStatistics:PlayerCheated(playerOrId: any, replayId: string?, reason: string?, contextInfo: string?)
 	local player = resolve(playerOrId)
 	if player then
