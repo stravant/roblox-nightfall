@@ -60,36 +60,86 @@ type ViewerState = {
 -- existed have neither field and can't be classified.
 local function statusTag(summary: any): string
 	if summary.Ended then
-		return "  [done]"
+		return "done"
 	end
 	if summary.LastUpdate == nil then
-		return "  [old]"
+		return "old"
 	end
 	if os.time() - summary.LastUpdate < 90 then
-		return "  [LIVE]"
+		return "LIVE"
 	end
-	return "  [cut off]"
+	return "cut off"
+end
+
+local kStatusColors = {
+	["done"] = Color3.new(0, 0, 0),
+	["old"] = Color3.new(0.55, 0.55, 0.55),
+	["LIVE"] = Color3.fromRGB(0, 140, 0),
+	["cut off"] = Color3.fromRGB(180, 70, 0),
+}
+
+-- Session list columns: {header, xOffset (negative = from the right edge),
+-- width, alignment}. The Name column flexes to fill the middle.
+local kSessionColumns = {
+	Start = { x = 4, w = 92, align = Enum.TextXAlignment.Left },
+	Name = { x = 102, w = nil, align = Enum.TextXAlignment.Left }, -- flex
+	Events = { x = -196, w = 52, align = Enum.TextXAlignment.Right },
+	Duration = { x = -136, w = 56, align = Enum.TextXAlignment.Right },
+	Status = { x = -68, w = 64, align = Enum.TextXAlignment.Left },
+}
+local kNameRightReserve = 204 -- space kept clear for the right-side columns
+
+local function sessionCell(name: string, text: string, color: Color3?, bold: boolean?)
+	local column = kSessionColumns[name]
+	return e("TextLabel", {
+		Position = UDim2.new(if column.x < 0 then 1 else 0, column.x, 0, 0),
+		Size = if column.w
+			then UDim2.new(0, column.w, 1, 0)
+			else UDim2.new(1, -(column.x + kNameRightReserve), 1, 0),
+		BackgroundTransparency = 1,
+		Font = if bold then Enum.Font.SourceSansBold else Enum.Font.Code,
+		TextSize = 14,
+		TextColor3 = color or Color3.new(0, 0, 0),
+		TextXAlignment = column.align,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		Text = text,
+	})
+end
+
+-- Column headings, pinned above the scrolling rows
+local function sessionHeaderRow()
+	local cells: { [string]: any } = {}
+	for name, _ in pairs(kSessionColumns) do
+		cells[name] = sessionCell(name, name, Color3.new(0.4, 0.4, 0.4), true)
+	end
+	return e("Frame", {
+		LayoutOrder = 0,
+		Size = UDim2.new(1, -18, 0, 18),
+		BackgroundTransparency = 1,
+	}, cells)
 end
 
 local function sessionRow(summary: any, i: number, onPick: (key: string, title: string) -> ())
-	local title = string.format("%s  %s  (%d ev, %s)%s",
+	-- Compact one-line summary, used as the TIMELINE title after a pick
+	local status = statusTag(summary)
+	local title = string.format("%s  %s  (%d ev, %s)  [%s]",
 		formatDate(summary.Start or 0), summary.Name or "?", summary.EventCount or 0,
-		formatClock(summary.Duration or 0), statusTag(summary))
+		formatClock(summary.Duration or 0), status)
 	return e("TextButton", {
 		LayoutOrder = i,
 		Size = UDim2.new(1, -18, 0, 20),
-		BackgroundColor3 = Color3.new(1, 1, 1),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		Font = Enum.Font.Code,
-		TextSize = 14,
-		TextColor3 = Color3.new(0, 0, 0),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		Text = title,
+		Text = "",
 		[React.Event.MouseButton1Click] = function()
 			onPick(summary.Key, title)
 		end,
+	}, {
+		Start = sessionCell("Start", formatDate(summary.Start or 0)),
+		Name = sessionCell("Name", summary.Name or "?"),
+		Events = sessionCell("Events", tostring(summary.EventCount or 0)),
+		Duration = sessionCell("Duration", formatClock(summary.Duration or 0)),
+		Status = sessionCell("Status", status, kStatusColors[status]),
 	})
 end
 
@@ -151,6 +201,9 @@ local function JourneyViewerContent(props: ViewerState)
 		}),
 	}
 	if props.mode == "list" then
+		if #props.sessions > 0 then
+			items.Header = sessionHeaderRow()
+		end
 		for i, summary in pairs(props.sessions) do
 			items["Row" .. i] = sessionRow(summary, i, props.onPick)
 		end

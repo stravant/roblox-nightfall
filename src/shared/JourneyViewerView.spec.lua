@@ -41,8 +41,15 @@ return function(t)
 			t.expect(gui.JourneyWindow.WindowTitle.Text).toBe("Player Journeys")
 			t.expect(gui.JourneyWindow.StatusText.Text).toBe("2 recent sessions. Click one for its timeline.")
 			local scroll = gui.JourneyWindow:FindFirstChild("JourneyScroll", true)
-			t.expect(scroll.Row1.Text:find("Alice") ~= nil).toBeTruthy()
-			t.expect(scroll.Row2.Text:find("Bob") ~= nil).toBeTruthy()
+			-- Tabular rows: header + one cell per column. (":FindFirstChild
+			-- rather than dot access: a child literally named "Name" is
+			-- shadowed by the Instance.Name property)
+			t.expect(scroll.Header:FindFirstChild("Name").Text).toBe("Name")
+			t.expect(scroll.Row1:FindFirstChild("Name").Text).toBe("Alice")
+			t.expect(scroll.Row1.Events.Text).toBe("12")
+			t.expect(scroll.Row2:FindFirstChild("Name").Text).toBe("Bob")
+			-- No Ended/LastUpdate fields: classified as old
+			t.expect(scroll.Row1.Status.Text).toBe("old")
 			-- Timeline chrome hidden in list mode
 			t.expect(gui.JourneyWindow.BackButton.Visible).toBeFalsy()
 		end)
