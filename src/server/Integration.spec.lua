@@ -334,7 +334,7 @@ return function(t)
 
 	-- Play L12 for real through the game logic and return the winning replay
 	-- string: proves the client simulation and ReplayChecker agree on rules
-	local function generateWinningReplay(uploadIds, placeData)
+	local function generateWinningReplay(uploadIds)
 		uploadIds = uploadIds or { "golemstone", "golemstone" }
 		local inventory = {}
 		for id, unit in pairs(Scripts) do
@@ -342,7 +342,7 @@ return function(t)
 				table.insert(inventory, { Id = id, Count = 2 })
 			end
 		end
-		local gs = GameState.new(placeData or Places.L12, inventory, GameState.ServerDelayFunc)
+		local gs = GameState.new(Places.L12, inventory, GameState.ServerDelayFunc)
 		local zones = gs:GetUploadZones()
 		for i, unitId in pairs(uploadIds) do
 			gs:UploadUnit(zones[i].x, zones[i].y, Scripts[unitId])
@@ -407,7 +407,7 @@ return function(t)
 				gs:EndTurn()
 			end
 		end
-		assert(gs:HasWon(), "auto-player failed to win " .. gs:GetMapId())
+		assert(gs:HasWon(), "auto-player failed to win L12")
 		assert(not gs:HasErrors(), "auto-player performed invalid actions")
 		return gs:GetReplay()
 	end
@@ -1144,24 +1144,6 @@ return function(t)
 			end
 		end
 		t.expect(sawBounce).toBeTruthy()
-	end)
-
-	t.test("a tutorial-place replay fires no UnitUsed analytics", function()
-		-- Legit clients never submit a tutorial replay (the tutorial ends
-		-- via BeatTutorial), but a crafted one still validates - it must
-		-- not pollute the unit usage data with the scripted loadout
-		local player = makePlayer(9300, "TutorialReplayer")
-		remotes.Load:InvokeServer_TEST(player)
-		local tutorialReplay = generateWinningReplay(nil, Places.tutorial)
-		remotes.ProcessReplay:FireServer_TEST(player, tutorialReplay)
-		local reply = remotes.ProcessReplay.FiredToClients[#remotes.ProcessReplay.FiredToClients]
-		t.expect(reply.Args[1]).toBe(true) -- it IS valid...
-		for _, event in pairs(analyticsLog) do
-			-- ...but no unit usage was recorded for it
-			if event.Kind == "custom" and event.Player == player and event.Args[1] == "UnitUsed" then
-				error("UnitUsed fired for a tutorial replay")
-			end
-		end
 	end)
 
 	-- LAST on purpose: sweeps every analytics event the whole spec fired.

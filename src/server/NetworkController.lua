@@ -83,14 +83,9 @@ function NetworkController.install(remotes)
 		if result.Valid then
 			if not result.EarlyQuit then
 				ServerStatistics:PlayerPlayedLevel(player, result.NodeId, result.Won)
-				-- One UnitUsed event per fielded unit, split by outcome.
-				-- The tutorial's scripted fixed loadout is excluded: legit
-				-- clients never submit a tutorial replay (the tutorial ends
-				-- via BeatTutorial instead), but don't trust that here.
-				if result.PlaceId ~= 'tutorial' then
-					for _, unitId in pairs(result.UnitsUsed or {}) do
-						ServerStatistics:UnitUsed(player, unitId, result.Won)
-					end
+				-- One UnitUsed event per fielded unit, split by outcome
+				for _, unitId in pairs(result.UnitsUsed or {}) do
+					ServerStatistics:UnitUsed(player, unitId, result.Won)
 				end
 			else
 				ServerStatistics:PlayerQuitLevelEarly(player, result.NodeId)
