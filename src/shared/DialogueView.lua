@@ -31,9 +31,13 @@ local kTypeStallChance = 0.06 -- odds a character hangs like a dropped packet
 local kTypeStallMin = 0.023
 local kTypeStallMax = 0.077
 
+-- The standard window chrome title blue (matches the slice texture's band)
+local kDefaultUserColor = Color3.fromRGB(0, 0, 128)
+
 type DialogueState = {
 	username: string,
 	avatarImage: string,
+	userColor: Color3,
 	text: string,
 	hasContent: boolean,
 	choice1: string?,
@@ -122,6 +126,15 @@ local function DialogueContent(props: DialogueState)
 			ImageRectOffset = kWindowImageRectOffset,
 			ImageRectSize = kWindowImageRectSize,
 		}, {
+			-- The character's signature color painted over the chrome
+			-- texture's title band (Aeacus keeps the standard blue)
+			TitleBar = e("Frame", {
+				Position = UDim2.new(0, 3, 0, 3),
+				Size = UDim2.new(1, -6, 0, 18),
+				BackgroundColor3 = props.userColor,
+				BorderSizePixel = 0,
+				ZIndex = 1,
+			}),
 			WindowTitle = e("TextLabel", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 6, 0, 12),
@@ -131,6 +144,7 @@ local function DialogueContent(props: DialogueState)
 				TextSize = 14,
 				TextColor3 = Color3.new(1, 1, 1),
 				TextXAlignment = Enum.TextXAlignment.Left,
+				ZIndex = 2,
 				Text = if props.tutorial then props.windowTitle
 					elseif props.username ~= "" then props.windowTitle .. " - " .. props.username
 					else props.windowTitle,
@@ -147,7 +161,10 @@ local function DialogueContent(props: DialogueState)
 					then e("ImageLabel", {
 						Position = UDim2.new(0, 6, 0, 6),
 						Size = UDim2.new(0, 92, 0, 92),
-						BackgroundColor3 = Color3.new(0.670588, 0.670588, 0.670588),
+						-- Desaturated wash of the character color: the
+						-- saturated title color wouldn't contrast with
+						-- the avatar art
+						BackgroundColor3 = props.userColor:Lerp(Color3.new(0.75, 0.75, 0.75), 0.65),
 						BorderColor3 = Color3.new(0, 0, 0),
 						Image = props.avatarImage,
 					})
@@ -208,6 +225,7 @@ function DialogueView.new()
 	local mRoot = StatefulRoot.create(mGui, DialogueContent, {
 		username = "",
 		avatarImage = "",
+		userColor = kDefaultUserColor,
 		text = "",
 		hasContent = false,
 		choice1 = nil,
@@ -243,11 +261,12 @@ function DialogueView.new()
 		end
 	end
 
-	function this:SetUser(name: string, image: string)
+	function this:SetUser(name: string, image: string, color: Color3?)
 		mUsername = name
 		mRoot.setState({
 			username = name,
 			avatarImage = image,
+			userColor = color or kDefaultUserColor,
 		})
 	end
 
@@ -344,7 +363,7 @@ function DialogueView.new()
 	-- Returns the terminal target that ended the conversation: plain 'end',
 	-- or an 'end:<outcome>' variant the caller can branch on
 	function this:ExecuteConversation(conversation)
-		this:SetUser(conversation.User, conversation.Image)
+		this:SetUser(conversation.User, conversation.Image, conversation.Color)
 		local chatPart = "main"
 		while true do
 			local partData = conversation.Parts[chatPart]

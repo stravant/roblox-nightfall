@@ -62,7 +62,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 
 	-- Corner dialogue that never blocks input
 	local tutorialDialogue = DialogueView.new()
-	tutorialDialogue:SetUser(Netmap.TutorialCallout.User, Netmap.TutorialCallout.Image)
+	tutorialDialogue:SetUser(Netmap.TutorialCallout.User, Netmap.TutorialCallout.Image, Netmap.TutorialCallout.Color)
 	tutorialDialogue:SetTutorial()
 	tutorialDialogue:SetVisible(true)
 	tutorialDialogue:GetGui().Parent = container

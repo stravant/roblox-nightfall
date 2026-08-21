@@ -73,21 +73,29 @@ local function part(text, response1, target1, response2, target2)
 end
 
 local function conversation(tb)
+	-- Each character gets a signature saturated color (chat window title
+	-- bar; a desaturated version backs their avatar) so who's talking is
+	-- memorable at a glance. Aeacus keeps the standard title-bar blue.
 	if tb.User == 'spinner' then
 		tb.User = "Vexedly"
 		tb.Image = 'rbxassetid://1353163481' --rbxgameasset://Images/UserVexedly'
+		tb.Color = Color3.fromRGB(128, 0, 128)
 	elseif tb.User == 'superphreak' then
 		tb.User = "Aeacus"
 		tb.Image = 'rbxassetid://1352624214' --rbxgameasset://Images/UserAeacus'
+		tb.Color = Color3.fromRGB(0, 0, 128)
 	elseif tb.User == 'wintermutant' then
 		tb.User = "Minish"
 		tb.Image = 'rbxassetid://1353163480' --rbxgameasset://Images/UserMinish'
+		tb.Color = Color3.fromRGB(0, 118, 0)
 	elseif tb.User == 'joana' then
 		tb.User = "Are92"
 		tb.Image = 'rbxassetid://1353163482' --rbxgameasset://Images/UserAre92'
+		tb.Color = Color3.fromRGB(0, 128, 128)
 	elseif tb.User == 'disarray' then
 		tb.User = "Dignity"
 		tb.Image = 'rbxassetid://1367227087' --rbxgameasset://Images/UserDignity'
+		tb.Color = Color3.fromRGB(155, 0, 0)
 	else
 		error("Invalid user: "..tostring(tb.User))
 	end
