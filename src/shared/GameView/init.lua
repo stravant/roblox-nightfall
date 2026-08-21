@@ -1438,9 +1438,11 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	for _, coord in pairs(mUploadZones) do
 		local tile = TileTemplates.UploadOverlay()
 		-- Counter-phase border: fades IN as the main image flashes out, so
-		-- the zone is never just an empty square mid-flash
+		-- the zone is never just an empty square mid-flash. The light steel
+		-- blue matches the upload marker's on-board look (the sprite itself
+		-- is white - its blue comes from the board art underneath)
 		local border = Instance.new("UIStroke")
-		border.Color = Color3.fromRGB(255, 255, 255)
+		border.Color = Color3.fromRGB(140, 180, 230)
 		border.Thickness = 2
 		border.Transparency = 1
 		border.Parent = tile
@@ -1457,7 +1459,13 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 					entry.Gui.ImageTransparency = 0
 					entry.Border.Transparency = 1
 				else
-					entry.Gui.ImageTransparency = pulse
+					-- The SELECTED zone keeps its image solid (only the
+					-- border keeps flashing): it's the click-flow target,
+					-- dimming it read as deselection
+					local selected = mSelectionType == 'upload'
+						and mSelection ~= nil
+						and mSelection.x == entry.x and mSelection.y == entry.y
+					entry.Gui.ImageTransparency = if selected then 0 else pulse
 					-- Counter-phase: strongest exactly when the image is
 					-- most faded (pulse peaks at 0.85)
 					entry.Border.Transparency = 1 - pulse / 0.85
