@@ -375,7 +375,11 @@ function ServerPlayerData.new(player, serialized)
 			})
 			warn("ServerPlayerData | Got invalid replay from "..mPlayerLabel
 				.." ("..tostring(result.FailureReason)..") saved as "..result.FailedReplayKey)
-			warn(replayString)
+			-- print, NOT warn: every replay string is unique, so warning it
+			-- would spawn one error-report entry per rejection. The store
+			-- holds the string under the key warned above; this is just a
+			-- live-console fallback in case that write fails.
+			print(replayString)
 		end
 		return result
 	end
