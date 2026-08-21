@@ -846,8 +846,7 @@ function MainMenuView.new(container: Instance)
 			mMusicSlider:Set(value)
 		end,
 		onSpeedChanged = function(value: number)
-			-- Three stops: snap the continuous slider to -1 / 0 / 1
-			mSpeedSlider:Set(math.round(value))
+			mSpeedSlider:Set(value)
 		end,
 	})
 	local root = mRoot :: StatefulRoot.StatefulRoot
@@ -855,7 +854,7 @@ function MainMenuView.new(container: Instance)
 	-- Sound stuff
 	SoundManager:AddSoundSlider(mSoundSlider)
 	SoundManager:AddMusicSlider(mMusicSlider)
-	-- Gameplay speed: slider stops -1/0/1 map to GameSpeed 0/1/2
+	-- Gameplay speed: the continuous -1..1 slider maps to GameSpeed 0..2
 	mSpeedSlider:Set(GameSpeed:Get() - 1)
 	mSpeedSlider.Changed:connect(function(value: number)
 		GameSpeed:Set(value + 1)
