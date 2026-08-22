@@ -46,6 +46,33 @@ local kHeaderColor = Color3.new(0.737255, 0.784314, 0.886275)
 
 local GameView = {}
 
+-- The win overlay's "new personal best" showcase: compares this play's
+-- stats against the pre-battle bests (client-known; only set for nodes
+-- already beaten through a real win). Returns nil when nothing improved.
+-- Exposed on the module for direct testing.
+function GameView.BuildImprovementText(priorBests, playStats)
+	if not priorBests or not playStats then
+		return nil
+	end
+	local lines = {}
+	local kStats = {
+		{ Key = "Turns", Label = "Turns Taken" },
+		{ Key = "Moves", Label = "Tiles Moved" },
+		{ Key = "Units", Label = "Scripts Used" },
+	}
+	for _, stat in ipairs(kStats) do
+		local prior = priorBests[stat.Key]
+		local now = playStats[stat.Key]
+		if prior and now and now < prior then
+			table.insert(lines, string.format("%s  %d → %d", stat.Label, prior, now))
+		end
+	end
+	if #lines == 0 then
+		return nil
+	end
+	return "NEW PERSONAL BEST!\n" .. table.concat(lines, "\n")
+end
+
 --------------------------------------------------------------------------------
 -- Chrome render helpers
 --------------------------------------------------------------------------------
@@ -147,6 +174,7 @@ local function GameViewChrome(props)
 				Position = UDim2.new(0.5, 0, 0.6, 0),
 				Size = if props.endGameWon == false
 					then UDim2.new(0, 300, 0, 224)
+					elseif props.improvementText then UDim2.new(0, 300, 0, 202)
 					else UDim2.new(0, 300, 0, 130),
 				ZIndex = 2,
 				BackgroundTransparency = 1,
@@ -183,8 +211,21 @@ local function GameViewChrome(props)
 						elseif props.endGameWon == false then "You were defeated."
 						else "",
 				}),
+				-- Re-beat a node with better stats: celebrate them
+				ImprovementText = if props.improvementText
+					then e("TextLabel", {
+						Position = UDim2.new(0, 4, 0, 48),
+						Size = UDim2.new(1, -8, 0, 72),
+						BackgroundTransparency = 1,
+						Font = Enum.Font.SourceSansBold,
+						TextSize = 16,
+						TextColor3 = Color3.fromRGB(0, 130, 30),
+						TextYAlignment = Enum.TextYAlignment.Top,
+						Text = props.improvementText,
+					})
+					else nil,
 				SubmittingText = e("TextLabel", {
-					Position = UDim2.new(0, 0, 0, 50),
+					Position = UDim2.new(0, 0, 0, if props.improvementText then 122 else 50),
 					Size = UDim2.new(1, 0, 1, 0),
 					BackgroundTransparency = 1,
 					Font = Enum.Font.SourceSansBold,
@@ -333,6 +374,13 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	local mDidWin = nil
 	local mWasSkipped = false
 	local mSkipText = "Skip Node"
+	-- Pre-battle personal bests for this node ({Turns, Moves, Units}), set
+	-- by MainView for already-won nodes so the win overlay can showcase
+	-- improvements
+	local mPriorBests = nil
+	function this:SetPriorBests(bests)
+		mPriorBests = bests
+	end
 
 	-- Forward declarations used by chrome callbacks
 	local clearSelection
@@ -384,6 +432,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		end,
 		endGameOverlayVisible = false,
 		endGameWon = nil,
+		improvementText = nil,
 		submittingText = "(Submitting play...)",
 		skipText = "Skip Node",
 		onSkip = function()
@@ -1308,7 +1357,14 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 				ReplaySubmission:Submit(gameState:GetReplay())
 			end
 		end
-		root().setState({ endGameWon = wonGame })
+		root().setState({
+			endGameWon = wonGame,
+			-- Re-beating a node: showcase any stat improvements (the
+			-- stats-minded player's payoff). Real wins only - not skips.
+			improvementText = if wonGame and not skipLevel
+				then GameView.BuildImprovementText(mPriorBests, gameState:GetPlayStats()) or StatefulRoot.None
+				else StatefulRoot.None,
+		})
 		if wonGame then
 			-- Play victory sound?
 			SoundManager:Play('WinBattle')

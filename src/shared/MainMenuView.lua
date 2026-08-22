@@ -25,6 +25,7 @@ local WindowsSlider = require(game.ReplicatedStorage.Components.WindowsSlider)
 local WindowsTabView = require(game.ReplicatedStorage.Components.WindowsTabView)
 local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
 local Netmap = require(game.ReplicatedStorage.Netmap)
+local Places = require(game.ReplicatedStorage.Places)
 local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
 
 local e = React.createElement
@@ -60,7 +61,7 @@ type MainMenuState = {
 	statsDetail: {
 		Id: string,
 		Name: string,
-		Image: string,
+		PlaceId: string?,
 		SubLine: string,
 		You: { turns: number?, moves: number?, units: number? }?,
 		Friend: any, -- "pending" | "unavailable" | { [stat]: {Value, Name} }
@@ -308,6 +309,13 @@ local function MainMenuContent(props: MainMenuState)
 			PaddingBottom = UDim.new(0, 3),
 		}),
 	}
+	-- PaddingRight matches the scrollbar width so thumbnails center within
+	-- the VISIBLE area, not the full frame the scrollbar covers part of
+	railItems.UIPadding = e("UIPadding", {
+		PaddingTop = UDim.new(0, 3),
+		PaddingBottom = UDim.new(0, 3),
+		PaddingRight = UDim.new(0, 18),
+	})
 	for i, entry in ipairs(props.statsNodeList or {}) do
 		if entry.Kind == "divider" then
 			railItems["Item" .. i] = e("TextLabel", {
@@ -376,17 +384,14 @@ local function MainMenuContent(props: MainMenuState)
 			end
 			return tostring(cell.Value), cell.Name or ""
 		end
+		-- Small screens (base-size menu) get a compact single-line grid; the
+		-- grown desktop menu gets the battle-setup preview and big numbers
+		local compact = (props.menuHeight or 250) < 420
+
 		statsPaneItems = {
-			Thumb = e("ImageLabel", {
-				Position = UDim2.new(0, 0, 0, 2),
-				Size = UDim2.new(0, 40, 0, 40),
-				BackgroundColor3 = Color3.fromRGB(206, 206, 206),
-				BorderSizePixel = 0,
-				Image = d.Image,
-			}),
 			NodeName = e("TextLabel", {
-				Position = UDim2.new(0, 48, 0, 2),
-				Size = UDim2.new(1, -170, 0, 20),
+				Position = UDim2.new(0, if compact then 0 else 104, 0, 2),
+				Size = UDim2.new(1, (if compact then 0 else -104) - 122, 0, 20),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 16,
@@ -396,12 +401,12 @@ local function MainMenuContent(props: MainMenuState)
 				Text = d.Name,
 			}),
 			SubLine = e("TextLabel", {
-				Position = UDim2.new(0, 48, 0, 22),
-				Size = UDim2.new(1, -170, 0, 16),
+				Position = UDim2.new(0, if compact then 0 else 104, 0, 22),
+				Size = UDim2.new(1, (if compact then 0 else -104) - 122, 0, 16),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
 				TextSize = 14,
-				TextColor3 = Color3.new(0.3, 0.3, 0.3),
+				TextColor3 = Color3.new(0, 0, 0),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Text = d.SubLine,
 			}),
@@ -420,74 +425,142 @@ local function MainMenuContent(props: MainMenuState)
 				end,
 			}),
 		}
-		-- Records grid: You / Friend / World columns per stat
-		local kGridTop = 50
-		local kRowHeight = 34
+
+		-- Mini battle-setup preview: the node's board at a glance (tiles,
+		-- enemy layout, upload zones, pickups) instead of repeating the
+		-- node thumbnail
+		if not compact and d.PlaceId and Places[d.PlaceId] then
+			local place = Places[d.PlaceId]
+			local kCell = 6
+			local previewItems: { [string]: any } = {}
+			for x = 1, 16 do
+				for y = 1, 12 do
+					if place.MapData[x][y] then
+						previewItems["T" .. x .. "_" .. y] = e("Frame", {
+							Position = UDim2.new(0, (x - 1) * kCell, 0, (y - 1) * kCell),
+							Size = UDim2.new(0, kCell - 1, 0, kCell - 1),
+							BackgroundColor3 = Color3.fromRGB(185, 196, 214),
+							BorderSizePixel = 0,
+						})
+					end
+				end
+			end
+			local function overlay(key, coord, color)
+				previewItems[key] = e("Frame", {
+					Position = UDim2.new(0, (coord.x - 1) * kCell, 0, (coord.y - 1) * kCell),
+					Size = UDim2.new(0, kCell - 1, 0, kCell - 1),
+					BackgroundColor3 = color,
+					BorderSizePixel = 0,
+					ZIndex = 2,
+				})
+			end
+			for i, zone in ipairs(place.UploadZones) do
+				overlay("Z" .. i, zone, Color3.fromRGB(60, 140, 255))
+			end
+			for i, coord in ipairs(place.ExtraCreditList) do
+				overlay("C" .. i, coord, Color3.fromRGB(222, 185, 50))
+			end
+			for i, coord in ipairs(place.CodeList) do
+				overlay("K" .. i, coord, Color3.fromRGB(70, 200, 100))
+			end
+			for u, unitEntry in ipairs(place.ProgramList) do
+				local color = if unitEntry.Type == 'enemy'
+					then Color3.fromRGB(200, 45, 45)
+					else Color3.fromRGB(90, 190, 90)
+				for s, coord in ipairs(unitEntry.Tail) do
+					overlay("U" .. u .. "_" .. s, coord, color)
+				end
+			end
+			statsPaneItems.SetupPreview = e("Frame", {
+				Position = UDim2.new(0, 0, 0, 2),
+				Size = UDim2.new(0, 16 * kCell, 0, 12 * kCell),
+				BackgroundColor3 = Color3.fromRGB(24, 26, 34),
+				BorderSizePixel = 0,
+			}, previewItems)
+		end
+
+		-- Records grid, spreadsheet style: stat labels on the left, one
+		-- right-aligned column each for You / Friend / World
+		local kGridTop = if compact then 44 else 82
+		local kRowHeight = if compact then 22 else 42
 		local kGridStats = {
-			{ Key = "turns", Label = "Turns", You = d.You and d.You.turns },
-			{ Key = "moves", Label = "Moves", You = d.You and d.You.moves },
-			{ Key = "units", Label = "Scripts", You = d.You and d.You.units },
+			{ Key = "turns", Label = "Turns Taken", You = d.You and d.You.turns },
+			{ Key = "moves", Label = "Tiles Moved", You = d.You and d.You.moves },
+			{ Key = "units", Label = "Scripts Used", You = d.You and d.You.units },
 		}
 		local kColumns = { "You", "Friend", "World" }
+		local gridItems: { [string]: any } = {}
 		for c, columnName in ipairs(kColumns) do
-			statsPaneItems["Head" .. columnName] = e("TextLabel", {
-				Position = UDim2.new((c - 1) / 3, 60, 0, kGridTop),
-				Size = UDim2.new(1 / 3, -62, 0, 16),
+			gridItems["Head" .. columnName] = e("TextLabel", {
+				Position = UDim2.new((c - 1) / 3, 8, 0, 0),
+				Size = UDim2.new(1 / 3, -8, 0, 14),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 13,
-				TextColor3 = Color3.new(0.35, 0.35, 0.35),
-				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = Color3.new(0, 0, 0),
+				TextXAlignment = Enum.TextXAlignment.Right,
 				Text = columnName,
 			})
 		end
 		for r, stat in ipairs(kGridStats) do
-			local y = kGridTop + 18 + (r - 1) * kRowHeight
+			local y = 18 + (r - 1) * kRowHeight
+			for c = 1, 3 do
+				local value, holder
+				if c == 1 then
+					value = if stat.You then tostring(stat.You) else "—"
+					holder = ""
+				else
+					value, holder = recordCell(if c == 2 then d.Friend else d.World, stat.Key)
+				end
+				if compact and holder ~= "" then
+					value = value .. " (" .. holder .. ")"
+				end
+				-- The numbers are the star: big, bold, right-aligned
+				gridItems[kColumns[c] .. stat.Key] = e("TextLabel", {
+					Position = UDim2.new((c - 1) / 3, 8, 0, y),
+					Size = UDim2.new(1 / 3, -8, 0, if compact then 18 else 24),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.SourceSansBold,
+					TextSize = if compact then 16 else 22,
+					TextColor3 = Color3.new(0, 0, 0),
+					TextXAlignment = Enum.TextXAlignment.Right,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					Text = value,
+				})
+				if not compact and c > 1 then
+					-- Record holder beneath the number; the WORLD record
+					-- holder in bold - that name is an achievement
+					gridItems[kColumns[c] .. stat.Key .. "Name"] = e("TextLabel", {
+						Position = UDim2.new((c - 1) / 3, 8, 0, y + 24),
+						Size = UDim2.new(1 / 3, -8, 0, 12),
+						BackgroundTransparency = 1,
+						Font = if c == 3 then Enum.Font.SourceSansBold else Enum.Font.SourceSans,
+						TextSize = 11,
+						TextColor3 = if c == 3 then Color3.new(0, 0, 0) else Color3.new(0.35, 0.35, 0.35),
+						TextXAlignment = Enum.TextXAlignment.Right,
+						TextTruncate = Enum.TextTruncate.AtEnd,
+						Text = holder,
+					})
+				end
+			end
+		end
+		for r, stat in ipairs(kGridStats) do
 			statsPaneItems["Label" .. stat.Key] = e("TextLabel", {
-				Position = UDim2.new(0, 0, 0, y),
-				Size = UDim2.new(0, 56, 0, 16),
+				Position = UDim2.new(0, 0, 0, kGridTop + 18 + (r - 1) * kRowHeight + (if compact then 1 else 5)),
+				Size = UDim2.new(0, 92, 0, 16),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
-				TextSize = 14,
+				TextSize = 15,
 				TextColor3 = Color3.new(0, 0, 0),
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Text = stat.Label,
 			})
-			statsPaneItems["You" .. stat.Key] = e("TextLabel", {
-				Position = UDim2.new(0, 60, 0, y),
-				Size = UDim2.new(1 / 3, -62, 0, 16),
-				BackgroundTransparency = 1,
-				Font = Enum.Font.Code,
-				TextSize = 14,
-				TextColor3 = Color3.new(0, 0, 0),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				Text = if stat.You then tostring(stat.You) else "—",
-			})
-			for c = 2, 3 do
-				local value, holder = recordCell(if c == 2 then d.Friend else d.World, stat.Key)
-				statsPaneItems[kColumns[c] .. stat.Key] = e("TextLabel", {
-					Position = UDim2.new((c - 1) / 3, 60, 0, y),
-					Size = UDim2.new(1 / 3, -62, 0, 16),
-					BackgroundTransparency = 1,
-					Font = Enum.Font.Code,
-					TextSize = 14,
-					TextColor3 = Color3.new(0, 0, 0),
-					TextXAlignment = Enum.TextXAlignment.Left,
-					Text = value,
-				})
-				statsPaneItems[kColumns[c] .. stat.Key .. "Name"] = e("TextLabel", {
-					Position = UDim2.new((c - 1) / 3, 60, 0, y + 14),
-					Size = UDim2.new(1 / 3, -62, 0, 12),
-					BackgroundTransparency = 1,
-					Font = Enum.Font.SourceSans,
-					TextSize = 11,
-					TextColor3 = Color3.new(0.45, 0.45, 0.45),
-					TextXAlignment = Enum.TextXAlignment.Left,
-					TextTruncate = Enum.TextTruncate.AtEnd,
-					Text = holder,
-				})
-			end
 		end
+		statsPaneItems.Grid = e("Frame", {
+			Position = UDim2.new(0, 92, 0, kGridTop),
+			Size = UDim2.new(1, -92, 0, 18 + 3 * kRowHeight),
+			BackgroundTransparency = 1,
+		}, gridItems)
 		statsPaneItems.BackHint = e("TextButton", {
 			AnchorPoint = Vector2.new(0, 1),
 			Position = UDim2.new(0, 0, 1, 0),
@@ -495,7 +568,7 @@ local function MainMenuContent(props: MainMenuState)
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
 			TextSize = 13,
-			TextColor3 = Color3.new(0.35, 0.35, 0.35),
+			TextColor3 = Color3.new(0, 0, 0),
 			TextXAlignment = Enum.TextXAlignment.Left,
 			Text = "< Back to overview",
 			[React.Event.MouseButton1Click] = function()
@@ -524,7 +597,9 @@ local function MainMenuContent(props: MainMenuState)
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
 				TextSize = 14,
-				TextColor3 = Color3.new(0.35, 0.35, 0.35),
+				-- Full black: grey body text doesn't read against the grey
+				-- tab background
+				TextColor3 = Color3.new(0, 0, 0),
 				TextWrapped = true,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextYAlignment = Enum.TextYAlignment.Top,
@@ -801,7 +876,7 @@ function MainMenuView.new(container: Instance)
 				statsDetail = {
 					Id = nodeId,
 					Name = Netmap.GetNodeDisplayName(nodeId),
-					Image = node.BeatenImage or node.Image,
+					PlaceId = node.PlaceId,
 					SubLine = if mine
 						then string.format("Wins %d  ·  Attempts %d", mine.Wins or 0, mine.Attempts or 0)
 						else "",

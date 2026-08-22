@@ -176,6 +176,19 @@ return function(t)
 		end)
 	end)
 
+	t.test("BuildImprovementText showcases only the improved stats", function()
+		local prior = { Turns = 10, Moves = 20, Units = 3 }
+		-- Better turns and moves, same units
+		local text = GameView.BuildImprovementText(prior, { Turns = 8, Moves = 15, Units = 3 })
+		t.expect(text:find("NEW PERSONAL BEST!") ~= nil).toBeTruthy()
+		t.expect(text:find("Turns Taken  10 → 8", 1, true) ~= nil).toBeTruthy()
+		t.expect(text:find("Tiles Moved  20 → 15", 1, true) ~= nil).toBeTruthy()
+		t.expect(text:find("Scripts Used", 1, true)).toBe(nil)
+		-- Nothing improved / never beaten before: no showcase
+		t.expect(GameView.BuildImprovementText(prior, { Turns = 10, Moves = 25, Units = 4 })).toBe(nil)
+		t.expect(GameView.BuildImprovementText(nil, { Turns = 1, Moves = 1, Units = 1 })).toBe(nil)
+	end)
+
 	t.test("Destroy removes the gui and the 3D board", function()
 		withView(function(view, gui)
 			ReactRoblox.act(function()

@@ -598,6 +598,9 @@ function MainView.new()
 		local gameState = GameState.new(placeData, LocalPlayerData:GetProgramList(), GameState.ClientDelayFunc)
 		local gameController = GameController.new(gameState)
 		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface, entrySound)
+		-- Replaying an already-won node: hand the win overlay the current
+		-- bests so it can showcase improvements
+		gameView:SetPriorBests(LocalPlayerData:GetNodeBests(nodeId))
 		if initialPlacement then
 			gameView:ApplyInitialPlacement(initialPlacement)
 		end

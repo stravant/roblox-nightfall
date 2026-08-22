@@ -157,6 +157,20 @@ function LocalPlayerData:RecordNodeAttempt(id)
 		info.AttemptCount = (info.AttemptCount or 0) + 1
 	end
 end
+-- The client-known personal bests for a node ({Turns, Moves, Units}), or
+-- nil before the first recorded win (skip-beaten nodes have none)
+function LocalPlayerData:GetNodeBests(id)
+	local info = mNodeInfo[id]
+	if info and info.BestTurns then
+		return {
+			Turns = info.BestTurns,
+			Moves = info.BestMoves,
+			Units = info.BestUnits,
+		}
+	end
+	return nil
+end
+
 function LocalPlayerData:RecordNodeCompletion(id, stats)
 	local info = mNodeInfo[id]
 	if not info then

@@ -16,7 +16,7 @@ return function(t)
 		t.expect(result.NodeId).toBe("lm12")
 		t.expect(result.UnitCount).toBe(2)
 		t.expect(result.TurnCount).toBe(6)
-		t.expect(result.MoveCount).toBe(8)
+		t.expect(result.MoveCount).toBe(15) -- tiles moved, not move actions
 		t.expect(result.Valid).toBeFalsy()
 		t.expect(result.Won).toBeFalsy()
 		-- The diagnosis carries WHY the sim rejected it and how far it got

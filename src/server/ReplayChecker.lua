@@ -211,8 +211,11 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 				return result
 			end
 			if unitMove.MoveData then
-				-- Add move to count tracking
-				result.MoveCount = result.MoveCount + 1
+				-- Count TILES moved (one per step), matching the client's
+				-- mPlayMoveCount and the "Tiles Moved" stat label. (This
+				-- used to count action entries, so pre-change records read
+				-- artificially low.)
+				result.MoveCount = result.MoveCount + #unitMove.MoveData
 				for _, delta in pairs(unitMove.MoveData) do
 					gameState:UnitMove(unit, unit.Tail[1].x + delta.DX, unit.Tail[1].y + delta.DY)
 				end
