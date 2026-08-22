@@ -219,7 +219,12 @@ function NetworkController.install(remotes)
 			if player.Parent ~= nil then
 				PlayerDataCache[player] = playerData
 			end
-		
+
+			-- Badges introduced after this player's progression happened
+			-- never re-trigger their award events: re-derive them from the
+			-- save on every login (no-op for badges already owned)
+			playerData:EvaluateRetroactiveBadges()
+
 			-- Record the stat
 			ServerStatistics:PlayerJoined(player, playerData:IsNewPlayer())
 		
