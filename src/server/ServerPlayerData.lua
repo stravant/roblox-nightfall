@@ -71,7 +71,9 @@ function ServerPlayerData.new(player, serialized)
 	do -- Ensure that node status has stats
 		for id, data in pairs(mNodeStatus) do
 			data.AttemptCount = data.AttemptCount or 0
-			data.WinningPlayId = nil -- The first time that we beat the node
+			-- NOTE: WinningPlayId used to be wiped here, which silently
+			-- discarded the stored replay pointer on every load. It persists
+			-- now: the stats screen's thumbnail playback fetches it.
 		end
 	end
 	
@@ -307,10 +309,11 @@ function ServerPlayerData.new(player, serialized)
 			BadgeAwarder:EvaluateWinBadges(player, replayResult, data.AttemptCount, securityLevelAtBattle)
 		end
 		
-		-- If this is a win, and we don't have a recorded replay for the node yet
-		-- then record it. We have to record a replay Id only because there isn't
-		-- space for all the nodes replays in the single player data key.
-		if replayResult.Won and not data.WinningPlayId then
+		-- Record the winning replay, keeping the pointer on the LATEST win
+		-- (the stats thumbnail playback shows it). We record an id rather
+		-- than the string because there isn't space for every node's replay
+		-- in the single player data key.
+		if replayResult.Won then
 			-- Note, this returns right away
 			data.WinningPlayId = DataStoreService:SaveReplay(replayString)
 		end

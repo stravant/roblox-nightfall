@@ -632,12 +632,17 @@ return function(t)
 		-- Bogus node ids are rejected
 		t.expect(remotes.GetNodeRecords:InvokeServer_TEST(player, "nope")).toBe(nil)
 
-		-- The stored first-win replay comes back for thumbnail playback
+		-- The stored winning replay comes back for thumbnail playback
 		local replay = remotes.GetNodeReplay:InvokeServer_TEST(rival, "lm12")
 		t.expect(replay).toBe(kL12WinningReplay)
 		-- Never-won nodes and bogus ids have none
 		t.expect(remotes.GetNodeReplay:InvokeServer_TEST(rival, "ph16")).toBe(nil)
 		t.expect(remotes.GetNodeReplay:InvokeServer_TEST(rival, "nope")).toBe(nil)
+
+		-- The replay pointer survives a save/load cycle (a load-time fixup
+		-- used to wipe it, which left every fresh session replay-less)
+		remotes.Load:InvokeServer_TEST(rival)
+		t.expect(remotes.GetNodeReplay:InvokeServer_TEST(rival, "lm12")).toBe(kL12WinningReplay)
 	end)
 
 	t.test("skip-sweeping the netmap awards the progression badges", function()
