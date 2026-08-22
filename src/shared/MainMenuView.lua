@@ -1037,7 +1037,9 @@ function MainMenuView.new(container: Instance)
 			-- viewports with the width growing in proportion, read LIVE at
 			-- open (the viewport isn't settled at construction time)
 			local viewport = workspace.CurrentCamera.ViewportSize
-			local menuHeight = math.clamp(viewport.Y - 180, 250, 500)
+			-- Floor raised 250 -> 270: at the old floor the phone menus ran
+			-- slightly too short for their content
+			local menuHeight = math.clamp(viewport.Y - 180, 270, 500)
 			mRoot.setState({
 				menuSession = mSession,
 				-- With the session key: the remounted tab view reads it
