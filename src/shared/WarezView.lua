@@ -174,21 +174,22 @@ local function detailPanel(selectedId: string?)
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, 4),
 		}),
-		-- One header row: icon with the name and core stats beside it
+		-- Header: icon beside three stacked text rows (name / move / max
+		-- size), the stat numbers enlarged via RichText
 		Header = e("Frame", {
 			LayoutOrder = 1,
-			Size = UDim2.new(1, 0, 0, 36),
+			Size = UDim2.new(1, 0, 0, 58),
 			BackgroundTransparency = 1,
 		}, {
 			DetailIcon = e("ImageLabel", {
-				Size = UDim2.new(0, 36, 0, 36),
+				Size = UDim2.new(0, 56, 0, 56),
 				BackgroundColor3 = def.Color,
 				BorderColor3 = Color3.new(0, 0, 0),
 				Image = def.Image,
 			}),
 			DetailName = e("TextLabel", {
-				Position = UDim2.new(0, 44, 0, 0),
-				Size = UDim2.new(1, -44, 0, 18),
+				Position = UDim2.new(0, 64, 0, 0),
+				Size = UDim2.new(1, -64, 0, 18),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 18,
@@ -196,16 +197,27 @@ local function detailPanel(selectedId: string?)
 				TextXAlignment = Enum.TextXAlignment.Left,
 				Text = def.Name,
 			}),
-			StatsText = e("TextLabel", {
-				Position = UDim2.new(0, 44, 0, 18),
-				Size = UDim2.new(1, -44, 0, 18),
+			MoveText = e("TextLabel", {
+				Position = UDim2.new(0, 64, 0, 20),
+				Size = UDim2.new(1, -64, 0, 19),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
 				TextSize = 16,
 				RichText = true,
 				TextColor3 = kTextBlack,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				Text = string.format("Move: <b>%d</b>   Max Size: <b>%d</b>", def.Move, def.MaxSize),
+				Text = string.format('Move: <b><font size="20">%d</font></b>', def.Move),
+			}),
+			MaxSizeText = e("TextLabel", {
+				Position = UDim2.new(0, 64, 0, 39),
+				Size = UDim2.new(1, -64, 0, 19),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSans,
+				TextSize = 16,
+				RichText = true,
+				TextColor3 = kTextBlack,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = string.format('Max Size: <b><font size="20">%d</font></b>', def.MaxSize),
 			}),
 		}),
 		Attacks = e("TextLabel", {
