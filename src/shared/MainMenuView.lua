@@ -751,11 +751,20 @@ local function MainMenuContent(props: MainMenuState)
 					Name = "Settings",
 					Label = "Settings",
 					Content = {
-						-- Note the template's double space in the label text
-						SoundVolumeLabel = sectionLabel("Sound Effect  Volume", UDim2.new(0, 10, 0, 5)),
-						MusicVolumeLabel = sectionLabel("Music Volume", UDim2.new(0, 10, 0, 41)),
-						SoundVolume = e(WindowsSlider, {
+						GameSpeedLabel = sectionLabel("Gameplay Speed", UDim2.new(0, 10, 0, 5)),
+						GameSpeed = e(WindowsSlider, {
 							Position = UDim2.new(0.4, 0, 0, 5),
+							Size = UDim2.new(0.6, -6, 0, 36),
+							Value = props.speedValue,
+							LeftLabel = "Slow",
+							RightLabel = "Fast",
+							OnChanged = props.onSpeedChanged,
+						}),
+						-- Note the template's double space in the label text
+						SoundVolumeLabel = sectionLabel("Sound Effect  Volume", UDim2.new(0, 10, 0, 41)),
+						MusicVolumeLabel = sectionLabel("Music Volume", UDim2.new(0, 10, 0, 77)),
+						SoundVolume = e(WindowsSlider, {
+							Position = UDim2.new(0.4, 0, 0, 41),
 							Size = UDim2.new(0.6, -6, 0, 36),
 							Value = props.soundValue,
 							LeftLabel = "Muted",
@@ -763,21 +772,12 @@ local function MainMenuContent(props: MainMenuState)
 							OnChanged = props.onSoundChanged,
 						}),
 						MusicVolume = e(WindowsSlider, {
-							Position = UDim2.new(0.4, 0, 0, 41),
+							Position = UDim2.new(0.4, 0, 0, 77),
 							Size = UDim2.new(0.6, -6, 0, 36),
 							Value = props.musicValue,
 							LeftLabel = "Muted",
 							RightLabel = "DAT BASS",
 							OnChanged = props.onMusicChanged,
-						}),
-						GameSpeedLabel = sectionLabel("Gameplay Speed", UDim2.new(0, 10, 0, 77)),
-						GameSpeed = e(WindowsSlider, {
-							Position = UDim2.new(0.4, 0, 0, 77),
-							Size = UDim2.new(0.6, -6, 0, 36),
-							Value = props.speedValue,
-							LeftLabel = "Slow",
-							RightLabel = "Fast",
-							OnChanged = props.onSpeedChanged,
 						}),
 					},
 				},
