@@ -126,7 +126,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 	result.PlaceId = placeId
 	local place = Places[placeId]
 	if not place then
-		warn("ReplayChecker | Missing place "..placeId)
+		warn("ReplayChecker | Missing place")
 		result.FailureReason = "MissingPlace " .. placeId
 		return result
 	end
@@ -142,7 +142,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 	if foundInNode then
 		result.NodeId = foundInNode
 	else
-		warn("ReplayChecker | Missing node with place "..placeId.." in it.")
+		warn("ReplayChecker | Missing node for place")
 		result.FailureReason = "MissingNode " .. placeId
 		return result
 	end
@@ -199,13 +199,13 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 		end
 		for _, unitMove in pairs(unitMoves) do
 			if not inBounds(unitMove.X, unitMove.Y) then
-				warn("ReplayChecker | Out of bounds unit location "..unitMove.X..", "..unitMove.Y)
+				warn("ReplayChecker | Out of bounds unit location")
 				result.FailureReason = "OutOfBoundsUnit " .. unitMove.X .. "," .. unitMove.Y
 				return result
 			end
 			local unit = gameState:GetUnit(unitMove.X, unitMove.Y)
 			if not unit then
-				warn("ReplayChecker | Missing unit at "..unitMove.X..", "..unitMove.Y)
+				warn("ReplayChecker | Missing unit")
 				result.FailureReason = "MissingUnit " .. unitMove.X .. "," .. unitMove.Y
 					.. " turn " .. result.TurnCount
 				return result
@@ -219,7 +219,7 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 			end
 			if unitMove.CommandData then
 				if not inBounds(unitMove.CommandData.X, unitMove.CommandData.Y) then
-					warn("ReplayChecker | Out of bounds target for command "..unitMove.CommandData.X..", "..unitMove.CommandData.Y)
+					warn("ReplayChecker | Out of bounds command target")
 					result.FailureReason = "OutOfBoundsTarget " .. unitMove.CommandData.X .. "," .. unitMove.CommandData.Y
 					return result
 				end

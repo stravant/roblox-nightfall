@@ -145,11 +145,13 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	local mInvalidActionCount = 0
 	-- The FIRST invalid reason: when the server re-simulation rejects a
 	-- replay, this is the diagnostic that explains why (surfaced through
-	-- ReplayChecker into the InvalidReplay analytics event). warn rather
-	-- than print so live server error reports capture it.
+	-- ReplayChecker into the InvalidReplay analytics event and the
+	-- failed-replay store). print, NOT warn: the message variants
+	-- (coordinates, sizes) would each become their own error-report entry
+	-- and spam the log.
 	local mFirstInvalidReason = nil
 	local function invalidAction(message)
-		warn("INVALID: " .. message)
+		print("INVALID: " .. message)
 		mInvalidActionCount = mInvalidActionCount + 1
 		if not mFirstInvalidReason then
 			mFirstInvalidReason = message

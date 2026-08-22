@@ -373,12 +373,14 @@ function ServerPlayerData.new(player, serialized)
 				Name = player.Name,
 				Time = os.time(),
 			})
-			warn("ServerPlayerData | Got invalid replay from "..mPlayerLabel
+			-- STABLE warn text: the error report groups by message, so this
+			-- becomes one counted entry (= the rejection rate). All the
+			-- per-replay variants (player, reason, key, the replay string)
+			-- go to prints / the store / the InvalidReplay analytics event.
+			warn("ServerPlayerData | Invalid replay rejected (details in the"
+				.. " failed-replay store / InvalidReplay analytics)")
+			print("ServerPlayerData | Invalid replay from "..mPlayerLabel
 				.." ("..tostring(result.FailureReason)..") saved as "..result.FailedReplayKey)
-			-- print, NOT warn: every replay string is unique, so warning it
-			-- would spawn one error-report entry per rejection. The store
-			-- holds the string under the key warned above; this is just a
-			-- live-console fallback in case that write fails.
 			print(replayString)
 		end
 		return result
