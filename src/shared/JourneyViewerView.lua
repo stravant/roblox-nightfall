@@ -11,6 +11,7 @@
 
 local Signal = require(game.ReplicatedStorage.Signal)
 local JourneyPlayback = require(game.ReplicatedStorage.JourneyPlayback)
+local Netmap = require(game.ReplicatedStorage.Netmap)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
@@ -148,15 +149,20 @@ end
 
 -- Netmap node positions (id -> world XZ), for annotating pan events with the
 -- node the camera ended nearest to. Built lazily from the place's Netmap
--- model; absent (tests, broken place) it just skips the annotation.
+-- model, keeping only children named by a LOGICAL node id - the live view
+-- fills the same container with art clones named things like "lm",
+-- "ph_disabled", and "SecurityKey". Absent (tests, broken place) it just
+-- skips the annotation.
 local mNodePositionsCache: { { Id: string, X: number, Z: number } }? = nil
 local function getNodePositions(): { { Id: string, X: number, Z: number } }
 	if not mNodePositionsCache then
 		local positions = {}
 		pcall(function()
 			for _, ch in pairs(workspace.Netmap:GetChildren()) do
-				local p = ch:GetPivot().Position
-				table.insert(positions, { Id = ch.Name, X = p.X, Z = p.Z })
+				if Netmap.ById[ch.Name] then
+					local p = ch:GetPivot().Position
+					table.insert(positions, { Id = ch.Name, X = p.X, Z = p.Z })
+				end
 			end
 		end)
 		mNodePositionsCache = positions

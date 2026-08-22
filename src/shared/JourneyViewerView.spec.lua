@@ -97,6 +97,10 @@ return function(t)
 		end
 		node("lm12", 80, -40)
 		node("ph16", 300, 200)
+		-- Art clones sharing the container must be ignored, even when closer
+		node("SecurityKey", 75, -38)
+		node("lm", 75, -38)
+		node("ph_disabled", 280, 190)
 		netmapFolder.Parent = workspace
 
 		local ok, err = pcall(function()
