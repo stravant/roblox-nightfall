@@ -218,6 +218,9 @@ function ReplayChecker:Check(replay, delayFunc, viewPlaybackFunc)
 				result.MoveCount = result.MoveCount + #unitMove.MoveData
 				for _, delta in pairs(unitMove.MoveData) do
 					gameState:UnitMove(unit, unit.Tail[1].x + delta.DX, unit.Tail[1].y + delta.DY)
+					-- Pace out the replayed tile steps too (a no-op under the
+					-- server's delay func; animated playback sees each step)
+					delayFunc('MoveAlly')
 				end
 			end
 			if unitMove.CommandData then

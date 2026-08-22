@@ -670,6 +670,10 @@ function MainView.new()
 			if didStart and not skipped then
 				if didWin then
 					LocalPlayerData:RecordNodeCompletion(nodeId, gameState:GetPlayStats())
+					-- Feed the stats thumbnail playback with this fresh win
+					if replay then
+						mMainMenu:SetNodeReplay(nodeId, replay)
+					end
 				else
 					LocalPlayerData:RecordNodeAttempt(nodeId)
 				end

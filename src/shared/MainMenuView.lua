@@ -27,6 +27,7 @@ local Win95Scrollbar = require(game.ReplicatedStorage.Components.Win95Scrollbar)
 local Netmap = require(game.ReplicatedStorage.Netmap)
 local Places = require(game.ReplicatedStorage.Places)
 local JourneyRecorder = require(game.ReplicatedStorage.JourneyRecorder)
+local ReplayChecker = require(game.ReplicatedStorage.ReplayChecker)
 
 local e = React.createElement
 
@@ -55,6 +56,9 @@ type MainMenuState = {
 	skipsUsedText: string,
 	statsSummary: string?,
 	statsSelectedId: string?,
+	-- Node whose rail thumbnail is animating a replay (its static unit
+	-- overlays hide; the live positions render into a PlaybackOverlay)
+	statsPlaybackId: string?,
 	-- Node thumbnail rail: nodes in security-level order with dividers
 	statsNodeList: { { Kind: string, Id: string?, Text: string?, PlaceId: string?, Beaten: boolean?, Y: number } }?,
 	-- nil = the general overview pane; set = the selected node's rich view
@@ -203,10 +207,11 @@ end
 -- Miniature copy of a node's databattle layout (board tiles, upload zones,
 -- pickups, pre-placed units) at cellPx pixels per board square, as the
 -- children of a (16*cellPx) x (12*cellPx) frame. dimmed renders just a dark
--- silhouette of the board shape (unbeaten nodes). Horizontal runs of tiles
--- merge into single frames: the stats rail shows dozens of these minis, and
--- per-tile frames would be thousands of instances.
-local function miniLayoutItems(placeId: string?, cellPx: number, dimmed: boolean): { [string]: any }
+-- silhouette of the board shape (unbeaten nodes). hideUnits skips the static
+-- unit overlays (replay playback renders live positions instead). Horizontal
+-- runs of tiles merge into single frames: the stats rail shows dozens of
+-- these minis, and per-tile frames would be thousands of instances.
+local function miniLayoutItems(placeId: string?, cellPx: number, dimmed: boolean, hideUnits: boolean?): { [string]: any }
 	local place = placeId and Places[placeId]
 	local items: { [string]: any } = {}
 	if not place then
@@ -251,12 +256,14 @@ local function miniLayoutItems(placeId: string?, cellPx: number, dimmed: boolean
 	for i, coord in ipairs(place.CodeList) do
 		overlay("K" .. i, coord, Color3.fromRGB(70, 200, 100))
 	end
-	for u, unitEntry in ipairs(place.ProgramList) do
-		local color = if unitEntry.Type == 'enemy'
-			then Color3.fromRGB(200, 45, 45)
-			else Color3.fromRGB(90, 190, 90)
-		for s, coord in ipairs(unitEntry.Tail) do
-			overlay("U" .. u .. "_" .. s, coord, color)
+	if not hideUnits then
+		for u, unitEntry in ipairs(place.ProgramList) do
+			local color = if unitEntry.Type == 'enemy'
+				then Color3.fromRGB(200, 45, 45)
+				else Color3.fromRGB(90, 190, 90)
+			for s, coord in ipairs(unitEntry.Tail) do
+				overlay("U" .. u .. "_" .. s, coord, color)
+			end
 		end
 	end
 	return items
@@ -412,8 +419,11 @@ local function MainMenuContent(props: MainMenuState)
 		else
 			local selected = entry.Id == props.statsSelectedId
 			-- Each thumbnail is a mini copy of the node's databattle layout
-			-- (a dark silhouette while unbeaten)
-			local miniItems = miniLayoutItems(entry.PlaceId, 4, not entry.Beaten)
+			-- (a dark silhouette while unbeaten). While a replay animates in
+			-- this cell the static unit overlays hide - the playback overlay
+			-- renders the live positions.
+			local playing = entry.Id == props.statsPlaybackId
+			local miniItems = miniLayoutItems(entry.PlaceId, 4, not entry.Beaten, playing)
 			miniItems.Stroke = if selected
 				then e("UIStroke", { Thickness = 2, Color = Color3.new(0, 0, 0.5) })
 				else nil
@@ -940,6 +950,129 @@ function MainMenuView.new(container: Instance)
 		end)
 	end
 
+	-- Replay playback in the selected rail thumbnail: the node's mini layout
+	-- hides its static units and a full GameState re-simulation of one of
+	-- the player's winning replays renders live unit positions on repeat.
+	local mNodeReplays: { [string]: any } = {} -- nodeId -> replay string | false (known-absent)
+	local mPlaybackThread: thread? = nil
+	local mPlaybackNode: string? = nil
+	local kPlaybackCellPx = 4
+	local kPlaybackDelays = {
+		DeleteSector = 0.05,
+		GrowSector = 0.05,
+		MoveEnemy = 0.1,
+		AttackIntent = 0.25,
+		MoveAlly = 0.1,
+	}
+
+	-- A session win recorded by MainView; also fills the fetch cache
+	function this:SetNodeReplay(nodeId: string, replay: string)
+		if type(replay) == "string" and replay ~= "" then
+			mNodeReplays[nodeId] = replay
+		end
+	end
+
+	local function getNodeReplay(nodeId: string): string?
+		if mNodeReplays[nodeId] == nil then
+			-- First look: fetch the stored first-win replay (yields)
+			local ok, replay = pcall(function()
+				return game.ReplicatedStorage.Remotes.GetNodeReplay:InvokeServer(nodeId)
+			end)
+			mNodeReplays[nodeId] = if ok and type(replay) == "string" and replay ~= ""
+				then replay
+				else false
+		end
+		local replay = mNodeReplays[nodeId]
+		return if replay then replay else nil
+	end
+
+	local function renderPlaybackFrame(nodeId: string, gameState: any)
+		local cell = mGui:FindFirstChild("Node_" .. nodeId, true)
+		if not cell then
+			return -- rail not currently rendered (other tab); sim keeps going
+		end
+		local overlayFrame = cell:FindFirstChild("PlaybackOverlay")
+		if not overlayFrame then
+			overlayFrame = Instance.new("Frame")
+			overlayFrame.Name = "PlaybackOverlay"
+			overlayFrame.BackgroundTransparency = 1
+			overlayFrame.Size = UDim2.new(1, 0, 1, 0)
+			overlayFrame.ZIndex = 3
+			overlayFrame.Parent = cell
+		end
+		overlayFrame:ClearAllChildren()
+		for unit in pairs(gameState:GetUnits()) do
+			local color = if unit.Enemy
+				then Color3.fromRGB(200, 45, 45)
+				else Color3.fromRGB(90, 190, 90)
+			for s, coord in ipairs(unit.Tail) do
+				local square = Instance.new("Frame")
+				square.Position = UDim2.new(0, (coord.x - 1) * kPlaybackCellPx, 0, (coord.y - 1) * kPlaybackCellPx)
+				square.Size = UDim2.new(0, kPlaybackCellPx - 1, 0, kPlaybackCellPx - 1)
+				-- Head at full color, tail dimmed toward black
+				square.BackgroundColor3 = if s == 1 then color else color:Lerp(Color3.new(0, 0, 0), 0.4)
+				square.BorderSizePixel = 0
+				square.ZIndex = 3
+				square.Parent = overlayFrame
+			end
+		end
+	end
+
+	local function stopStatsPlayback()
+		if mPlaybackThread then
+			task.cancel(mPlaybackThread)
+			mPlaybackThread = nil
+		end
+		if mPlaybackNode then
+			local cell = mGui:FindFirstChild("Node_" .. mPlaybackNode, true)
+			local overlayFrame = cell and cell:FindFirstChild("PlaybackOverlay")
+			if overlayFrame then
+				overlayFrame:Destroy()
+			end
+			mPlaybackNode = nil
+		end
+		if mRoot then
+			mRoot.setState({ statsPlaybackId = StatefulRoot.None })
+		end
+	end
+
+	local function startStatsPlayback(nodeId: string)
+		stopStatsPlayback()
+		mPlaybackThread = task.spawn(function()
+			local replay = getNodeReplay(nodeId) -- may yield on first fetch
+			if not replay then
+				return
+			end
+			mPlaybackNode = nodeId
+			if mRoot then
+				mRoot.setState({ statsPlaybackId = nodeId })
+			end
+			-- The sim only mutates state between delay calls, so rendering at
+			-- the top of each delay shows every step
+			local gameState = nil
+			local function delayFunc(which)
+				if gameState then
+					renderPlaybackFrame(nodeId, gameState)
+				end
+				task.wait(kPlaybackDelays[which] or 0.1)
+			end
+			while true do
+				local result = ReplayChecker:Check(replay, delayFunc, function(gs)
+					gameState = gs
+				end)
+				if gameState then
+					renderPlaybackFrame(nodeId, gameState)
+				end
+				if not (result and result.Won) then
+					-- A stored replay can go stale against rule changes;
+					-- freeze on whatever played rather than loop the warns
+					break
+				end
+				task.wait(1.5) -- hold the final position, then loop
+			end
+		end)
+	end
+
 	-- Push the selected node's detail pane (friendRec/worldRec: "pending",
 	-- "unavailable", or the { [stat] = {Value, Name} } record tables)
 	local function pushStatsDetail(nodeId, friendRec, worldRec)
@@ -984,6 +1117,7 @@ function MainMenuView.new(container: Instance)
 
 	local function selectStatsNode(nodeId)
 		mSelectedStatsNode = nodeId
+		startStatsPlayback(nodeId)
 		pushStatsDetail(nodeId, "pending", "pending")
 		task.spawn(function()
 			local ok, records = pcall(function()
@@ -1002,6 +1136,7 @@ function MainMenuView.new(container: Instance)
 
 	local function clearStatsSelection()
 		mSelectedStatsNode = nil
+		stopStatsPlayback()
 		if mRoot then
 			mRoot.setState({
 				statsSelectedId = StatefulRoot.None,
@@ -1175,6 +1310,7 @@ function MainMenuView.new(container: Instance)
 	function this:Hide()
 		JourneyRecorder:Record("MenuClose")
 		reportStatsVisit("close")
+		stopStatsPlayback()
 		mGui.Visible = false
 		ModalManager:SetModal(false)
 	end
@@ -1237,6 +1373,7 @@ function MainMenuView.new(container: Instance)
 		skipsUsedText = "5 skips",
 		statsSummary = "",
 		statsSelectedId = nil,
+		statsPlaybackId = nil,
 		statsNodeList = {},
 		statsDetail = nil,
 		defaultTab = nil,
@@ -1308,6 +1445,7 @@ function MainMenuView.new(container: Instance)
 	-- TODO: implement stats
 
 	function this:Destroy()
+		stopStatsPlayback()
 		mSkipsUpdateCn:disconnect()
 		mSoundSlider:Destroy()
 		mMusicSlider:Destroy()

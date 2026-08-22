@@ -382,6 +382,14 @@ end
 
 -- Save a replay
 local mReplaysDatastore = DataStore:GetDataStore(REPLAYS_DATASTORE)
+
+function DataStoreService:GetReplay(id)
+	local st, result = pcall(function()
+		return mReplaysDatastore:GetAsync(id)
+	end)
+	return if st then result else nil
+end
+
 function DataStoreService:SaveReplay(replayString)
 	local id = HttpService:GenerateGUID(false)
 	spawn(function()

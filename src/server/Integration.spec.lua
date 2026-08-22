@@ -252,6 +252,7 @@ return function(t)
 		FunnelStep = mockRemoteEvent("FunnelStep"),
 		ServerError = mockRemoteEvent("ServerError"),
 		GetNodeRecords = mockRemoteFunction("GetNodeRecords"),
+		GetNodeReplay = mockRemoteFunction("GetNodeReplay"),
 		GetBadges = mockRemoteFunction("GetBadges"),
 		SaveSettings = mockRemoteEvent("SaveSettings"),
 		PostTutorialChoice = mockRemoteEvent("PostTutorialChoice"),
@@ -630,6 +631,13 @@ return function(t)
 
 		-- Bogus node ids are rejected
 		t.expect(remotes.GetNodeRecords:InvokeServer_TEST(player, "nope")).toBe(nil)
+
+		-- The stored first-win replay comes back for thumbnail playback
+		local replay = remotes.GetNodeReplay:InvokeServer_TEST(rival, "lm12")
+		t.expect(replay).toBe(kL12WinningReplay)
+		-- Never-won nodes and bogus ids have none
+		t.expect(remotes.GetNodeReplay:InvokeServer_TEST(rival, "ph16")).toBe(nil)
+		t.expect(remotes.GetNodeReplay:InvokeServer_TEST(rival, "nope")).toBe(nil)
 	end)
 
 	t.test("skip-sweeping the netmap awards the progression badges", function()

@@ -5,7 +5,7 @@
 
 local NetworkController = require(game.ServerScriptService.NetworkController)
 local DataStoreService = require(game.ServerScriptService.DataStoreService)
-local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
+local ReplayChecker = require(game.ReplicatedStorage.ReplayChecker)
 local GameState = require(game.ReplicatedStorage.GameState)
 
 NetworkController.install(game.ReplicatedStorage.Remotes)

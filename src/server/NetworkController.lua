@@ -345,6 +345,20 @@ function NetworkController.install(remotes)
 		return result
 	end
 
+	-- The player's own stored winning replay for a node (recorded on the
+	-- first win), for the stats screen's animated thumbnail playback
+	remotes.GetNodeReplay.OnServerInvoke = function(player, nodeId)
+		if type(nodeId) ~= "string" or not Netmap.ById[nodeId] then
+			return nil
+		end
+		local playerData = PlayerDataCache[player]
+		local playId = playerData and playerData:GetWinningPlayId(nodeId)
+		if not playId then
+			return nil
+		end
+		return DataStoreService:GetReplay(playId)
+	end
+
 	--------------------------------------------------------------------------------
 	-- Badge listing (no stored data: ownership and badge info come from the
 	-- badge web APIs, cached server-side)

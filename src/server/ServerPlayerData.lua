@@ -3,7 +3,7 @@ local Scripts = require(game.ReplicatedStorage.Scripts)
 local Netmap = require(game.ReplicatedStorage.Netmap)
 local ServerStatistics = require(game.ServerScriptService.ServerStatistics)
 local BadgeAwarder = require(game.ServerScriptService.BadgeAwarder)
-local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
+local ReplayChecker = require(game.ReplicatedStorage.ReplayChecker)
 local GameState = require(game.ReplicatedStorage.GameState)
 local Places = require(game.ReplicatedStorage.Places)
 local DebugFlags = require(game.ReplicatedStorage.DebugFlags)
@@ -327,6 +327,13 @@ function ServerPlayerData.new(player, serialized)
 			replayResult)
 	end
 	
+	-- The stored winning replay id for a node (nil if never won). Recorded on
+	-- the first win; backs the stats-thumbnail playback fetch.
+	function this:GetWinningPlayId(nodeId)
+		local node = mNodeStatus[nodeId]
+		return node and node.WinningPlayId
+	end
+
 	function this:ProcessReplay(replayString)
 		-- The replay string is client-provided: a malformed one must read as
 		-- invalid, not throw out of the remote handler

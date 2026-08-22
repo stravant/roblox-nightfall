@@ -1,7 +1,7 @@
 -- Specs require game modules via game.* paths (NOT relative) so every module
 -- resolves to the single copy installed into the runtests DataModel.
 return function(t)
-	local ReplayChecker = require(game.ServerScriptService.ReplayChecker)
+	local ReplayChecker = require(game.ReplicatedStorage.ReplayChecker)
 	local GameState = require(game.ReplicatedStorage.GameState)
 
 	-- Replay quoted in ReplayChecker.lua's header comment. NOTE: it is stale —
