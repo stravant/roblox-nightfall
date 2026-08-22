@@ -267,15 +267,14 @@ function ServerPlayerData.new(player, serialized)
 	-- with zero badges. Re-derive the progression set from the save;
 	-- AwardBadge is a no-op for badges already owned.
 	function this:EvaluateRetroactiveBadges()
-		local deserved = {}
 		if mNodeStatus.hq and mNodeStatus.hq.Beaten then
-			table.insert(deserved, "PluggedIn")
+			BadgeAwarder:Award(player, "PluggedIn")
 		end
 		for level = 2, math.min(mSecurityLevel, 5) do
-			table.insert(deserved, "SecurityClearance" .. level)
+			BadgeAwarder:Award(player, "SecurityClearance" .. level)
 		end
 		if mNodeStatus['end'] and mNodeStatus['end'].Beaten then
-			table.insert(deserved, "MidnightAverted")
+			BadgeAwarder:Award(player, "MidnightAverted")
 		end
 		local allBeaten = true
 		for id, def in pairs(Netmap.ById) do
@@ -285,11 +284,8 @@ function ServerPlayerData.new(player, serialized)
 			end
 		end
 		if allBeaten then
-			table.insert(deserved, "NodeSweeper")
+			BadgeAwarder:Award(player, "NodeSweeper")
 		end
-		-- AwardMissing, NOT Award: veterans already own most of these, and
-		-- awarding an owned badge makes the engine warn on every login
-		BadgeAwarder:AwardMissing(player, deserved)
 	end
 
 	-- Add the stats for the replay to the stats tracking for the user,

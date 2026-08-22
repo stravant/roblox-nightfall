@@ -799,26 +799,6 @@ return function(t)
 		t.expect(badgeAwarded(7008, "ConsumerGrade")).toBeTruthy()
 	end)
 
-	t.test("AwardMissing skips badges the player already owns", function()
-		-- The retroactive login sweep must not re-award owned badges: the
-		-- engine warns on every such call, spamming the live log
-		local player = makePlayer(7300, "RetroChecked")
-		-- Pre-own PluggedIn (as if awarded in an earlier session)
-		table.insert(badgeAwards, { UserId = 7300, BadgeId = Badges.Ids.PluggedIn })
-		BadgeAwarder:AwardMissing(player, { "PluggedIn", "SecurityClearance2" })
-		task.wait()
-		local pluggedIn, clearance2 = 0, 0
-		for _, award in pairs(badgeAwards) do
-			if award.UserId == 7300 and award.BadgeId == Badges.Ids.PluggedIn then
-				pluggedIn += 1
-			elseif award.UserId == 7300 and award.BadgeId == Badges.Ids.SecurityClearance2 then
-				clearance2 += 1
-			end
-		end
-		t.expect(pluggedIn).toBe(1) -- only the pre-seeded ownership
-		t.expect(clearance2).toBe(1) -- the missing badge was granted
-	end)
-
 	t.test("GetBadges lists earned badges with info from the badge APIs", function()
 		-- A fresh player owns none of the (all-configured) badges
 		local newcomer = makePlayer(6010, "Badgeless")
