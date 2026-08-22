@@ -120,7 +120,7 @@ local function commandSummary(command: any): string
 	elseif command.Type == "zero" then
 		effect = "remove a tile"
 	elseif command.Type == "speedMod" then
-		effect = (if command.Amount > 0 then "+" else "") .. command.Amount .. " speed"
+		effect = (if command.Amount > 0 then "+" else "") .. command.Amount .. " movement"
 	elseif command.Type == "sizeMod" then
 		effect = "+" .. command.Amount .. " max size"
 	elseif command.Type == "grow" then

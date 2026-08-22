@@ -693,11 +693,11 @@ local function MainMenuContent(props: MainMenuState)
 			Name = "TabPanel",
 			Position = UDim2.new(0, 5, 0, 61),
 			Size = UDim2.new(1, -10, 1, -105),
-			DefaultTab = props.defaultTab or (if props.battleContext then "Databattle" else "Sound"),
+			DefaultTab = props.defaultTab or (if props.battleContext then "Databattle" else "Settings"),
 			Tabs = appendTabs(tabs, {
 				{
-					Name = "Sound",
-					Label = "Sound",
+					Name = "Settings",
+					Label = "Settings",
 					Content = {
 						-- Note the template's double space in the label text
 						SoundVolumeLabel = sectionLabel("Sound Effect  Volume", UDim2.new(0, 10, 0, 5)),

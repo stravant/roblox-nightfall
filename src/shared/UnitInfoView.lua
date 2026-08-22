@@ -456,7 +456,7 @@ function UnitInfoView.new(container: Instance, availablePrograms: { any })
 			elseif command.Type == "damage" then
 				bodyText = "Delete " .. squareStr(command.Amount) .. " from the target"
 			elseif command.Type == "speedMod" then
-				bodyText = "Modify target speed by " .. command.Amount
+				bodyText = "Modify target movement by " .. command.Amount
 			elseif command.Type == "sizeMod" then
 				bodyText = "Increase target max size by " .. command.Amount
 			elseif command.Type == "grow" then

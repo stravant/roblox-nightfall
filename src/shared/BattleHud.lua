@@ -55,9 +55,9 @@ local function commandBodyText(unitName: string, command: any): string
 		bodyText = "Delete " .. squareStr(command.Amount) .. " from the target"
 	elseif command.Type == "speedMod" then
 		if command.Amount > 0 then
-			bodyText = "Increase target speed by " .. command.Amount
+			bodyText = "Increase target movement by " .. command.Amount
 		else
-			bodyText = "Decrease target speed by " .. (-command.Amount)
+			bodyText = "Decrease target movement by " .. (-command.Amount)
 		end
 	elseif command.Type == "sizeMod" then
 		bodyText = "Increase target max size by " .. command.Amount
