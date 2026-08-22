@@ -465,7 +465,7 @@ local function MainMenuContent(props: MainMenuState)
 
 		statsPaneItems = {
 			NodeName = e("TextLabel", {
-				Position = UDim2.new(0, if compact then 0 else 104, 0, 2),
+				Position = UDim2.new(0, if compact then 0 else 104, 0, -3),
 				Size = UDim2.new(1, (if compact then 0 else -104) - 122, 0, 20),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
@@ -476,7 +476,7 @@ local function MainMenuContent(props: MainMenuState)
 				Text = d.Name,
 			}),
 			SubLine = e("TextLabel", {
-				Position = UDim2.new(0, if compact then 0 else 104, 0, 22),
+				Position = UDim2.new(0, if compact then 0 else 104, 0, 17),
 				Size = UDim2.new(1, (if compact then 0 else -104) - 122, 0, 16),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSans,
@@ -488,7 +488,7 @@ local function MainMenuContent(props: MainMenuState)
 			PlayAgain = e(ColoredWindowsButton, {
 				Name = "PlayAgainButton",
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, 0, 0, 4),
+				Position = UDim2.new(1, 0, 0, -1),
 				Size = UDim2.new(0, 110, 0, 34),
 				ImageColor3 = Color3.new(0, 0, 1),
 				Text = "Play Again",
@@ -506,7 +506,7 @@ local function MainMenuContent(props: MainMenuState)
 		-- node thumbnail
 		if not compact and d.PlaceId and Places[d.PlaceId] then
 			statsPaneItems.SetupPreview = e("Frame", {
-				Position = UDim2.new(0, 0, 0, 2),
+				Position = UDim2.new(0, 0, 0, -3),
 				Size = UDim2.new(0, 16 * 6, 0, 12 * 6),
 				BackgroundColor3 = Color3.fromRGB(24, 26, 34),
 				BorderSizePixel = 0,
@@ -516,7 +516,7 @@ local function MainMenuContent(props: MainMenuState)
 		-- Records grid, spreadsheet style: a narrow two-line stat-label
 		-- column, then a right-aligned column each for You / Friend / World,
 		-- separated by Win95 groove rulers.
-		local kGridTop = if compact then 40 else 82
+		local kGridTop = if compact then 35 else 77
 		local kHeaderH = if compact then 16 else 18
 		local kRowHeight = if compact then 38 else 44
 		-- Column widths: label and You are FIXED and narrow (two short
