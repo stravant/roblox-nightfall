@@ -388,7 +388,7 @@ local function MainMenuContent(props: MainMenuState)
 			FillDirection = Enum.FillDirection.Vertical,
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 2),
+			Padding = UDim.new(0, 6),
 		}),
 		-- PaddingRight matches the scrollbar width so thumbnails center
 		-- within the VISIBLE area, not the frame the scrollbar covers
@@ -1024,7 +1024,7 @@ function MainMenuView.new(container: Instance)
 		end
 		-- The rail: battle nodes in security-level order with dividers. Y
 		-- mirrors the rendered layout (3px top pad; 16px dividers and 48px
-		-- cells, 6px apart) so scroll-to-node needs no layout queries.
+		-- cells, list padding 6px) so scroll-to-node needs no layout queries.
 		local ordered = {}
 		for id, node in pairs(Netmap.ById) do
 			if not node.Warez and id ~= 'hq' then
@@ -1045,7 +1045,7 @@ function MainMenuView.new(container: Instance)
 			if item.Level ~= lastLevel then
 				lastLevel = item.Level
 				table.insert(list, { Kind = "divider", Text = "— Level " .. item.Level .. " —", Y = y })
-				y += 18
+				y += 22
 			end
 			local beaten = LocalPlayerData:HasBeatenNode(item.Id)
 			table.insert(list, {
