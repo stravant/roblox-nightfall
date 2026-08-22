@@ -595,8 +595,25 @@ function MainView.new()
 		local gameController = GameController.new(gameState)
 		local gameView = GameView.new(gameState, gameController, mMainMenu, mTopbarBattleInterface, entrySound)
 		-- Replaying an already-won node: hand the win overlay the current
-		-- bests so it can showcase improvements
-		gameView:SetPriorBests(LocalPlayerData:GetNodeBests(nodeId))
+		-- bests so it can showcase improvements, plus (async) the world
+		-- records so strictly beating one gets the bigger headline
+		local priorBests = LocalPlayerData:GetNodeBests(nodeId)
+		gameView:SetPriorBests(priorBests)
+		if priorBests then
+			task.spawn(function()
+				local ok, records = pcall(function()
+					return game.ReplicatedStorage.Remotes.GetNodeRecords:InvokeServer(nodeId)
+				end)
+				if ok and records and records.World then
+					local world = records.World
+					gameView:SetWorldRecords({
+						Turns = world.turns and world.turns.Value,
+						Moves = world.moves and world.moves.Value,
+						Units = world.units and world.units.Value,
+					})
+				end
+			end)
+		end
 		if initialPlacement then
 			gameView:ApplyInitialPlacement(initialPlacement)
 		end
@@ -624,7 +641,7 @@ function MainView.new()
 		
 		-- Restore the main state when the game is over
 		local gameCompletedConnection;
-		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart, skipped, retryRequested)
+		gameCompletedConnection = gameView.CloseGame:connect(function(didWin, replay, didStart, skipped, retryRequested, viewStatsRequested)
 			JourneyRecorder:Record("BattleExit", nodeId
 				.. (if didWin then " won" elseif didStart then " lost" else " left")
 				.. (if skipped then " (skip)" else "")
@@ -670,6 +687,12 @@ function MainView.new()
 			-- pre-placed (but not started, so it can be adjusted)
 			if retryRequested and not didWin then
 				this:PlayGame(placeId, nodeId, startingPlacement)
+			end
+
+			-- Win screen's View Stats: land on this node's statistics page
+			-- (bests were recorded above, so the page shows this play)
+			if viewStatsRequested and didWin then
+				mMainMenu:ShowStats(nodeId)
 			end
 		end)
 		

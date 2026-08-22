@@ -922,6 +922,23 @@ function MainMenuView.new(container: Instance)
 	local function pushStatsDetail(nodeId, friendRec, worldRec)
 		local node = Netmap.ById[nodeId]
 		local mine = mStatsNodes[nodeId]
+		-- The server caches world records per session, so a record the player
+		-- JUST set won't be in the fetch yet: wherever the local best strictly
+		-- beats the fetched world record, show the local best as the record
+		if type(worldRec) == "table" and mine and mine.BestTurns then
+			local localPlayer = game:GetService("Players").LocalPlayer
+			local myName = if localPlayer then localPlayer.Name else "You"
+			local myBests = { turns = mine.BestTurns, moves = mine.BestMoves, units = mine.BestUnits }
+			local patched = nil
+			for stat, myValue in pairs(myBests) do
+				local cell = worldRec[stat]
+				if myValue and cell and myValue < cell.Value then
+					patched = patched or table.clone(worldRec)
+					patched[stat] = { Value = myValue, Name = myName }
+				end
+			end
+			worldRec = patched or worldRec
+		end
 		if mRoot then
 			mRoot.setState({
 				statsSelectedId = nodeId,

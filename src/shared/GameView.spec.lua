@@ -189,6 +189,22 @@ return function(t)
 		t.expect(GameView.BuildImprovementText(nil, { Turns = 1, Moves = 1, Units = 1 })).toBe(nil)
 	end)
 
+	t.test("BuildImprovementText upgrades the headline for beaten world records", function()
+		local prior = { Turns = 10, Moves = 20, Units = 3 }
+		local world = { Turns = 6, Moves = 16, Units = 2 }
+		-- Turns strictly beats the world record; moves only beats the
+		-- personal best
+		local text = GameView.BuildImprovementText(prior, { Turns = 5, Moves = 18, Units = 3 }, world)
+		t.expect(text:find("NEW WORLD RECORD!") ~= nil).toBeTruthy()
+		t.expect(text:find("Turns Taken  10 → 5  (world record!)", 1, true) ~= nil).toBeTruthy()
+		t.expect(text:find("Tiles Moved  20 → 18", 1, true) ~= nil).toBeTruthy()
+		t.expect(text:find("Tiles Moved  20 → 18  (world record!)", 1, true)).toBe(nil)
+		-- TYING the world record is not beating it
+		local tied = GameView.BuildImprovementText(prior, { Turns = 6, Moves = 20, Units = 3 }, world)
+		t.expect(tied:find("NEW PERSONAL BEST!") ~= nil).toBeTruthy()
+		t.expect(tied:find("world record", 1, true)).toBe(nil)
+	end)
+
 	t.test("Destroy removes the gui and the 3D board", function()
 		withView(function(view, gui)
 			ReactRoblox.act(function()

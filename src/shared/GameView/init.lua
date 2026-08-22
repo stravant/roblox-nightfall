@@ -48,13 +48,16 @@ local GameView = {}
 
 -- The win overlay's "new personal best" showcase: compares this play's
 -- stats against the pre-battle bests (client-known; only set for nodes
--- already beaten through a real win). Returns nil when nothing improved.
+-- already beaten through a real win) and, when known, the world records
+-- (a stat strictly better than the cached world record upgrades the
+-- headline). Returns nil when nothing improved.
 -- Exposed on the module for direct testing.
-function GameView.BuildImprovementText(priorBests, playStats)
+function GameView.BuildImprovementText(priorBests, playStats, worldBests)
 	if not priorBests or not playStats then
 		return nil
 	end
 	local lines = {}
+	local anyWorldRecord = false
 	local kStats = {
 		{ Key = "Turns", Label = "Turns Taken" },
 		{ Key = "Moves", Label = "Tiles Moved" },
@@ -63,14 +66,22 @@ function GameView.BuildImprovementText(priorBests, playStats)
 	for _, stat in ipairs(kStats) do
 		local prior = priorBests[stat.Key]
 		local now = playStats[stat.Key]
-		if prior and now and now < prior then
-			table.insert(lines, string.format("%s  %d → %d", stat.Label, prior, now))
+		local world = worldBests and worldBests[stat.Key]
+		local beatWorld = world and now and now < world
+		if prior and now and (now < prior or beatWorld) then
+			local line = string.format("%s  %d → %d", stat.Label, prior, now)
+			if beatWorld then
+				line ..= "  (world record!)"
+				anyWorldRecord = true
+			end
+			table.insert(lines, line)
 		end
 	end
 	if #lines == 0 then
 		return nil
 	end
-	return "NEW PERSONAL BEST!\n" .. table.concat(lines, "\n")
+	local headline = if anyWorldRecord then "NEW WORLD RECORD!" else "NEW PERSONAL BEST!"
+	return headline .. "\n" .. table.concat(lines, "\n")
 end
 
 --------------------------------------------------------------------------------
@@ -263,14 +274,27 @@ local function GameViewChrome(props)
 						Text = props.skipText,
 					}),
 				}),
+				-- On a re-beat win the bottom row splits: Continue + View Stats
 				OkayButton = e(WindowsButton, {
 					Name = "OkayButton",
 					AnchorPoint = Vector2.new(0, 1),
 					Position = UDim2.new(0, 16, 1, -12),
-					Size = UDim2.new(1, -32, 0, 36),
+					Size = if props.viewStatsVisible
+						then UDim2.new(0.5, -20, 0, 36)
+						else UDim2.new(1, -32, 0, 36),
 					Text = "Continue",
 					OnClick = props.onOkay,
 				}),
+				ViewStatsButton = if props.viewStatsVisible
+					then e(WindowsButton, {
+						Name = "ViewStatsButton",
+						AnchorPoint = Vector2.new(1, 1),
+						Position = UDim2.new(1, -16, 1, -12),
+						Size = UDim2.new(0.5, -20, 0, 36),
+						Text = "View Stats",
+						OnClick = props.onViewStats,
+					})
+					else nil,
 			}),
 		}),
 	})
@@ -381,6 +405,13 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	function this:SetPriorBests(bests)
 		mPriorBests = bests
 	end
+	-- Cached world-record values for this node ({Turns, Moves, Units}), set
+	-- asynchronously by MainView; strictly beating one upgrades the win
+	-- overlay's showcase headline
+	local mWorldBests = nil
+	function this:SetWorldRecords(bests)
+		mWorldBests = bests
+	end
 
 	-- Forward declarations used by chrome callbacks
 	local clearSelection
@@ -433,6 +464,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		endGameOverlayVisible = false,
 		endGameWon = nil,
 		improvementText = nil,
+		viewStatsVisible = false,
 		submittingText = "(Submitting play...)",
 		skipText = "Skip Node",
 		onSkip = function()
@@ -440,6 +472,12 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		end,
 		onOkay = function()
 			this.CloseGame:fire(mDidWin, gameState:GetReplay(), gameState:IsGameStarted(), mWasSkipped)
+		end,
+		onViewStats = function()
+			-- Same teardown as Continue, plus a request to land on this
+			-- node's statistics page
+			this.CloseGame:fire(mDidWin, gameState:GetReplay(), gameState:IsGameStarted(), mWasSkipped,
+				--[[retryRequested=]] false, --[[viewStatsRequested=]] true)
 		end,
 		onRetry = function()
 			-- Same teardown as Continue, plus a request to re-enter the
@@ -1362,8 +1400,10 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			-- Re-beating a node: showcase any stat improvements (the
 			-- stats-minded player's payoff). Real wins only - not skips.
 			improvementText = if wonGame and not skipLevel
-				then GameView.BuildImprovementText(mPriorBests, gameState:GetPlayStats()) or StatefulRoot.None
+				then GameView.BuildImprovementText(mPriorBests, gameState:GetPlayStats(), mWorldBests) or StatefulRoot.None
 				else StatefulRoot.None,
+			-- Re-beat wins also offer jumping straight to the stats page
+			viewStatsVisible = wonGame and not skipLevel and mPriorBests ~= nil,
 		})
 		if wonGame then
 			-- Play victory sound?
