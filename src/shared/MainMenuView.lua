@@ -984,7 +984,7 @@ function MainMenuView.new(container: Instance)
 		end
 		-- The rail: battle nodes in security-level order with dividers. Y
 		-- mirrors the rendered layout (3px top pad; 16px dividers and 48px
-		-- cells, 2px apart) so scroll-to-node needs no layout queries.
+		-- cells, 4px apart) so scroll-to-node needs no layout queries.
 		local ordered = {}
 		for id, node in pairs(Netmap.ById) do
 			if not node.Warez and id ~= 'hq' then
@@ -1015,7 +1015,7 @@ function MainMenuView.new(container: Instance)
 				Beaten = beaten,
 				PlaceId = node.PlaceId,
 			})
-			y += 50
+			y += 52
 		end
 		mStatsNodeList = list
 		if mRoot then
