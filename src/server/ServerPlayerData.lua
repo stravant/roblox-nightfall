@@ -260,34 +260,6 @@ function ServerPlayerData.new(player, serialized)
 		end
 	end
 	
-	-- Retroactive progression badges, evaluated on login: players whose
-	-- progression predates a badge's existence never re-trigger the live
-	-- award events (beating the tutorial, a security upgrade), leaving them
-	-- permanently badge-less - found via a live report of a veteran save
-	-- with zero badges. Re-derive the progression set from the save;
-	-- AwardBadge is a no-op for badges already owned.
-	function this:EvaluateRetroactiveBadges()
-		if mNodeStatus.hq and mNodeStatus.hq.Beaten then
-			BadgeAwarder:Award(player, "PluggedIn")
-		end
-		for level = 2, math.min(mSecurityLevel, 5) do
-			BadgeAwarder:Award(player, "SecurityClearance" .. level)
-		end
-		if mNodeStatus['end'] and mNodeStatus['end'].Beaten then
-			BadgeAwarder:Award(player, "MidnightAverted")
-		end
-		local allBeaten = true
-		for id, def in pairs(Netmap.ById) do
-			if not def.Warez and not (mNodeStatus[id] and mNodeStatus[id].Beaten) then
-				allBeaten = false
-				break
-			end
-		end
-		if allBeaten then
-			BadgeAwarder:Award(player, "NodeSweeper")
-		end
-	end
-
 	-- Add the stats for the replay to the stats tracking for the user,
 	-- such as number of attempts and best attempt on the level
 	-- securityLevelAtBattle: the level BEFORE this win's triggers, so a win

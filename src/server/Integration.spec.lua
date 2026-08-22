@@ -1035,13 +1035,6 @@ return function(t)
 		end
 		t.expect(loaded.Credits).toBe(expectedCredits)
 
-		-- Retroactive badges: this save beat the tutorial before badges
-		-- existed, so PluggedIn must be granted on login (and nothing
-		-- level-gated: the save is security level 1)
-		task.wait() -- awards are fire-and-forget
-		t.expect(badgeAwarded(9200, "PluggedIn")).toBeTruthy()
-		t.expect(badgeAwarded(9200, "SecurityClearance2")).toBeFalsy()
-
 		-- The legacy data flows through gameplay: win a battle on it
 		remotes.ProcessReplay:FireServer_TEST(player, kL12WinningReplay)
 		playerLeaves(player)
