@@ -115,6 +115,9 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	-- Units on the board
 	local mUnitSet = {}
 	local mUnitList = {}
+	-- Monotonic creation order, for iteration that must be REPLAY-STABLE
+	-- (see startAITurn); resurrection via undo reuses the unit and keeps it
+	local mNextUnitOrder = 0
 
 	-- Fire UnitUpdated only for still-live units: some paths (marking the
 	-- previous mover Done, undo actions) can reach a unit that already fired
@@ -180,6 +183,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			for i, coord in pairs(tail) do
 				tailCopy[i] = coord
 			end
+			mNextUnitOrder = mNextUnitOrder + 1
 			unit  = {
 				Definition = unitData;
 				Tail = tailCopy;
@@ -189,6 +193,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 				MoveLeft = unitData.Move;
 				Color = unitData.Color;
 				Done = false;
+				OrderIndex = mNextUnitOrder;
 			}
 		end
 		for _, coord in pairs(tail) do
@@ -664,6 +669,16 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		for i, unit in ipairs(mUnitList) do
 			units[i] = unit
 		end
+		-- Act in CREATION order, not list order: undoing a kill re-appends
+		-- the resurrected unit to mUnitList, and undo is invisible to the
+		-- replay - so the live client's list order diverges from the
+		-- server re-simulation's, and enemy acting order changes outcomes
+		-- (the source of the live MissingUnit replay rejections). Creation
+		-- order is identical on both sides: place enemies, then uploads in
+		-- recorded order, with resurrection reusing the unit and its index.
+		table.sort(units, function(a, b)
+			return a.OrderIndex < b.OrderIndex
+		end)
 		for _, unit in ipairs(units) do
 			-- The unit itself may have died meanwhile (e.g. cost/self-damage)
 			if unit.Enemy and mUnitSet[unit] then

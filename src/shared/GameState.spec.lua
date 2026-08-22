@@ -346,6 +346,42 @@ return function(t)
 		t.expect(turnEnds).toBe(1)
 	end)
 
+	t.test("undoing a kill preserves the enemy acting order", function()
+		-- Regression: undoing a kill resurrects the unit by APPENDING it to
+		-- the unit list, but undo is invisible to the replay - so the live
+		-- client's enemies acted in a different order than the server
+		-- re-simulation's, outcomes diverged, and valid wins were rejected
+		-- with MissingUnit (seen live). The AI must act in creation order.
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		gs:UploadUnit(7, 10, Scripts.buzzbomb)
+		local bomb = gs:GetUnit(7, 10)
+		gs:StartGame()
+		local firstSentinel = gs:GetUnit(6, 3)
+		t.expect(firstSentinel ~= nil).toBeTruthy()
+
+		-- Kill the FIRST-created enemy (single sector), then undo the kill
+		gs:UnitMove(bomb, 6, 4)
+		gs:UnitExecute(bomb, "sting", 6, 3)
+		t.expect(gs:GetUnit(6, 3)).toBe(nil)
+		gs:Undo()
+		t.expect(gs:GetUnit(6, 3)).toBe(firstSentinel)
+
+		-- The resurrected enemy sits at the END of the unit list now, but
+		-- it must still ACT first (matching the replay re-simulation, where
+		-- the undone kill never happened)
+		local firstActed = nil
+		local cn = gs.EnemySelectUnit:connect(function(enemy)
+			if firstActed == nil then
+				firstActed = enemy
+			end
+		end)
+		gs:EndTurn()
+		task.wait() -- game signals are BindableEvent-based (async)
+		cn:disconnect()
+		t.expect(firstActed).toBe(firstSentinel)
+		t.expect(gs:HasErrors()).toBeFalsy()
+	end)
+
 	t.test("replay string records place id and uploads", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		local zone = gs:GetUploadZones()[1]
