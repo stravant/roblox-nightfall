@@ -576,29 +576,32 @@ local function MainMenuContent(props: MainMenuState)
 					value, holder = recordCell(if c == 2 then d.Friend else d.World, stat.Key)
 				end
 				local col = kCols[kColumns[c]]
-				-- The numbers are the star: big, bold, right-aligned
+				local kValueH = if compact then 16 else 22
+				-- The numbers are the star: big, bold, right-aligned,
+				-- pinned to the top of the cell
 				gridItems[kColumns[c] .. stat.Key] = e("TextLabel", {
-					Position = UDim2.new(col[1], col[2] + 6, 0, y + 2),
-					Size = UDim2.new(col[3], col[4] - 14, 0, if compact then 20 else 24),
+					Position = UDim2.new(col[1], col[2] + 6, 0, y),
+					Size = UDim2.new(col[3], col[4] - 14, 0, kValueH),
 					BackgroundTransparency = 1,
 					Font = Enum.Font.SourceSansBold,
 					TextSize = if compact then 15 else 22,
 					TextColor3 = Color3.new(0, 0, 0),
 					TextXAlignment = Enum.TextXAlignment.Right,
+					TextYAlignment = Enum.TextYAlignment.Top,
 					TextTruncate = Enum.TextTruncate.AtEnd,
 					Text = value,
 				})
 				if c > 1 then
-					-- Record holder in small text beneath the number; the
-					-- WORLD record holder in bold - that name is an achievement
+					-- Record holder in small text tight beneath the number
 					gridItems[kColumns[c] .. stat.Key .. "Name"] = e("TextLabel", {
-						Position = UDim2.new(col[1], col[2] + 6, 0, y + (if compact then 21 else 27)),
-						Size = UDim2.new(col[3], col[4] - 14, 0, 12),
+						Position = UDim2.new(col[1], col[2] + 6, 0, y + kValueH),
+						Size = UDim2.new(col[3], col[4] - 14, 0, 14),
 						BackgroundTransparency = 1,
-						Font = if c == 3 then Enum.Font.SourceSansBold else Enum.Font.SourceSans,
-						TextSize = if compact then 10 else 11,
+						Font = Enum.Font.SourceSans,
+						TextSize = if compact then 12 else 13,
 						TextColor3 = if c == 3 then Color3.new(0, 0, 0) else Color3.new(0.35, 0.35, 0.35),
 						TextXAlignment = Enum.TextXAlignment.Right,
+						TextYAlignment = Enum.TextYAlignment.Top,
 						TextTruncate = Enum.TextTruncate.AtEnd,
 						Text = holder,
 					})
