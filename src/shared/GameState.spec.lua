@@ -15,6 +15,37 @@ return function(t)
 		return inventory
 	end
 
+	t.test("enemy AI survives its head square being outside the distance fill", function()
+		-- A pickup underneath an enemy blocks the AI flood fill from ever
+		-- stamping the enemy's own head square (the fill won't enter pickup
+		-- squares outside attack range), so the move logic must treat the
+		-- head's distance as "not in range" rather than comparing nil.
+		-- Regression for a live crash: GameState attempt to compare nil <= number.
+		local mapData = {}
+		for x = 1, 16 do
+			mapData[x] = {}
+			for y = 1, 12 do
+				mapData[x][y] = (y == 6 and x >= 2 and x <= 12) -- one corridor
+			end
+		end
+		local placeData = {
+			Id = 'TESTAI',
+			CreditReward = 0,
+			MapData = mapData,
+			UploadZones = { { x = 2, y = 6 } },
+			ExtraCreditList = { { x = 12, y = 6 } }, -- beneath the enemy
+			CodeList = {},
+			ProgramList = {
+				{ Id = 'pup', Type = 'enemy', Tail = { { x = 12, y = 6 } } },
+			},
+		}
+		local gs = GameState.new(placeData, makeInventory(), GameState.ServerDelayFunc)
+		gs:UploadUnit(2, 6, Scripts.hack)
+		gs:StartGame()
+		gs:EndTurn() -- runs the enemy turn; must not throw
+		t.expect(gs:HasErrors()).toBeFalsy()
+	end)
+
 	t.test("new game state exposes the place's upload zones", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		t.expect(gs:IsGameStarted()).toBeFalsy()

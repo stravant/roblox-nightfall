@@ -613,11 +613,16 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			end
 			if bestSquare then
 				local inRangeDistance = (moveLeft - 1) + attack.Range
-				if getBoard(unit.Tail[1]).Distance <= inRangeDistance and bestDistance > inRangeDistance then
+				-- The head square may not be part of the current fill at all
+				-- (e.g. its tile zeroed out beneath the unit): nil distance =
+				-- not in range, never compare a stale/missing value
+				local headSquare = getBoard(unit.Tail[1])
+				local headDistance = if headSquare.Nonce == nonce then headSquare.Distance else nil
+				if headDistance and headDistance <= inRangeDistance and bestDistance > inRangeDistance then
 					-- Make sure we don't move out of range from in range on our last move of the turn
 					-- just because it's the only move we have.
 					break
-				elseif #unit.Tail == unit.MaxSize and getBoard(unit.Tail[1]).Distance <= attack.Range then
+				elseif #unit.Tail == unit.MaxSize and headDistance and headDistance <= attack.Range then
 					-- If we're already at max size and in range, then stop moving
 					break
 				else
