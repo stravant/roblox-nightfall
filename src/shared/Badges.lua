@@ -24,7 +24,7 @@ Badges.Ids = {
 
 	-- Flavor / secret
 	KaBoom = 2520022461701687, -- win a battle in which a suicide command fired
-	BitByBit = 1133927120334893, -- win using only Bit-Man style grid commands
+	BitByBit = 1133927120334893, -- win with Zero/One casts and NO damage attacks
 	PersistencePays = 3123775208724163, -- win a node after many failed attempts
 }
 

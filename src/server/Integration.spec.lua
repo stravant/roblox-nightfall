@@ -739,11 +739,16 @@ return function(t)
 		local overLimit = makePlayer(7002, "OverLimit")
 		BadgeAwarder:EvaluateWinBadges(overLimit, result({ TurnCount = Badges.SpeedrunnerTurnLimit + 1 }), 1, 2)
 
-		-- BitByBit: only grid commands qualify; mixing in damage doesn't
+		-- BitByBit: grid casts plus any NON-damage support qualify; any
+		-- damage cast disqualifies, as does never casting a grid command
 		local gridOnly = makePlayer(7003, "GridOnly")
 		BadgeAwarder:EvaluateWinBadges(gridOnly, result({ UsedCommandTypes = { zero = true, one = true } }), 1, 2)
 		local gridMixed = makePlayer(7004, "GridMixed")
 		BadgeAwarder:EvaluateWinBadges(gridMixed, result({ UsedCommandTypes = { zero = true, damage = true } }), 1, 2)
+		local gridSupport = makePlayer(7010, "GridSupport")
+		BadgeAwarder:EvaluateWinBadges(gridSupport, result({ UsedCommandTypes = { one = true, grow = true, speedMod = true } }), 1, 2)
+		local supportOnly = makePlayer(7011, "SupportOnly")
+		BadgeAwarder:EvaluateWinBadges(supportOnly, result({ UsedCommandTypes = { grow = true } }), 1, 2)
 
 		-- Flawless requires zero losses AND a battle at security level 2+;
 		-- Persistence needs the attempt count
@@ -782,6 +787,8 @@ return function(t)
 		t.expect(badgeAwarded(7002, "Speedrunner")).toBeFalsy()
 		t.expect(badgeAwarded(7003, "BitByBit")).toBeTruthy()
 		t.expect(badgeAwarded(7004, "BitByBit")).toBeFalsy()
+		t.expect(badgeAwarded(7010, "BitByBit")).toBeTruthy()
+		t.expect(badgeAwarded(7011, "BitByBit")).toBeFalsy()
 		t.expect(badgeAwarded(7005, "FlawlessIntrusion")).toBeTruthy()
 		t.expect(badgeAwarded(7009, "FlawlessIntrusion")).toBeFalsy()
 		t.expect(badgeAwarded(7005, "PersistencePays")).toBeFalsy()

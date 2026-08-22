@@ -81,14 +81,12 @@ function BadgeAwarder:EvaluateWinBadges(player: any, replayResult: any, attemptC
 	if replayResult.UsedSuicideCommand then
 		self:Award(player, "KaBoom")
 	end
-	local usedAny, onlyGrid = false, true
-	for commandType in pairs(replayResult.UsedCommandTypes or {}) do
-		usedAny = true
-		if commandType ~= 'zero' and commandType ~= 'one' then
-			onlyGrid = false
-		end
-	end
-	if usedAny and onlyGrid then
+	-- Bit by Bit: won with Bit-Man doing the dirty work - at least one
+	-- Zero/One cast and NO damage-dealing attacks. Support casts (grows,
+	-- boosts, slows) don't disqualify: the point is winning without
+	-- fighting, not swearing off every helper.
+	local used = replayResult.UsedCommandTypes or {}
+	if (used['zero'] or used['one']) and not used['damage'] then
 		self:Award(player, "BitByBit")
 	end
 	if attemptCount >= Badges.PersistenceWinAttempts then
