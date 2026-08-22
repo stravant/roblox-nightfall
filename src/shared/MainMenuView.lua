@@ -644,7 +644,11 @@ local function MainMenuContent(props: MainMenuState)
 		-- reaching the backdrop, which closes the menu)
 		Name = "Menu",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 0),
+		-- The backdrop host extends UP past the gui inset to dim the whole
+		-- screen, so its center sits above the VISIBLE center - nudge down
+		-- by half the inset or the window pokes under the Roblox topbar
+		Position = UDim2.new(0.5, 0, 0.5,
+			math.floor(game:GetService("GuiService"):GetGuiInset().Y / 2)),
 		-- 400x250 fits a phone; larger viewports stretch the window (the
 		-- tab panel is edge-relative, so tab content gets real extra room
 		-- at native UI size rather than scaling up)
@@ -1037,9 +1041,9 @@ function MainMenuView.new(container: Instance)
 			-- viewports with the width growing in proportion, read LIVE at
 			-- open (the viewport isn't settled at construction time)
 			local viewport = workspace.CurrentCamera.ViewportSize
-			-- Floor raised 250 -> 270: at the old floor the phone menus ran
+			-- Floor raised 250 -> 280: at the old floor the phone menus ran
 			-- slightly too short for their content
-			local menuHeight = math.clamp(viewport.Y - 180, 270, 500)
+			local menuHeight = math.clamp(viewport.Y - 180, 280, 500)
 			mRoot.setState({
 				menuSession = mSession,
 				-- With the session key: the remounted tab view reads it
