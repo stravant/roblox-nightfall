@@ -46,6 +46,78 @@ return function(t)
 		t.expect(gs:HasErrors()).toBeFalsy()
 	end)
 
+	t.test("undoing an ally-targeted grow does not refresh the target's move", function()
+		-- Live invalid-replay regression: dr grows the golem, the grow is
+		-- undone, and the undo handed the (already-moved) golem a fresh
+		-- move - which the undo-free server re-simulation then rejected
+		local gs = GameState.new(Places.L26,
+			{ { Id = 'dr', Count = 1 }, { Id = 'golemmud', Count = 1 } }, GameState.ServerDelayFunc)
+		gs:UploadUnit(4, 9, Scripts.dr)
+		gs:UploadUnit(5, 9, Scripts.golemmud)
+		gs:StartGame()
+		local golem = gs:GetUnit(5, 9)
+		gs:UnitMove(golem, 5, 8) -- golemmud has Move 1: fully spent
+		t.expect(golem.MoveLeft).toBe(0)
+		local dr = gs:GetUnit(4, 9)
+		gs:UnitExecute(dr, 'grow', 5, 9) -- grow targets the golem's tail
+		gs:Undo()
+		-- The golem's move must STILL be spent
+		t.expect(golem.MoveLeft).toBe(0)
+		gs:UnitMove(golem, 5, 7)
+		t.expect(golem.Tail[1].x).toBe(5)
+		t.expect(golem.Tail[1].y).toBe(8)
+	end)
+
+	t.test("undo keeps the partial-mover-done rule intact", function()
+		-- Live invalid-replay regression: slingshot moves partially, bitman
+		-- acts in place and is undone. The undo used to clear the last-mover
+		-- tracking, so bitman's next move failed to mark the slingshot Done
+		-- - letting it act later in an order the server re-sim rejects.
+		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
+		gs:UploadUnit(7, 10, Scripts.bitman)
+		gs:UploadUnit(10, 10, Scripts.slingshot)
+		gs:StartGame()
+		local bitman = gs:GetUnit(7, 10)
+		local sling = gs:GetUnit(10, 10)
+		gs:UnitMove(sling, 10, 9) -- partial move
+		gs:UnitExecute(bitman, 'zero', 7, 9) -- bitman acts without moving
+		gs:Undo() -- undo the zero
+		t.expect(sling.Done).toBeFalsy()
+		gs:UnitMove(bitman, 7, 9)
+		-- The partially-moved slingshot is done now that another unit moved
+		t.expect(sling.Done).toBeTruthy()
+	end)
+
+	t.test("EndTurn waits for an in-flight move animation", function()
+		-- Live invalid-replay regression: a Done Turn press mid-walk used to
+		-- serialize the turn with the walk's remaining tiles missing from
+		-- the replay while the unit still finished the walk locally, so the
+		-- next turn's actions referenced a position the server never saw
+		local function delayFunc(which)
+			task.wait(0.03)
+		end
+		local gs = GameState.new(Places.L12, makeInventory(), delayFunc)
+		gs:UploadUnit(7, 10, Scripts.bug)
+		gs:StartGame()
+		local bug = gs:GetUnit(7, 10)
+		local moveDone = false
+		task.spawn(function()
+			gs:UnitMove(bug, 7, 7) -- 3-tile walk, yields between tiles
+			moveDone = true
+		end)
+		t.expect(moveDone).toBeFalsy() -- still mid-walk
+		gs:EndTurn() -- must wait the walk out before serializing
+		t.expect(moveDone).toBeTruthy()
+		-- Act from the unit's REAL position next turn and re-simulate: the
+		-- replay must agree with what the client did
+		gs:UnitMove(bug, 7, 6)
+		gs:EndTurn()
+		local ReplayChecker = require(game.ReplicatedStorage.ReplayChecker)
+		local result = ReplayChecker:Check(gs:GetReplay(), GameState.ServerDelayFunc)
+		t.expect(result.FailureReason).toBe(nil)
+		t.expect(result.Valid).toBeTruthy()
+	end)
+
 	t.test("new game state exposes the place's upload zones", function()
 		local gs = GameState.new(Places.L12, makeInventory(), GameState.ServerDelayFunc)
 		t.expect(gs:IsGameStarted()).toBeFalsy()

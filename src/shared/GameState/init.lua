@@ -134,6 +134,10 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	
 	-- The history of units moved / activated this turn and how to undo them
 	local mThisTurnHistory = {}
+
+	-- Player unit walks currently animating (their tile loops yield on the
+	-- client); EndTurn waits for them so the replay serializes complete moves
+	local mPlayerMovesInFlight = 0
 	
 	-- Has the game started and what turn is it if it has?
 	local mGameStarted = false
@@ -253,7 +257,12 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		return entry
 	end
 	
-	local function restoreUnit(unit, tail)
+	-- preserveTurnState: restore the tail WITHOUT refreshing Done/MoveLeft.
+	-- Used when the unit is the TARGET of an undone command (grow/damage):
+	-- the command never touched its turn state, so the undo must not either
+	-- (undoing an ally's grow onto a moved unit must not grant it a fresh
+	-- move - the server re-sim, which never sees undos, would reject it).
+	local function restoreUnit(unit, tail, preserveTurnState)
 		if mUnitSet[unit] then
 			-- If the unit is still around, just modify it's tail
 			for _, coord in pairs(unit.Tail) do --> uninstall from board
@@ -263,8 +272,10 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			for _, coord in pairs(unit.Tail) do --> install into board
 				getBoard(coord).Unit = unit
 			end
-			unit.Done = false
-			unit.MoveLeft = unit.Move
+			if not preserveTurnState then
+				unit.Done = false
+				unit.MoveLeft = unit.Move
+			end
 			fireUnitUpdated(unit)
 		else
 			-- Otherwise, we need to recreate it
@@ -442,7 +453,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 					originalEnemyTail[i] = coord
 				end
 				historyEntry.UndoAction = function()
-					restoreUnit(target, originalEnemyTail)
+					restoreUnit(target, originalEnemyTail, --[[preserveTurnState=]] true)
 				end
 			end
 			for i = 1, math.min(#target.Tail, command.Amount) do
@@ -507,7 +518,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 					originalEnemyTail[i] = coord
 				end
 				historyEntry.UndoAction = function()
-					restoreUnit(target, originalEnemyTail)
+					restoreUnit(target, originalEnemyTail, --[[preserveTurnState=]] true)
 				end
 			end
 			for i = 1, command.Amount do
@@ -885,12 +896,16 @@ function GameState.new(placeData, unitInventory, delayFunc)
 	
 	function this:Undo()
 		if mThisTurnHistory and #mThisTurnHistory > 0 then
-			-- No more last moved unit
-			mLastMovedUnit = nil			
-			
 			-- Pop the most recently added entry
 			local entry = mThisTurnHistory[#mThisTurnHistory]
 			mThisTurnHistory[#mThisTurnHistory] = nil
+
+			-- Reinstate the PREVIOUS entry's unit as the last mover. Clearing
+			-- it outright made the client forget to mark a partially-moved
+			-- unit Done when another unit moved after the undo - permitting
+			-- move orders the (undo-free) server re-simulation rejects.
+			local top = mThisTurnHistory[#mThisTurnHistory]
+			mLastMovedUnit = top and top.Unit or nil
 			
 			-- First undo the action if there was one
 			if entry.UndoAction then
@@ -1125,12 +1140,24 @@ function GameState.new(placeData, unitInventory, delayFunc)
 			table.insert(squares, targetSq)
 			targetSq = targetSq.From
 		end
-		
-		for i = #squares, 1, -1 do	
-			moveUnitImpl(unit, squares[i])
-			if i ~= 1 then
-				delayFunc('MoveAlly')
+
+		-- The walk yields between tiles on the client; EndTurn waits out
+		-- in-flight moves so a Done Turn press mid-animation can't serialize
+		-- the turn with the tail of this move missing from the replay.
+		-- pcall so a throw can't leave the counter stuck (which would hang
+		-- every later EndTurn).
+		mPlayerMovesInFlight = mPlayerMovesInFlight + 1
+		local ok, err = pcall(function()
+			for i = #squares, 1, -1 do
+				moveUnitImpl(unit, squares[i])
+				if i ~= 1 then
+					delayFunc('MoveAlly')
+				end
 			end
+		end)
+		mPlayerMovesInFlight = mPlayerMovesInFlight - 1
+		if not ok then
+			error(err, 0)
 		end
 		
 		-- Did we win? We need to do this check here because
@@ -1258,6 +1285,14 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		if mIsEnemyTurn then
 			print("Ignored: end turn during the enemy turn")
 			return
+		end
+		-- A Done Turn press can land while a unit's move animation is still
+		-- walking tiles (the walk yields between them): wait it out, or the
+		-- serialized turn drops the move's remaining tiles from the replay
+		-- while the unit still finishes the walk locally (live MissingUnit
+		-- desyncs). No-yield delay funcs never see an in-flight move.
+		while mPlayerMovesInFlight > 0 do
+			delayFunc('MoveAlly')
 		end
 		-- Finish the player turn
 		finishPlayerTurn()
