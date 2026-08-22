@@ -29,6 +29,9 @@ local NetworkController = {}
 -- mock remote objects in tests
 function NetworkController.install(remotes)
 	local PlayerDataCache = {}
+	-- Per session: the last databattle each player attempted ({NodeId, Won}),
+	-- reported by the LastPlayed analytic when they leave
+	local LastBattleCache = {}
 
 	-- Session journey recording (the UX study tool)
 	JourneyService.install(remotes)
@@ -82,6 +85,8 @@ function NetworkController.install(remotes)
 		-- Stat tracking
 		if result.Valid then
 			if not result.EarlyQuit then
+				-- Remembered for the LastPlayed event fired when they leave
+				LastBattleCache[player] = { NodeId = result.NodeId, Won = result.Won }
 				ServerStatistics:PlayerPlayedLevel(player, result.NodeId, result.Won)
 				-- One UnitUsed event per fielded unit, split by outcome
 				for _, unitId in pairs(result.UnitsUsed or {}) do
@@ -450,10 +455,15 @@ function NetworkController.install(remotes)
 		local playerData = PlayerDataCache[player]
 		if playerData then
 			ServerStatistics:PlayerLeft(player, playerData:HasBeatenTutorial())
+			-- Where the session ended: the last battle attempted and its
+			-- outcome (empty fields pre-tutorial / with no battles played)
+			local last = if playerData:HasBeatenTutorial() then LastBattleCache[player] else nil
+			ServerStatistics:LastPlayed(player, last and last.NodeId, last and last.Won)
 			PlayerDataCache[player] = nil
 		else
 			ServerStatistics:PlayerBounced(player)
 		end
+		LastBattleCache[player] = nil
 		FriendsCache[player] = nil
 		NodeRecordsCache[player] = nil
 		BadgeOwnershipCache[player] = nil

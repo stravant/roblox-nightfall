@@ -1134,6 +1134,37 @@ return function(t)
 		t.expect(seen[2]).toBe("play_again/browsed")
 	end)
 
+	t.test("leaving logs the session's last databattle", function()
+		local player = makePlayer(9600, "Leaver")
+		remotes.Load:InvokeServer_TEST(player)
+		remotes.BeatTutorial:FireServer_TEST(player)
+		remotes.ProcessReplay:FireServer_TEST(player, kL12WinningReplay)
+		task.wait(0.1)
+		playerLeaves(player)
+		local found = nil
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Player == player and event.Args[1] == "LastPlayed" then
+				found = event
+			end
+		end
+		t.expect(found ~= nil).toBeTruthy()
+		t.expect(found.Args[3][Enum.AnalyticsCustomFieldKeys.CustomField01.Name]).toBe("lm12")
+		t.expect(found.Args[3][Enum.AnalyticsCustomFieldKeys.CustomField02.Name]).toBe("win")
+
+		-- A pre-tutorial leaver still logs the event, with empty fields
+		local fresh = makePlayer(9601, "FreshLeaver")
+		remotes.Load:InvokeServer_TEST(fresh)
+		playerLeaves(fresh)
+		local freshEvent = nil
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Player == fresh and event.Args[1] == "LastPlayed" then
+				freshEvent = event
+			end
+		end
+		t.expect(freshEvent ~= nil).toBeTruthy()
+		t.expect(freshEvent.Args[3]).toBe(nil)
+	end)
+
 	t.test("a marathon journey is cut off with a marker, well under 4MB", function()
 		local JourneyService = require(game.ServerScriptService.JourneyService)
 		local MockDataStore = require(game.ServerScriptService.MockDataStore)

@@ -267,6 +267,26 @@ function ServerStatistics:PlayerLeft(playerOrId: any, completedTutorial: boolean
 	-- Session length / retention are tracked by Roblox natively; nothing to do
 end
 
+-- The session's last databattle, logged as the player leaves: which node
+-- they last attempted and whether they won it. Logged with EMPTY fields
+-- when no battle was attempted this session (e.g. the tutorial isn't
+-- beaten yet) - the event still counts the departure.
+function ServerStatistics:LastPlayed(playerOrId: any, nodeId: string?, won: boolean?)
+	local player = resolve(playerOrId)
+	if player then
+		try("LastPlayed", function()
+			local fields = nil
+			if nodeId then
+				fields = {
+					[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = sanitizeField(nodeId),
+					[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = if won then "win" else "loss",
+				}
+			end
+			AnalyticsService:LogCustomEvent(player, "LastPlayed", 1, fields)
+		end)
+	end
+end
+
 -- When a player leaves before they even finish loading
 function ServerStatistics:PlayerBounced(playerOrId: any)
 	local player = resolve(playerOrId)
