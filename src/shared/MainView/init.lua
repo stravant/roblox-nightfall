@@ -504,15 +504,23 @@ function MainView.new()
 			if node.Id == 'hq' then
 				-- Special behavior
 				mMainMenu:Show()
-				
+
 			elseif node.Warez then
 				-- Visit warez node
 				this:VisitWarez(nodeId)
+			elseif LocalPlayerData:HasBeatenNode(nodeId) then
+				-- Beaten nodes open their statistics page (with Play Again)
+				-- instead of dropping straight back into the battle
+				mMainMenu:ShowStats(nodeId)
 			else
 				-- Do the battle
 				this:PlayGame(node.PlaceId, nodeId)
 			end
 		end
+	end)
+	mMainMenu.PlayNodeRequested:connect(function(nodeId)
+		JourneyRecorder:Record("StatsPlayAgain", nodeId)
+		this:PlayGame(Netmap.ById[nodeId].PlaceId, nodeId)
 	end)
 	
 	-- Warez node

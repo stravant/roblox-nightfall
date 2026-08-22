@@ -182,7 +182,10 @@ function LocalPlayerData:GetProgressStats()
 		BattleNodesBeaten = 0,
 		Wins = 0,
 		Attempts = 0,
-		Nodes = {}, -- { Id, BestTurns, BestMoves, BestUnits } for won nodes
+		-- { Id, BestTurns?, BestMoves?, BestUnits?, Wins, Attempts } for
+		-- every node with any history (bests only present after a replay
+		-- win; a node beaten via skip has none)
+		Nodes = {},
 	}
 	for id, node in pairs(Netmap.ById) do
 		if not node.Warez then
@@ -194,12 +197,14 @@ function LocalPlayerData:GetProgressStats()
 				end
 				stats.Wins += info.Wins or 0
 				stats.Attempts += info.AttemptCount or 0
-				if info.BestTurns then
+				if info.Beaten or info.BestTurns or (info.AttemptCount or 0) > 0 then
 					table.insert(stats.Nodes, {
 						Id = id,
 						BestTurns = info.BestTurns,
 						BestMoves = info.BestMoves,
 						BestUnits = info.BestUnits,
+						Wins = info.Wins or 0,
+						Attempts = info.AttemptCount or 0,
 					})
 				end
 			end

@@ -126,11 +126,49 @@ return function(t)
 		end
 	end)
 
-	t.test("stats tab holds the summary and the bests list", function()
+	t.test("stats tab holds the node rail and the overview pane", function()
 		withView(function(view, gui)
 			local statsTab = gui.Menu.TabPanel.Tabs.Stats
-			t.expect(statsTab:FindFirstChild("SummaryLabel")).toBeTruthy()
-			t.expect(statsTab:FindFirstChild("StatsScroll", true).ClassName).toBe("ScrollingFrame")
+			-- Overview pane by default (no node selected)
+			t.expect(statsTab:FindFirstChild("SummaryLabel", true)).toBeTruthy()
+			t.expect(statsTab:FindFirstChild("StatsRailScroll", true).ClassName).toBe("ScrollingFrame")
+		end)
+	end)
+
+	t.test("ShowStats opens the stats tab with the node's detail pane", function()
+		withView(function(view, gui)
+			-- LocalPlayerData isn't loaded in the test place: stub the two
+			-- reads the stats panel makes
+			local originalStats = LocalPlayerData.GetProgressStats
+			local originalBeaten = LocalPlayerData.HasBeatenNode
+			LocalPlayerData.GetProgressStats = function()
+				return {
+					BattleNodesTotal = 3, BattleNodesBeaten = 1, Wins = 4, Attempts = 6,
+					Nodes = { { Id = "lm12", BestTurns = 5, BestMoves = 9, BestUnits = 2, Wins = 4, Attempts = 6 } },
+				}
+			end
+			LocalPlayerData.HasBeatenNode = function(_self, id)
+				return id == "lm12"
+			end
+			local ok, err = pcall(function()
+				ReactRoblox.act(function()
+					view:ShowStats("lm12")
+				end)
+				task.wait() -- async record fetch resolves (to unavailable)
+				ReactRoblox.act(function() end)
+				local statsTab = gui.Menu.TabPanel.Tabs.Stats
+				-- The rail rendered the node thumbnails (beaten selectable,
+				-- and at least one unbeaten silhouette from the real netmap)
+				t.expect(statsTab:FindFirstChild("Node_lm12", true)).toBeTruthy()
+				-- The detail pane replaced the overview, with Play Again
+				t.expect(statsTab:FindFirstChild("SummaryLabel", true)).toBe(nil)
+				t.expect(statsTab:FindFirstChild("PlayAgainButton", true)).toBeTruthy()
+			end)
+			LocalPlayerData.GetProgressStats = originalStats
+			LocalPlayerData.HasBeatenNode = originalBeaten
+			if not ok then
+				error(err, 0)
+			end
 		end)
 	end)
 

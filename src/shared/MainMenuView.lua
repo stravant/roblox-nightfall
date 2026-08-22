@@ -53,9 +53,21 @@ type MainMenuState = {
 	skipsAvailableText: string,
 	skipsUsedText: string,
 	statsSummary: string?,
-	statsCompareText: string?,
 	statsSelectedId: string?,
-	statsRows: { { Id: string, Text: string } }?,
+	-- Node thumbnail rail: nodes in security-level order with dividers
+	statsNodeList: { { Kind: string, Id: string?, Text: string?, Image: string?, Beaten: boolean?, Y: number } }?,
+	-- nil = the general overview pane; set = the selected node's rich view
+	statsDetail: {
+		Id: string,
+		Name: string,
+		Image: string,
+		SubLine: string,
+		You: { turns: number?, moves: number?, units: number? }?,
+		Friend: any, -- "pending" | "unavailable" | { [stat]: {Value, Name} }
+		World: any,
+	}?,
+	defaultTab: string?,
+	onPlayAgain: ((nodeId: string) -> ())?,
 	onStatsNodeClick: ((id: string) -> ())?,
 	badgesEarnedHeader: string?,
 	badgesUnearnedHeader: string?,
@@ -75,6 +87,7 @@ type MainMenuState = {
 -- BuyButton is the standard button image tinted blue; the imperative
 -- WindowsButton.new applied its hover/press image swaps over the tint).
 type ColoredButtonProps = {
+	Name: string?,
 	AnchorPoint: Vector2?,
 	Position: UDim2?,
 	Size: UDim2?,
@@ -97,6 +110,7 @@ local function ColoredWindowsButton(props: ColoredButtonProps)
 	end
 
 	return e("ImageButton", {
+		Name = props.Name,
 		Image = image,
 		ImageColor3 = props.ImageColor3,
 		ScaleType = Enum.ScaleType.Slice,
@@ -279,40 +293,244 @@ local function MainMenuContent(props: MainMenuState)
 		})
 	end
 
-	-- One row per beaten node with its personal bests; clicking a row loads
-	-- the my-best / friend-best / world-best comparison
-	local statsRowItems: { [string]: any } = {
+	-- Stats tab: a narrow node-thumbnail rail (security-level dividers,
+	-- unbeaten nodes blacked out) beside a pane showing either the general
+	-- overview or the selected node's you/friend/world record view
+	local railItems: { [string]: any } = {
 		UIListLayout = e("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 1),
+			Padding = UDim.new(0, 2),
 		}),
 		UIPadding = e("UIPadding", {
-			PaddingTop = UDim.new(0, 2),
-			PaddingLeft = UDim.new(0, 4),
-			PaddingBottom = UDim.new(0, 2),
+			PaddingTop = UDim.new(0, 3),
+			PaddingBottom = UDim.new(0, 3),
 		}),
 	}
-	for i, row in pairs(props.statsRows or {}) do
-		local selected = row.Id ~= nil and row.Id == props.statsSelectedId
-		statsRowItems["Row" .. i] = e("TextButton", {
-			LayoutOrder = i,
-			Size = UDim2.new(1, -20, 0, 18),
-			BackgroundColor3 = if selected then Color3.new(0, 0, 0.5) else Color3.new(1, 1, 1),
-			BackgroundTransparency = if selected then 0 else 1,
-			BorderSizePixel = 0,
+	for i, entry in ipairs(props.statsNodeList or {}) do
+		if entry.Kind == "divider" then
+			railItems["Item" .. i] = e("TextLabel", {
+				LayoutOrder = i,
+				Size = UDim2.new(1, -4, 0, 16),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 12,
+				TextColor3 = Color3.new(0.35, 0.35, 0.35),
+				Text = entry.Text,
+			})
+		else
+			local selected = entry.Id == props.statsSelectedId
+			railItems["Item" .. i] = e("ImageButton", {
+				Name = "Node_" .. entry.Id,
+				LayoutOrder = i,
+				Size = UDim2.new(0, 48, 0, 48),
+				BackgroundColor3 = Color3.fromRGB(206, 206, 206),
+				BorderSizePixel = 0,
+				AutoButtonColor = entry.Beaten,
+				Image = entry.Image,
+				-- Unbeaten nodes are blacked-out silhouettes (and inert)
+				ImageColor3 = if entry.Beaten then Color3.new(1, 1, 1) else Color3.fromRGB(18, 18, 22),
+				[React.Event.MouseButton1Click] = function()
+					if entry.Beaten and props.onStatsNodeClick then
+						props.onStatsNodeClick(entry.Id)
+					end
+				end,
+			}, {
+				Stroke = if selected
+					then e("UIStroke", { Thickness = 2, Color = Color3.new(0, 0, 0.5) })
+					else nil,
+				IdLabel = if entry.Beaten
+					then e("TextLabel", {
+						AnchorPoint = Vector2.new(0.5, 1),
+						Position = UDim2.new(0.5, 0, 1, 0),
+						Size = UDim2.new(1, 0, 0, 12),
+						BackgroundColor3 = Color3.new(0, 0, 0),
+						BackgroundTransparency = 0.45,
+						BorderSizePixel = 0,
+						Font = Enum.Font.SourceSansBold,
+						TextSize = 11,
+						TextColor3 = Color3.new(1, 1, 1),
+						Text = entry.Id,
+					})
+					else nil,
+			})
+		end
+	end
+
+	-- The right-hand stats pane
+	local statsPaneItems: { [string]: any }
+	if props.statsDetail then
+		local d = props.statsDetail
+		-- One value cell of the records grid: value, with the holder's name
+		-- beneath for friend/world columns
+		local function recordCell(rec, statKey): (string, string)
+			if rec == "pending" then
+				return "…", ""
+			elseif type(rec) ~= "table" then
+				return "—", ""
+			end
+			local cell = rec[statKey]
+			if not cell then
+				return "—", ""
+			end
+			return tostring(cell.Value), cell.Name or ""
+		end
+		statsPaneItems = {
+			Thumb = e("ImageLabel", {
+				Position = UDim2.new(0, 0, 0, 2),
+				Size = UDim2.new(0, 40, 0, 40),
+				BackgroundColor3 = Color3.fromRGB(206, 206, 206),
+				BorderSizePixel = 0,
+				Image = d.Image,
+			}),
+			NodeName = e("TextLabel", {
+				Position = UDim2.new(0, 48, 0, 2),
+				Size = UDim2.new(1, -170, 0, 20),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 16,
+				TextColor3 = Color3.new(0, 0, 0.5),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				Text = d.Name,
+			}),
+			SubLine = e("TextLabel", {
+				Position = UDim2.new(0, 48, 0, 22),
+				Size = UDim2.new(1, -170, 0, 16),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSans,
+				TextSize = 14,
+				TextColor3 = Color3.new(0.3, 0.3, 0.3),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = d.SubLine,
+			}),
+			PlayAgain = e(ColoredWindowsButton, {
+				Name = "PlayAgainButton",
+				AnchorPoint = Vector2.new(1, 0),
+				Position = UDim2.new(1, 0, 0, 4),
+				Size = UDim2.new(0, 110, 0, 34),
+				ImageColor3 = Color3.new(0, 0, 1),
+				Text = "Play Again",
+				TextSize = 16,
+				OnClick = function()
+					if props.onPlayAgain then
+						props.onPlayAgain(d.Id)
+					end
+				end,
+			}),
+		}
+		-- Records grid: You / Friend / World columns per stat
+		local kGridTop = 50
+		local kRowHeight = 34
+		local kGridStats = {
+			{ Key = "turns", Label = "Turns", You = d.You and d.You.turns },
+			{ Key = "moves", Label = "Moves", You = d.You and d.You.moves },
+			{ Key = "units", Label = "Scripts", You = d.You and d.You.units },
+		}
+		local kColumns = { "You", "Friend", "World" }
+		for c, columnName in ipairs(kColumns) do
+			statsPaneItems["Head" .. columnName] = e("TextLabel", {
+				Position = UDim2.new((c - 1) / 3, 60, 0, kGridTop),
+				Size = UDim2.new(1 / 3, -62, 0, 16),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 13,
+				TextColor3 = Color3.new(0.35, 0.35, 0.35),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = columnName,
+			})
+		end
+		for r, stat in ipairs(kGridStats) do
+			local y = kGridTop + 18 + (r - 1) * kRowHeight
+			statsPaneItems["Label" .. stat.Key] = e("TextLabel", {
+				Position = UDim2.new(0, 0, 0, y),
+				Size = UDim2.new(0, 56, 0, 16),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 14,
+				TextColor3 = Color3.new(0, 0, 0),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = stat.Label,
+			})
+			statsPaneItems["You" .. stat.Key] = e("TextLabel", {
+				Position = UDim2.new(0, 60, 0, y),
+				Size = UDim2.new(1 / 3, -62, 0, 16),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.Code,
+				TextSize = 14,
+				TextColor3 = Color3.new(0, 0, 0),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Text = if stat.You then tostring(stat.You) else "—",
+			})
+			for c = 2, 3 do
+				local value, holder = recordCell(if c == 2 then d.Friend else d.World, stat.Key)
+				statsPaneItems[kColumns[c] .. stat.Key] = e("TextLabel", {
+					Position = UDim2.new((c - 1) / 3, 60, 0, y),
+					Size = UDim2.new(1 / 3, -62, 0, 16),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.Code,
+					TextSize = 14,
+					TextColor3 = Color3.new(0, 0, 0),
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Text = value,
+				})
+				statsPaneItems[kColumns[c] .. stat.Key .. "Name"] = e("TextLabel", {
+					Position = UDim2.new((c - 1) / 3, 60, 0, y + 14),
+					Size = UDim2.new(1 / 3, -62, 0, 12),
+					BackgroundTransparency = 1,
+					Font = Enum.Font.SourceSans,
+					TextSize = 11,
+					TextColor3 = Color3.new(0.45, 0.45, 0.45),
+					TextXAlignment = Enum.TextXAlignment.Left,
+					TextTruncate = Enum.TextTruncate.AtEnd,
+					Text = holder,
+				})
+			end
+		end
+		statsPaneItems.BackHint = e("TextButton", {
+			AnchorPoint = Vector2.new(0, 1),
+			Position = UDim2.new(0, 0, 1, 0),
+			Size = UDim2.new(1, 0, 0, 16),
+			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSans,
-			TextSize = 15,
-			TextColor3 = if selected then Color3.new(1, 1, 1) else Color3.new(0, 0, 0),
-			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextSize = 13,
+			TextColor3 = Color3.new(0.35, 0.35, 0.35),
 			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = row.Text,
+			Text = "< Back to overview",
 			[React.Event.MouseButton1Click] = function()
-				if row.Id and props.onStatsNodeClick then
-					props.onStatsNodeClick(row.Id)
+				if props.onStatsNodeClick and props.statsDetail then
+					-- Clicking the selected node toggles back to overview
+					props.onStatsNodeClick(props.statsDetail.Id)
 				end
 			end,
 		})
+	else
+		statsPaneItems = {
+			SummaryLabel = e("TextLabel", {
+				Position = UDim2.new(0, 0, 0, 4),
+				Size = UDim2.new(1, 0, 0, 60),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSansBold,
+				TextSize = 16,
+				TextColor3 = Color3.new(0, 0, 0.5),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Top,
+				Text = props.statsSummary or "",
+			}),
+			Hint = e("TextLabel", {
+				Position = UDim2.new(0, 0, 0, 68),
+				Size = UDim2.new(1, 0, 0, 32),
+				BackgroundTransparency = 1,
+				Font = Enum.Font.SourceSans,
+				TextSize = 14,
+				TextColor3 = Color3.new(0.35, 0.35, 0.35),
+				TextWrapped = true,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextYAlignment = Enum.TextYAlignment.Top,
+				Text = "Select a beaten node on the left to compare your records with friends and the world.",
+			}),
+		}
 	end
 
 	-- During a databattle a "Databattle" tab (forfeit / skip) leads, and is the
@@ -400,7 +618,7 @@ local function MainMenuContent(props: MainMenuState)
 			Name = "TabPanel",
 			Position = UDim2.new(0, 5, 0, 61),
 			Size = UDim2.new(1, -10, 1, -105),
-			DefaultTab = if props.battleContext then "Databattle" else "Sound",
+			DefaultTab = props.defaultTab or (if props.battleContext then "Databattle" else "Sound"),
 			Tabs = appendTabs(tabs, {
 				{
 					Name = "Sound",
@@ -440,36 +658,14 @@ local function MainMenuContent(props: MainMenuState)
 					Name = "Stats",
 					Label = "Statistics",
 					Content = {
-						SummaryLabel = e("TextLabel", {
+						-- Node thumbnail rail, Win95 listbox style
+						RailArea = e("Frame", {
 							Position = UDim2.new(0, 10, 0, 4),
-							Size = UDim2.new(1, -20, 0, 20),
-							BackgroundTransparency = 1,
-							Font = Enum.Font.SourceSansBold,
-							TextSize = 16,
-							TextColor3 = Color3.new(0, 0, 0.5),
-							TextXAlignment = Enum.TextXAlignment.Left,
-							Text = props.statsSummary or "",
-						}),
-						-- The my/friend/world comparison for the clicked node
-						CompareText = e("TextLabel", {
-							Position = UDim2.new(0, 10, 0, 24),
-							Size = UDim2.new(1, -20, 0, 58),
-							BackgroundTransparency = 1,
-							Font = Enum.Font.Code,
-							TextSize = 13,
-							TextColor3 = Color3.new(0, 0, 0),
-							TextXAlignment = Enum.TextXAlignment.Left,
-							TextYAlignment = Enum.TextYAlignment.Top,
-							Text = props.statsCompareText or "",
-						}),
-						-- Personal bests per beaten node, Win95 listbox style
-						ListArea = e("Frame", {
-							Position = UDim2.new(0, 10, 0, 86),
-							Size = UDim2.new(1, -20, 1, -92),
+							Size = UDim2.new(0, 84, 1, -10),
 							BackgroundColor3 = Color3.new(1, 1, 1),
 							BorderSizePixel = 0,
 						}, {
-							StatsScroll = e("ScrollingFrame", {
+							StatsRailScroll = e("ScrollingFrame", {
 								ref = statsScrollRef,
 								Size = UDim2.new(1, 0, 1, 0),
 								BackgroundTransparency = 1,
@@ -478,12 +674,18 @@ local function MainMenuContent(props: MainMenuState)
 								AutomaticCanvasSize = Enum.AutomaticSize.Y,
 								ScrollingDirection = Enum.ScrollingDirection.Y,
 								ScrollBarThickness = 0,
-							}, statsRowItems),
+							}, railItems),
 							Scrollbar = e(Win95Scrollbar, {
 								scrollRef = statsScrollRef,
-								lineScroll = 19,
+								lineScroll = 50,
 							}),
 						}),
+						-- Overview or selected-node detail
+						StatsPane = e("Frame", {
+							Position = UDim2.new(0, 104, 0, 4),
+							Size = UDim2.new(1, -114, 1, -10),
+							BackgroundTransparency = 1,
+						}, statsPaneItems),
 					},
 				},
 				{
@@ -553,6 +755,9 @@ local MainMenuView = {}
 function MainMenuView.new(container: Instance)
 	local this = {}
 
+	-- Fired by the stats detail pane's Play Again button (nodeId)
+	this.PlayNodeRequested = Signal.new()
+
 	local mGui = Instance.new("ImageButton")
 	mGui.Name = "MenuMouseCatcher"
 	-- Extended past the topbar inset so the dim covers the full screen
@@ -576,67 +781,43 @@ function MainMenuView.new(container: Instance)
 	-- during create) can setState; assigned right after StatefulRoot.create.
 	local mRoot: StatefulRoot.StatefulRoot? = nil
 
-	-- Statistics panel: summary + per-node rows, and the my/friend/world
-	-- comparison for a clicked row (records fetched from the server's
-	-- per-node ordered stores; friends via GetFriendsAsync)
-	local mStatsNodes = {} -- id -> { BestTurns, BestMoves, BestUnits }
+	-- Statistics panel: a node thumbnail rail (all battle nodes in security
+	-- level order, unbeaten blacked out) beside an overview pane that a
+	-- selected node replaces with its you/friend/world record view (records
+	-- fetched from the server's per-node ordered stores; friends via
+	-- GetFriendsAsync)
+	local mStatsNodes = {} -- id -> { BestTurns, BestMoves, BestUnits, Wins, Attempts }
+	local mStatsNodeList = {} -- the rail model (for scroll-to-node)
 	local mSelectedStatsNode = nil
 
-	local kStatOrder = { "turns", "moves", "units" }
-	local kStatLetter = { turns = "T", moves = "M", units = "S" }
-	local function formatRecordLine(rec)
-		if not rec or not next(rec) then
-			return "no record yet"
-		end
-		local parts = {}
-		local singleName = nil
-		local mixedNames = false
-		for _, stat in pairs(kStatOrder) do
-			local entry = rec[stat]
-			if entry then
-				if singleName == nil then
-					singleName = entry.Name
-				elseif entry.Name ~= singleName then
-					mixedNames = true
-				end
-			end
-		end
-		for _, stat in pairs(kStatOrder) do
-			local entry = rec[stat]
-			if entry then
-				local part = entry.Value .. kStatLetter[stat]
-				if mixedNames and entry.Name then
-					part = part .. " (" .. entry.Name .. ")"
-				end
-				table.insert(parts, part)
-			end
-		end
-		local line = table.concat(parts, " · ")
-		if not mixedNames and singleName then
-			line = line .. "  (" .. singleName .. ")"
-		end
-		return line
-	end
-
-	local function setCompareText(nodeId, friendLine, worldLine)
+	-- Push the selected node's detail pane (friendRec/worldRec: "pending",
+	-- "unavailable", or the { [stat] = {Value, Name} } record tables)
+	local function pushStatsDetail(nodeId, friendRec, worldRec)
+		local node = Netmap.ById[nodeId]
 		local mine = mStatsNodes[nodeId]
-		local youLine = if mine
-			then string.format("%dT · %dM · %dS", mine.BestTurns, mine.BestMoves, mine.BestUnits)
-			else "no win yet"
 		if mRoot then
 			mRoot.setState({
 				statsSelectedId = nodeId,
-				statsCompareText = Netmap.GetNodeDisplayName(nodeId) .. "\n"
-					.. "You:    " .. youLine .. "\n"
-					.. "Friend: " .. friendLine .. "\n"
-					.. "World:  " .. worldLine,
+				statsDetail = {
+					Id = nodeId,
+					Name = Netmap.GetNodeDisplayName(nodeId),
+					Image = node.BeatenImage or node.Image,
+					SubLine = if mine
+						then string.format("Wins %d  ·  Attempts %d", mine.Wins or 0, mine.Attempts or 0)
+						else "",
+					You = if mine and mine.BestTurns
+						then { turns = mine.BestTurns, moves = mine.BestMoves, units = mine.BestUnits }
+						else nil,
+					Friend = friendRec,
+					World = worldRec,
+				},
 			})
 		end
 	end
 
 	local function selectStatsNode(nodeId)
 		mSelectedStatsNode = nodeId
-		setCompareText(nodeId, "fetching...", "fetching...")
+		pushStatsDetail(nodeId, "pending", "pending")
 		task.spawn(function()
 			local ok, records = pcall(function()
 				return game.ReplicatedStorage.Remotes.GetNodeRecords:InvokeServer(nodeId)
@@ -645,11 +826,21 @@ function MainMenuView.new(container: Instance)
 				return -- a different node was picked while fetching
 			end
 			if ok and records then
-				setCompareText(nodeId, formatRecordLine(records.Friend), formatRecordLine(records.World))
+				pushStatsDetail(nodeId, records.Friend or {}, records.World or {})
 			else
-				setCompareText(nodeId, "unavailable", "unavailable")
+				pushStatsDetail(nodeId, "unavailable", "unavailable")
 			end
 		end)
+	end
+
+	local function clearStatsSelection()
+		mSelectedStatsNode = nil
+		if mRoot then
+			mRoot.setState({
+				statsSelectedId = StatefulRoot.None,
+				statsDetail = StatefulRoot.None,
+			})
+		end
 	end
 
 	-- Refresh the statistics panel content from local player data
@@ -660,28 +851,53 @@ function MainMenuView.new(container: Instance)
 		if not ok then
 			return -- player data not loaded yet
 		end
-		local rows = {}
 		mStatsNodes = {}
 		for _, node in pairs(stats.Nodes) do
 			mStatsNodes[node.Id] = node
-			table.insert(rows, {
-				Id = node.Id,
-				Text = string.format("%s  —  %d turns, %d moves, %d scripts",
-					Netmap.GetNodeDisplayName(node.Id), node.BestTurns, node.BestMoves, node.BestUnits),
+		end
+		-- The rail: battle nodes in security-level order with dividers. Y
+		-- mirrors the rendered layout (3px top pad; 16px dividers and 48px
+		-- cells, 2px apart) so scroll-to-node needs no layout queries.
+		local ordered = {}
+		for id, node in pairs(Netmap.ById) do
+			if not node.Warez and id ~= 'hq' then
+				table.insert(ordered, { Id = id, Level = node.Level })
+			end
+		end
+		table.sort(ordered, function(a, b)
+			if a.Level ~= b.Level then
+				return a.Level < b.Level
+			end
+			return a.Id < b.Id
+		end)
+		local list = {}
+		local y = 3
+		local lastLevel = nil
+		for _, item in ipairs(ordered) do
+			local node = Netmap.ById[item.Id]
+			if item.Level ~= lastLevel then
+				lastLevel = item.Level
+				table.insert(list, { Kind = "divider", Text = "— Level " .. item.Level .. " —", Y = y })
+				y += 18
+			end
+			local beaten = LocalPlayerData:HasBeatenNode(item.Id)
+			table.insert(list, {
+				Kind = "node",
+				Id = item.Id,
+				Y = y,
+				Beaten = beaten,
+				Image = if beaten then (node.BeatenImage or node.Image) else node.Image,
 			})
+			y += 50
 		end
-		if #rows == 0 then
-			rows = { { Text = "No battles won yet." } }
-		end
+		mStatsNodeList = list
 		if mRoot then
 			mRoot.setState({
-				statsSummary = string.format("Nodes beaten: %d/%d    Wins: %d    Attempts: %d",
+				statsSummary = string.format("Nodes beaten: %d / %d\nWins: %d\nAttempts: %d",
 					stats.BattleNodesBeaten, stats.BattleNodesTotal, stats.Wins, stats.Attempts),
-				statsRows = rows,
-				statsCompareText = if #rows > 0 and rows[1].Id
-					then "Click a node to compare with friends and the world."
-					else "",
+				statsNodeList = list,
 				statsSelectedId = StatefulRoot.None,
+				statsDetail = StatefulRoot.None,
 			})
 		end
 		mSelectedStatsNode = nil
@@ -734,7 +950,7 @@ function MainMenuView.new(container: Instance)
 
 	-- Show / hide the menu
 	local mSession = 0
-	function this:Show()
+	local function showInternal(defaultTab)
 		JourneyRecorder:Record("MenuOpen")
 		ModalManager:SetModal(true)
 		updateStats()
@@ -749,6 +965,8 @@ function MainMenuView.new(container: Instance)
 			local menuHeight = math.clamp(viewport.Y - 180, 250, 500)
 			mRoot.setState({
 				menuSession = mSession,
+				-- With the session key: the remounted tab view reads it
+				defaultTab = defaultTab or StatefulRoot.None,
 				menuHeight = menuHeight,
 				menuWidth = math.clamp(math.min(
 					viewport.X - 120,
@@ -756,6 +974,30 @@ function MainMenuView.new(container: Instance)
 			})
 		end
 		mGui.Visible = true
+	end
+	function this:Show()
+		showInternal(nil)
+	end
+
+	-- Open straight to the Statistics tab with a node selected and its rail
+	-- thumbnail scrolled into view (the netmap routes beaten-node clicks
+	-- here; the detail pane's Play Again re-enters the battle)
+	function this:ShowStats(nodeId)
+		showInternal("Stats")
+		if nodeId then
+			selectStatsNode(nodeId)
+			task.defer(function()
+				local scroll = mGui:FindFirstChild("StatsRailScroll", true)
+				if scroll then
+					for _, entry in ipairs(mStatsNodeList) do
+						if entry.Id == nodeId then
+							scroll.CanvasPosition = Vector2.new(0, math.max(0, entry.Y - 60))
+							break
+						end
+					end
+				end
+			end)
+		end
 	end
 	function this:Hide()
 		JourneyRecorder:Record("MenuClose")
@@ -820,11 +1062,21 @@ function MainMenuView.new(container: Instance)
 		skipsAvailableText = "5 skips",
 		skipsUsedText = "5 skips",
 		statsSummary = "",
-		statsCompareText = "",
 		statsSelectedId = nil,
-		statsRows = {},
+		statsNodeList = {},
+		statsDetail = nil,
+		defaultTab = nil,
 		onStatsNodeClick = function(id: string)
-			selectStatsNode(id)
+			-- Clicking the selected node again returns to the overview
+			if mSelectedStatsNode == id then
+				clearStatsSelection()
+			else
+				selectStatsNode(id)
+			end
+		end,
+		onPlayAgain = function(id: string)
+			this:Hide()
+			this.PlayNodeRequested:fire(id)
 		end,
 		badgesEarnedHeader = nil,
 		badgesUnearnedHeader = nil,
