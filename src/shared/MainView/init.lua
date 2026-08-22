@@ -507,7 +507,7 @@ function MainView.new()
 			elseif LocalPlayerData:HasBeatenNode(nodeId) then
 				-- Beaten nodes open their statistics page (with Play Again)
 				-- instead of dropping straight back into the battle
-				mMainMenu:ShowStats(nodeId)
+				mMainMenu:ShowStats(nodeId, --[[fromNodeClick=]] true)
 			else
 				-- Do the battle
 				this:PlayGame(node.PlaceId, nodeId)

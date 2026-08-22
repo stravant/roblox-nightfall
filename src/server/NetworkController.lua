@@ -180,6 +180,24 @@ function NetworkController.install(remotes)
 		ServerStatistics:PlacementMethod(player, method)
 	end)
 
+	-- Stats-page visit outcome (netmap click on a beaten node): how the visit
+	-- ended and whether other nodes were browsed. Whitelisted values; capped
+	-- per session like the placement reports.
+	local kStatsPageExits = { close = true, play_again = true }
+	local kMaxStatsPageReports = 20
+	local StatsPageReportCounts = {}
+	remotes.StatsPageOutcome.OnServerEvent:connect(function(player, exit, browsedOthers)
+		if type(exit) ~= "string" or not kStatsPageExits[exit] or type(browsedOthers) ~= "boolean" then
+			return
+		end
+		local count = StatsPageReportCounts[player] or 0
+		if count >= kMaxStatsPageReports then
+			return
+		end
+		StatsPageReportCounts[player] = count + 1
+		ServerStatistics:StatsPageOutcome(player, exit, browsedOthers)
+	end)
+
 	-- Post-tutorial wrap-up choice, for the explore-vs-battle split chart.
 	-- Whitelisted values, one report per player per session.
 	local kPostTutorialChoices = { explore = true, battle = true }

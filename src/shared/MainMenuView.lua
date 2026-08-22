@@ -925,6 +925,21 @@ function MainMenuView.new(container: Instance)
 	local mStatsNodeList = {} -- the rail model (for scroll-to-node)
 	local mSelectedStatsNode = nil
 
+	-- Analytics for stats visits that came from clicking a beaten netmap
+	-- node: how the visit ended (close vs play again) and whether any OTHER
+	-- node's stats got looked at along the way
+	local mStatsVisit = nil -- { Node: string, Browsed: boolean }
+	local function reportStatsVisit(exit: string)
+		if not mStatsVisit then
+			return
+		end
+		local browsed = mStatsVisit.Browsed
+		mStatsVisit = nil
+		pcall(function()
+			game.ReplicatedStorage.Remotes.StatsPageOutcome:FireServer(exit, browsed)
+		end)
+	end
+
 	-- Push the selected node's detail pane (friendRec/worldRec: "pending",
 	-- "unavailable", or the { [stat] = {Value, Name} } record tables)
 	local function pushStatsDetail(nodeId, friendRec, worldRec)
@@ -1009,7 +1024,7 @@ function MainMenuView.new(container: Instance)
 		end
 		-- The rail: battle nodes in security-level order with dividers. Y
 		-- mirrors the rendered layout (3px top pad; 16px dividers and 48px
-		-- cells, 4px apart) so scroll-to-node needs no layout queries.
+		-- cells, 6px apart) so scroll-to-node needs no layout queries.
 		local ordered = {}
 		for id, node in pairs(Netmap.ById) do
 			if not node.Warez and id ~= 'hq' then
@@ -1040,7 +1055,7 @@ function MainMenuView.new(container: Instance)
 				Beaten = beaten,
 				PlaceId = node.PlaceId,
 			})
-			y += 52
+			y += 54
 		end
 		mStatsNodeList = list
 		if mRoot then
@@ -1135,10 +1150,14 @@ function MainMenuView.new(container: Instance)
 
 	-- Open straight to the Statistics tab with a node selected and its rail
 	-- thumbnail scrolled into view (the netmap routes beaten-node clicks
-	-- here; the detail pane's Play Again re-enters the battle)
-	function this:ShowStats(nodeId)
+	-- here; the detail pane's Play Again re-enters the battle).
+	-- fromNodeClick marks a netmap-click visit for the outcome analytic.
+	function this:ShowStats(nodeId, fromNodeClick)
 		showInternal("Stats")
 		if nodeId then
+			if fromNodeClick then
+				mStatsVisit = { Node = nodeId, Browsed = false }
+			end
 			selectStatsNode(nodeId)
 			task.defer(function()
 				local scroll = mGui:FindFirstChild("StatsRailScroll", true)
@@ -1155,6 +1174,7 @@ function MainMenuView.new(container: Instance)
 	end
 	function this:Hide()
 		JourneyRecorder:Record("MenuClose")
+		reportStatsVisit("close")
 		mGui.Visible = false
 		ModalManager:SetModal(false)
 	end
@@ -1221,6 +1241,9 @@ function MainMenuView.new(container: Instance)
 		statsDetail = nil,
 		defaultTab = nil,
 		onStatsNodeClick = function(id: string)
+			if mStatsVisit and id ~= mStatsVisit.Node then
+				mStatsVisit.Browsed = true
+			end
 			-- Clicking the selected node again returns to the overview
 			if mSelectedStatsNode == id then
 				clearStatsSelection()
@@ -1229,6 +1252,8 @@ function MainMenuView.new(container: Instance)
 			end
 		end,
 		onPlayAgain = function(id: string)
+			-- Report before Hide, which would otherwise count this as a close
+			reportStatsVisit("play_again")
 			this:Hide()
 			this.PlayNodeRequested:fire(id)
 		end,

@@ -256,6 +256,7 @@ return function(t)
 		SaveSettings = mockRemoteEvent("SaveSettings"),
 		PostTutorialChoice = mockRemoteEvent("PostTutorialChoice"),
 		PlacementMethod = mockRemoteEvent("PlacementMethod"),
+		StatsPageOutcome = mockRemoteEvent("StatsPageOutcome"),
 		JourneyEvents = mockRemoteEvent("JourneyEvents"),
 		GetJourneyList = mockRemoteFunction("GetJourneyList"),
 		GetJourney = mockRemoteFunction("GetJourney"),
@@ -1098,6 +1099,26 @@ return function(t)
 			end
 		end
 		t.expect(spamCount).toBe(10)
+	end)
+
+	t.test("stats page outcome reports log whitelisted custom events", function()
+		local player = makePlayer(9500, "StatsBrowser")
+		remotes.StatsPageOutcome:FireServer_TEST(player, "close", false)
+		remotes.StatsPageOutcome:FireServer_TEST(player, "play_again", true)
+		remotes.StatsPageOutcome:FireServer_TEST(player, "explode", false)
+		remotes.StatsPageOutcome:FireServer_TEST(player, "close", "yes")
+		local seen = {}
+		for _, event in pairs(analyticsLog) do
+			if event.Kind == "custom" and event.Args[1] == "StatsPageOutcome"
+				and event.Player.UserId == 9500 then
+				local fields = event.Args[3]
+				table.insert(seen, fields[Enum.AnalyticsCustomFieldKeys.CustomField01.Name]
+					.. "/" .. fields[Enum.AnalyticsCustomFieldKeys.CustomField02.Name])
+			end
+		end
+		t.expect(#seen).toBe(2)
+		t.expect(seen[1]).toBe("close/stayed")
+		t.expect(seen[2]).toBe("play_again/browsed")
 	end)
 
 	t.test("a marathon journey is cut off with a marker, well under 4MB", function()

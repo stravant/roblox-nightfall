@@ -235,6 +235,21 @@ function ServerStatistics:UnitUsed(playerOrId: any, unitId: string, won: boolean
 	end
 end
 
+-- What a player did after a beaten netmap node dropped them on its stats
+-- page: how they left ('close' or 'play_again') and whether they browsed
+-- other nodes' stats while there ('browsed' or 'stayed')
+function ServerStatistics:StatsPageOutcome(playerOrId: any, exit: string, browsedOthers: boolean)
+	local player = resolve(playerOrId)
+	if player then
+		try("StatsPageOutcome", function()
+			AnalyticsService:LogCustomEvent(player, "StatsPageOutcome", 1, {
+				[Enum.AnalyticsCustomFieldKeys.CustomField01.Name] = exit,
+				[Enum.AnalyticsCustomFieldKeys.CustomField02.Name] = if browsedOthers then "browsed" else "stayed",
+			})
+		end)
+	end
+end
+
 function ServerStatistics:PlayerCheated(playerOrId: any, replayId: string?, reason: string?, contextInfo: string?)
 	local player = resolve(playerOrId)
 	if player then
