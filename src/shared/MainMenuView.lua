@@ -446,7 +446,10 @@ local function MainMenuContent(props: MainMenuState)
 				Name = "Node_" .. entry.Id,
 				LayoutOrder = i,
 				Size = UDim2.new(0, 64, 0, 48),
-				BackgroundColor3 = Color3.fromRGB(24, 26, 34),
+				-- Selection floods the whole thumbnail background blue
+				BackgroundColor3 = if selected
+					then Color3.fromRGB(0, 0, 128)
+					else Color3.fromRGB(24, 26, 34),
 				BorderSizePixel = 0,
 				AutoButtonColor = entry.Beaten,
 				Image = "",
@@ -543,6 +546,7 @@ local function MainMenuContent(props: MainMenuState)
 		local kLabelColW = if compact then 40 else 46
 		local kYouColW = if compact then 44 else 56
 		local kNameColsStart = kLabelColW + kYouColW
+		local kValueH = if compact then 16 else 22
 		local kGridStats = {
 			{ Key = "turns", Label = "Turns\nTaken", You = d.You and d.You.turns },
 			{ Key = "moves", Label = "Tiles\nMoved", You = d.You and d.You.moves },
@@ -556,7 +560,10 @@ local function MainMenuContent(props: MainMenuState)
 			Friend = { 0, kNameColsStart, 0.5, -kNameColsStart / 2 },
 			World = { 0.5, kNameColsStart / 2, 0.5, -kNameColsStart / 2 },
 		}
-		local gridHeight = kHeaderH + 4 + 3 * kRowHeight
+		-- Grid (and groove) height ends at the LAST row's content bottom, not
+		-- a full row pitch below it - the trailing inter-row spacing would
+		-- poke the grooves out past the bottom of the detail content
+		local gridHeight = kHeaderH + 4 + 2 * kRowHeight + kValueH + 14 + 2
 		local gridItems: { [string]: any } = {}
 		for _, columnName in ipairs(kColumns) do
 			local col = kCols[columnName]
@@ -594,7 +601,6 @@ local function MainMenuContent(props: MainMenuState)
 					value, holder = recordCell(if c == 2 then d.Friend else d.World, stat.Key)
 				end
 				local col = kCols[kColumns[c]]
-				local kValueH = if compact then 16 else 22
 				-- The numbers are the star: big, bold, right-aligned,
 				-- pinned to the top of the cell
 				gridItems[kColumns[c] .. stat.Key] = e("TextLabel", {
