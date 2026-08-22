@@ -507,15 +507,16 @@ function WarezView.new(warezNodeId: string, warez: { [string]: number })
 		insufficientVisible = false,
 		ownedCounts = ownedCounts(),
 		-- Larger viewports get a larger window (more shop rows visible at
-		-- native size), caps in line with the main menu's (500 tall, 600
-		-- wide) with the width growing in proportion so the window doesn't
-		-- read tall-and-narrow. Read LIVE at shop open: the viewport isn't
+		-- native size), floor and caps in line with the main menu's (which
+		-- sits 30px over its base and grows to 500 tall / 600 wide) with the
+		-- width growing in proportion so the window doesn't read
+		-- tall-and-narrow. Read LIVE at shop open: the viewport isn't
 		-- settled at module require time.
 		windowHeight = math.clamp(
-			workspace.CurrentCamera.ViewportSize.Y - 180, 210, 500),
+			workspace.CurrentCamera.ViewportSize.Y - 180, 240, 500),
 		windowWidth = math.clamp(math.min(
 			workspace.CurrentCamera.ViewportSize.X - 120,
-			380 + (math.clamp(workspace.CurrentCamera.ViewportSize.Y - 180, 210, 500) - 210) * 6 / 7
+			380 + (math.clamp(workspace.CurrentCamera.ViewportSize.Y - 180, 240, 500) - 210) * 6 / 7
 		), 380, 600),
 		programs = mPrograms,
 		onSelect = function(id: string)
