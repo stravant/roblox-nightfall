@@ -10,6 +10,7 @@
 -- {{t, event, detail?}}}.
 
 local Signal = require(game.ReplicatedStorage.Signal)
+local JourneyPlayback = require(game.ReplicatedStorage.JourneyPlayback)
 local ModalManager = require(game.ReplicatedStorage.ModalManager)
 local React = require(game.ReplicatedStorage.Packages.React)
 local StatefulRoot = require(game.ReplicatedStorage.Components.StatefulRoot)
@@ -145,8 +146,48 @@ local function sessionRow(summary: any, i: number, onPick: (key: string, title: 
 	})
 end
 
+-- Netmap node positions (id -> world XZ), for annotating pan events with the
+-- node the camera ended nearest to. Built lazily from the place's Netmap
+-- model; absent (tests, broken place) it just skips the annotation.
+local mNodePositionsCache: { { Id: string, X: number, Z: number } }? = nil
+local function getNodePositions(): { { Id: string, X: number, Z: number } }
+	if not mNodePositionsCache then
+		local positions = {}
+		pcall(function()
+			for _, ch in pairs(workspace.Netmap:GetChildren()) do
+				local p = ch:GetPivot().Position
+				table.insert(positions, { Id = ch.Name, X = p.X, Z = p.Z })
+			end
+		end)
+		mNodePositionsCache = positions
+	end
+	return mNodePositionsCache :: any
+end
+
+-- "120 studs to 80,-40" -> "120 studs to 80,-40 (near lm12)"
+local function annotatePanDetail(detail: string): string
+	local x, z = JourneyPlayback.ParsePan(detail)
+	if not x then
+		return detail
+	end
+	local bestId, bestDistSq = nil, math.huge
+	for _, node in pairs(getNodePositions()) do
+		local distSq = (node.X - x) ^ 2 + (node.Z - z) ^ 2
+		if distSq < bestDistSq then
+			bestId, bestDistSq = node.Id, distSq
+		end
+	end
+	if not bestId then
+		return detail
+	end
+	return detail .. " (near " .. bestId .. ")"
+end
+
 local function timelineRow(entry: any, previousT: number, i: number)
 	local t, event, detail = entry[1], entry[2], entry[3]
+	if event == "NetmapPan" and detail then
+		detail = annotatePanDetail(detail)
+	end
 	local gap = math.max(0, t - previousT)
 	return e("Frame", {
 		LayoutOrder = i,
@@ -312,6 +353,9 @@ local function JourneyViewerContent(props: ViewerState)
 end
 
 local JourneyViewerView = {}
+
+-- Exposed on the module for direct testing
+JourneyViewerView.AnnotatePanDetail = annotatePanDetail
 
 function JourneyViewerView.new(container: Instance, provider: any)
 	local this = {}

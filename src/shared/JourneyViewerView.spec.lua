@@ -82,4 +82,34 @@ return function(t)
 		end)
 		t.expect(ModalManager:IsModal()).toBeFalsy()
 	end)
+
+	t.test("pan details get annotated with the nearest netmap node", function()
+		-- Stub the place's netmap model (absent in the test place) for the
+		-- position lookup
+		local netmapFolder = Instance.new("Folder")
+		netmapFolder.Name = "Netmap"
+		local function node(id, x, z)
+			local part = Instance.new("Part")
+			part.Name = id
+			part.Anchored = true
+			part.CFrame = CFrame.new(x, 0, z)
+			part.Parent = netmapFolder
+		end
+		node("lm12", 80, -40)
+		node("ph16", 300, 200)
+		netmapFolder.Parent = workspace
+
+		local ok, err = pcall(function()
+			t.expect(JourneyViewerView.AnnotatePanDetail("120 studs to 75,-38"))
+				.toBe("120 studs to 75,-38 (near lm12)")
+			t.expect(JourneyViewerView.AnnotatePanDetail("40 studs to 280,190"))
+				.toBe("40 studs to 280,190 (near ph16)")
+			-- Unparseable details pass through untouched
+			t.expect(JourneyViewerView.AnnotatePanDetail("garbage")).toBe("garbage")
+		end)
+		netmapFolder:Destroy()
+		if not ok then
+			error(err, 0)
+		end
+	end)
 end
