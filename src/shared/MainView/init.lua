@@ -64,13 +64,13 @@ function MainView.new()
 	mTopbarGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 	-- Shared label for the topbar buttons: bold, properly centered (the old
 	-- Code font sat visibly off-center vertically)
-	local function topbarButtonLabel(text)
+	local function topbarButtonLabel(text, textColor, textSize)
 		return e("TextLabel", {
 			Size = UDim2.new(1, 0, 1, 0),
 			BackgroundTransparency = 1,
 			Font = Enum.Font.SourceSansBold,
-			TextSize = 18,
-			TextColor3 = Color3.new(0, 0, 0),
+			TextSize = textSize or 18,
+			TextColor3 = textColor or Color3.new(0, 0, 0),
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center,
 			Text = text,
@@ -160,23 +160,19 @@ function MainView.new()
 					Name = "StartGameButton",
 					LayoutOrder = 3,
 					Active = true,
-					AutomaticSize = Enum.AutomaticSize.X,
-					Size = UDim2.new(0, 0, 0, 36),
+					-- Fixed width with an explicit centered child label: the
+					-- old AutomaticSize.X + UIPadding + button-text combo
+					-- rendered the label visibly off-center
+					Size = UDim2.new(0, 150, 0, 36),
 					BackgroundColor3 = Color3.new(0.701961, 0, 0),
-					Font = Enum.Font.SourceSansBold,
-					TextSize = 19,
-					TextColor3 = Color3.new(1, 1, 1),
-					Text = "Start Databattle",
+					Text = "",
 					[React.Event.MouseButton1Click] = function()
 						if props.onStartClick then
 							props.onStartClick()
 						end
 					end,
 				}, {
-					UIPadding = e("UIPadding", {
-						PaddingLeft = UDim.new(0, 10),
-						PaddingRight = UDim.new(0, 10),
-					}),
+					TextLabel = topbarButtonLabel("Start Databattle", Color3.new(1, 1, 1), 19),
 				})
 				else nil,
 			LeaveButton = if props.leaveVisible
