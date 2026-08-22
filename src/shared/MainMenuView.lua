@@ -470,7 +470,7 @@ local function MainMenuContent(props: MainMenuState)
 		-- beneath for friend/world columns
 		local function recordCell(rec, statKey): (string, string)
 			if rec == "pending" then
-				return "…", ""
+				return "Loading...", ""
 			elseif type(rec) ~= "table" then
 				return "—", ""
 			end
