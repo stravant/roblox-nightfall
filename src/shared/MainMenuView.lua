@@ -518,7 +518,7 @@ local function MainMenuContent(props: MainMenuState)
 		-- separated by Win95 groove rulers.
 		local kGridTop = if compact then 40 else 82
 		local kHeaderH = if compact then 16 else 18
-		local kRowHeight = if compact then 30 else 44
+		local kRowHeight = if compact then 38 else 44
 		-- Column widths: label and You are FIXED and narrow (two short
 		-- lines / a bare number); Friend and World split everything left,
 		-- since they're the ones holding usernames
@@ -531,6 +531,7 @@ local function MainMenuContent(props: MainMenuState)
 			{ Key = "units", Label = "Scripts\nUsed", You = d.You and d.You.units },
 		}
 		local kColumns = { "You", "Friend", "World" }
+		local kColumnHeaders = { You = "You", Friend = "Friend", World = "World Record" }
 		-- {posScale, posOffset, sizeScale, sizeOffset} per value column
 		local kCols = {
 			You = { 0, kLabelColW, 0, kYouColW },
@@ -549,7 +550,7 @@ local function MainMenuContent(props: MainMenuState)
 				TextSize = 13,
 				TextColor3 = Color3.new(0, 0, 0),
 				TextXAlignment = Enum.TextXAlignment.Right,
-				Text = columnName,
+				Text = kColumnHeaders[columnName],
 			})
 		end
 		for r, stat in ipairs(kGridStats) do
@@ -574,9 +575,6 @@ local function MainMenuContent(props: MainMenuState)
 				else
 					value, holder = recordCell(if c == 2 then d.Friend else d.World, stat.Key)
 				end
-				if compact and holder ~= "" then
-					value = value .. " (" .. holder .. ")"
-				end
 				local col = kCols[kColumns[c]]
 				-- The numbers are the star: big, bold, right-aligned
 				gridItems[kColumns[c] .. stat.Key] = e("TextLabel", {
@@ -590,15 +588,15 @@ local function MainMenuContent(props: MainMenuState)
 					TextTruncate = Enum.TextTruncate.AtEnd,
 					Text = value,
 				})
-				if not compact and c > 1 then
-					-- Record holder beneath the number; the WORLD record
-					-- holder in bold - that name is an achievement
+				if c > 1 then
+					-- Record holder in small text beneath the number; the
+					-- WORLD record holder in bold - that name is an achievement
 					gridItems[kColumns[c] .. stat.Key .. "Name"] = e("TextLabel", {
-						Position = UDim2.new(col[1], col[2] + 6, 0, y + 27),
+						Position = UDim2.new(col[1], col[2] + 6, 0, y + (if compact then 21 else 27)),
 						Size = UDim2.new(col[3], col[4] - 14, 0, 12),
 						BackgroundTransparency = 1,
 						Font = if c == 3 then Enum.Font.SourceSansBold else Enum.Font.SourceSans,
-						TextSize = 11,
+						TextSize = if compact then 10 else 11,
 						TextColor3 = if c == 3 then Color3.new(0, 0, 0) else Color3.new(0.35, 0.35, 0.35),
 						TextXAlignment = Enum.TextXAlignment.Right,
 						TextTruncate = Enum.TextTruncate.AtEnd,
@@ -625,23 +623,6 @@ local function MainMenuContent(props: MainMenuState)
 			Size = UDim2.new(1, 0, 0, gridHeight),
 			BackgroundTransparency = 1,
 		}, gridItems)
-		statsPaneItems.BackHint = e("TextButton", {
-			AnchorPoint = Vector2.new(0, 1),
-			Position = UDim2.new(0, 0, 1, 0),
-			Size = UDim2.new(1, 0, 0, 16),
-			BackgroundTransparency = 1,
-			Font = Enum.Font.SourceSans,
-			TextSize = 13,
-			TextColor3 = Color3.new(0, 0, 0),
-			TextXAlignment = Enum.TextXAlignment.Left,
-			Text = "< Back to overview",
-			[React.Event.MouseButton1Click] = function()
-				if props.onStatsNodeClick and props.statsDetail then
-					-- Clicking the selected node toggles back to overview
-					props.onStatsNodeClick(props.statsDetail.Id)
-				end
-			end,
-		})
 	else
 		statsPaneItems = {
 			SummaryLabel = e("TextLabel", {
