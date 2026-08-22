@@ -515,30 +515,35 @@ local function MainMenuContent(props: MainMenuState)
 
 		-- Records grid, spreadsheet style: a narrow two-line stat-label
 		-- column, then a right-aligned column each for You / Friend / World,
-		-- separated by Win95 groove rulers. Value columns split the width
-		-- remaining after the label column: column c's left edge is
-		-- kLabelColW + (c-1)/3 * (width - kLabelColW), which UDim2 expresses
-		-- as scale (c-1)/3 with offset kLabelColW * (1 - (c-1)/3).
+		-- separated by Win95 groove rulers.
 		local kGridTop = if compact then 40 else 82
 		local kHeaderH = if compact then 16 else 18
 		local kRowHeight = if compact then 30 else 44
-		local kLabelColW = if compact then 48 else 54
+		-- Column widths: label and You are FIXED and narrow (two short
+		-- lines / a bare number); Friend and World split everything left,
+		-- since they're the ones holding usernames
+		local kLabelColW = if compact then 40 else 46
+		local kYouColW = if compact then 44 else 56
+		local kNameColsStart = kLabelColW + kYouColW
 		local kGridStats = {
 			{ Key = "turns", Label = "Turns\nTaken", You = d.You and d.You.turns },
 			{ Key = "moves", Label = "Tiles\nMoved", You = d.You and d.You.moves },
 			{ Key = "units", Label = "Scripts\nUsed", You = d.You and d.You.units },
 		}
 		local kColumns = { "You", "Friend", "World" }
+		-- {posScale, posOffset, sizeScale, sizeOffset} per value column
+		local kCols = {
+			You = { 0, kLabelColW, 0, kYouColW },
+			Friend = { 0, kNameColsStart, 0.5, -kNameColsStart / 2 },
+			World = { 0.5, kNameColsStart / 2, 0.5, -kNameColsStart / 2 },
+		}
 		local gridHeight = kHeaderH + 4 + 3 * kRowHeight
-		local function columnX(c: number): (number, number)
-			return (c - 1) / 3, kLabelColW * (1 - (c - 1) / 3)
-		end
 		local gridItems: { [string]: any } = {}
-		for c, columnName in ipairs(kColumns) do
-			local xScale, xOff = columnX(c)
+		for _, columnName in ipairs(kColumns) do
+			local col = kCols[columnName]
 			gridItems["Head" .. columnName] = e("TextLabel", {
-				Position = UDim2.new(xScale, xOff + 6, 0, 0),
-				Size = UDim2.new(1 / 3, -(kLabelColW / 3) - 14, 0, kHeaderH - 2),
+				Position = UDim2.new(col[1], col[2] + 6, 0, 0),
+				Size = UDim2.new(col[3], col[4] - 14, 0, kHeaderH - 2),
 				BackgroundTransparency = 1,
 				Font = Enum.Font.SourceSansBold,
 				TextSize = 13,
@@ -572,12 +577,11 @@ local function MainMenuContent(props: MainMenuState)
 				if compact and holder ~= "" then
 					value = value .. " (" .. holder .. ")"
 				end
-				local xScale, xOff = columnX(c)
-				local cellWidth = UDim2.new(1 / 3, -(kLabelColW / 3) - 14, 0, 0)
+				local col = kCols[kColumns[c]]
 				-- The numbers are the star: big, bold, right-aligned
 				gridItems[kColumns[c] .. stat.Key] = e("TextLabel", {
-					Position = UDim2.new(xScale, xOff + 6, 0, y + 2),
-					Size = UDim2.new(cellWidth.X.Scale, cellWidth.X.Offset, 0, if compact then 20 else 24),
+					Position = UDim2.new(col[1], col[2] + 6, 0, y + 2),
+					Size = UDim2.new(col[3], col[4] - 14, 0, if compact then 20 else 24),
 					BackgroundTransparency = 1,
 					Font = Enum.Font.SourceSansBold,
 					TextSize = if compact then 15 else 22,
@@ -590,8 +594,8 @@ local function MainMenuContent(props: MainMenuState)
 					-- Record holder beneath the number; the WORLD record
 					-- holder in bold - that name is an achievement
 					gridItems[kColumns[c] .. stat.Key .. "Name"] = e("TextLabel", {
-						Position = UDim2.new(xScale, xOff + 6, 0, y + 27),
-						Size = UDim2.new(cellWidth.X.Scale, cellWidth.X.Offset, 0, 12),
+						Position = UDim2.new(col[1], col[2] + 6, 0, y + 27),
+						Size = UDim2.new(col[3], col[4] - 14, 0, 12),
 						BackgroundTransparency = 1,
 						Font = if c == 3 then Enum.Font.SourceSansBold else Enum.Font.SourceSans,
 						TextSize = 11,
@@ -605,10 +609,10 @@ local function MainMenuContent(props: MainMenuState)
 		end
 		-- Win95 groove rulers: vertical between the label column and each
 		-- value column, horizontal under the header and between rows
-		for b = 0, 2 do
-			local xScale, xOff = columnX(b + 1)
+		for b, columnName in ipairs(kColumns) do
+			local col = kCols[columnName]
 			groove(gridItems, "VRule" .. b,
-				UDim2.new(xScale, xOff, 0, 0), UDim2.new(0, 1, 0, gridHeight), true)
+				UDim2.new(col[1], col[2], 0, 0), UDim2.new(0, 1, 0, gridHeight), true)
 		end
 		groove(gridItems, "HRuleHead",
 			UDim2.new(0, 0, 0, kHeaderH), UDim2.new(1, -2, 0, 1), false)
