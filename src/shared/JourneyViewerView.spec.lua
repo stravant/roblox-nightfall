@@ -84,10 +84,10 @@ return function(t)
 	end)
 
 	t.test("pan details get annotated with the nearest netmap node", function()
-		-- Stub the place's netmap model (absent in the test place) for the
-		-- position lookup
+		-- Stub the live view's hit-area folder (absent in the test place)
+		-- for the position lookup
 		local netmapFolder = Instance.new("Folder")
-		netmapFolder.Name = "Netmap"
+		netmapFolder.Name = "NetmapNodeHitAreas"
 		local function node(id, x, z)
 			local part = Instance.new("Part")
 			part.Name = id
@@ -97,9 +97,10 @@ return function(t)
 		end
 		node("lm12", 80, -40)
 		node("ph16", 300, 200)
-		-- Art clones sharing the container must be ignored, even when closer
+		-- Non-node parts sharing the container must be ignored, even when
+		-- closer (the folder also holds "_AnimateHit" query proxies)
+		node("lm12_AnimateHit", 75, -38)
 		node("SecurityKey", 75, -38)
-		node("lm", 75, -38)
 		node("ph_disabled", 280, 190)
 		netmapFolder.Parent = workspace
 

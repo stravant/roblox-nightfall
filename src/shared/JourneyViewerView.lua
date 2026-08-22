@@ -148,17 +148,19 @@ local function sessionRow(summary: any, i: number, onPick: (key: string, title: 
 end
 
 -- Netmap node positions (id -> world XZ), for annotating pan events with the
--- node the camera ended nearest to. Built lazily from the place's Netmap
--- model, keeping only children named by a LOGICAL node id - the live view
--- fills the same container with art clones named things like "lm",
--- "ph_disabled", and "SecurityKey". Absent (tests, broken place) it just
--- skips the annotation.
+-- node the camera ended nearest to. Read lazily from the live view's
+-- NetmapNodeHitAreas folder - its parts are named by LOGICAL node id.
+-- (workspace.Netmap is no good: the view destroys the id-named placeholders
+-- during setup and fills the container with art clones named "lm",
+-- "ph_disabled", "SecurityKey"...) Absent (tests, broken place) it just
+-- skips the annotation. The "_AnimateHit" query proxies in the same folder
+-- fail the Netmap.ById check.
 local mNodePositionsCache: { { Id: string, X: number, Z: number } }? = nil
 local function getNodePositions(): { { Id: string, X: number, Z: number } }
 	if not mNodePositionsCache then
 		local positions = {}
 		pcall(function()
-			for _, ch in pairs(workspace.Netmap:GetChildren()) do
+			for _, ch in pairs(workspace.NetmapNodeHitAreas:GetChildren()) do
 				if Netmap.ById[ch.Name] then
 					local p = ch:GetPivot().Position
 					table.insert(positions, { Id = ch.Name, X = p.X, Z = p.Z })
