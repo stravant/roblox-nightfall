@@ -185,7 +185,6 @@ local function commandListEntry(
 			Font = Enum.Font.SourceSansBold,
 			TextSize = 14,
 			TextColor3 = Color3.new(1, 1, 1),
-			TextStrokeColor3 = Color3.new(1, 1, 1),
 			Text = "Insufficient Size",
 			Visible = entry.NotEnoughSize,
 		}),

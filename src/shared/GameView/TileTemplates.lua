@@ -106,7 +106,10 @@ function TileTemplates.PickupCreditsWithAmount(): ImageLabel
 	amount.Font = Enum.Font.Code
 	amount.TextSize = 16
 	amount.TextColor3 = Color3.new(0.0470588, 1, 0)
-	amount.TextStrokeTransparency = 0
+	local amountStroke = Instance.new("UIStroke")
+	amountStroke.Color = Color3.new(0, 0, 0)
+	amountStroke.Thickness = 1.5
+	amountStroke.Parent = amount
 	amount.Parent = pickup
 	return pickup
 end

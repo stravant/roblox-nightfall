@@ -869,8 +869,11 @@ function MainView.new()
 		content.Font = Enum.Font.SourceSans
 		content.TextSize = 14
 		content.TextColor3 = Color3.new(0, 1, 0.968628)
-		content.TextStrokeTransparency = 0
 		content.TextWrapped = true
+		local contentStroke = Instance.new("UIStroke")
+		contentStroke.Color = Color3.new(0, 0, 0)
+		contentStroke.Thickness = 1.5
+		contentStroke.Parent = content
 		content.TextXAlignment = Enum.TextXAlignment.Left
 		content.TextYAlignment = Enum.TextYAlignment.Top
 		content.Text = title.."\n"..body

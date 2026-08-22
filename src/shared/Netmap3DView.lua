@@ -15,8 +15,10 @@ local Netmap3DView = {}
 -- topbarCredits interface); only the transient credit delta text is created
 -- here because it's a fire-and-forget TweenPosition animation.
 
--- Replacement for the old script.CreditUpdateText template clone
-local function makeCreditUpdateText()
+-- Replacement for the old script.CreditUpdateText template clone.
+-- Returns the label and its UIStroke (UIStroke, not the legacy TextStroke:
+-- it renders a clean crisp outline).
+local function makeCreditUpdateText(): (TextLabel, UIStroke)
 	local text = Instance.new("TextLabel")
 	text.Name = "CreditUpdateText"
 	text.BackgroundTransparency = 1
@@ -25,11 +27,14 @@ local function makeCreditUpdateText()
 	text.Font = Enum.Font.Code
 	text.TextSize = 20
 	text.TextColor3 = Color3.new(1, 0, 0.0156863)
-	text.TextStrokeColor3 = Color3.new(1, 1, 1)
-	text.TextStrokeTransparency = 0.5
 	text.TextWrapped = true
 	text.TextXAlignment = Enum.TextXAlignment.Right
-	return text
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.new(1, 1, 1)
+	stroke.Transparency = 0.5
+	stroke.Thickness = 1.5
+	stroke.Parent = text
+	return text, stroke
 end
 
 local NETMAP_NODE_MODELS = workspace.Nodes
@@ -552,9 +557,11 @@ function Netmap3DView.new(topbarCredits)
 			lockText.Font = Enum.Font.SourceSansBold
 			lockText.TextScaled = true
 			lockText.TextColor3 = Color3.new(1, 1, 1)
-			lockText.TextStrokeColor3 = Color3.new(0, 0, 0)
-			lockText.TextStrokeTransparency = 0
 			lockText.Text = lockedText
+			local lockStroke = Instance.new("UIStroke")
+			lockStroke.Color = Color3.new(0, 0, 0)
+			lockStroke.Thickness = 1.5
+			lockStroke.Parent = lockText
 			lockText.Parent = overlay
 		end
 
@@ -1031,14 +1038,14 @@ function Netmap3DView.new(topbarCredits)
 			local inset = mTopbarCredits.GetInset()
 			if mLastShownCredits ~= nil and inset then
 				local delta = credits - mLastShownCredits
-				local text = makeCreditUpdateText()
+				local text, stroke = makeCreditUpdateText()
 				if delta > 0 then
 					text.Text = "+"..delta
 					text.TextColor3 = Color3.new(0, 0.4, 0)
 				else
 					text.Text = ""..delta
 					text.TextColor3 = Color3.new(1, 0, 0)
-					text.TextStrokeColor3 = Color3.new(0.5, 0, 0)
+					stroke.Color = Color3.new(0.5, 0, 0)
 				end
 				text.Parent = inset
 				text:TweenPosition(UDim2.new(0, 4, 1.1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 1, false, function()

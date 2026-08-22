@@ -162,11 +162,15 @@ local function sectionLabel(text: string, position: UDim2)
 		Font = Enum.Font.SourceSans,
 		TextSize = 18,
 		TextColor3 = Color3.new(0, 0, 0),
-		TextStrokeColor3 = Color3.new(1, 1, 1),
-		TextStrokeTransparency = 0.9,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextWrapped = true,
 		Text = text,
+	}, {
+		UIStroke = e("UIStroke", {
+			Color = Color3.new(1, 1, 1),
+			Transparency = 0.9,
+			Thickness = 1.5,
+		}),
 	})
 end
 
@@ -178,10 +182,14 @@ local function skipsCountText(text: string, position: UDim2)
 		Font = Enum.Font.SourceSansBold,
 		TextSize = 20,
 		TextColor3 = Color3.new(0, 0, 0),
-		TextStrokeColor3 = Color3.new(1, 1, 1),
-		TextStrokeTransparency = 0.8,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = text,
+	}, {
+		UIStroke = e("UIStroke", {
+			Color = Color3.new(1, 1, 1),
+			Transparency = 0.8,
+			Thickness = 1.5,
+		}),
 	})
 end
 

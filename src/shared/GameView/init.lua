@@ -213,14 +213,18 @@ local function GameViewChrome(props)
 					Font = Enum.Font.SourceSans,
 					TextSize = 18,
 					TextColor3 = Color3.new(0, 0, 0),
-					TextStrokeColor3 = Color3.new(1, 1, 1),
-					TextStrokeTransparency = 0.9,
 					TextWrapped = true,
 					TextYAlignment = Enum.TextYAlignment.Top,
 					Text = if props.endGameWon == true
 						then "You won the battle!"
 						elseif props.endGameWon == false then "You were defeated."
 						else "",
+				}, {
+					UIStroke = e("UIStroke", {
+						Color = Color3.new(1, 1, 1),
+						Transparency = 0.9,
+						Thickness = 1.5,
+					}),
 				}),
 				-- Re-beat a node with better stats: celebrate them
 				ImprovementText = if props.improvementText
@@ -906,8 +910,12 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		finger.BackgroundTransparency = 1
 		finger.Text = "\u{1F446}" -- pointing finger
 		finger.TextSize = 44
-		finger.TextStrokeTransparency = 0.6
 		finger.ZIndex = 11
+		local fingerStroke = Instance.new("UIStroke")
+		fingerStroke.Color = Color3.new(0, 0, 0)
+		fingerStroke.Transparency = 0.6
+		fingerStroke.Thickness = 1.5
+		fingerStroke.Parent = finger
 		finger.Visible = false
 		finger.Parent = mGui
 		local startTime = os.clock()

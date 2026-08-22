@@ -50,9 +50,13 @@ local function skipOption(image: string, label: string, xScale: number, onClick:
 			Font = Enum.Font.ArialBold,
 			TextSize = 20,
 			TextColor3 = Color3.new(0, 0.501961, 0),
-			TextStrokeColor3 = Color3.new(0.384314, 1, 0),
-			TextStrokeTransparency = 0.8,
 			Text = label,
+		}, {
+			UIStroke = e("UIStroke", {
+				Color = Color3.new(0.384314, 1, 0),
+				Transparency = 0.8,
+				Thickness = 1.5,
+			}),
 		}),
 	})
 end
