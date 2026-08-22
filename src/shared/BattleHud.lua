@@ -35,13 +35,13 @@ local kProgramDragThresholdPx = 10
 -- Command text generation (same wording as the old views)
 --------------------------------------------------------------------------------
 
-local function sectorStr(sectors: number): string
-	if sectors == 0 then
-		return "zero sectors"
-	elseif sectors == 1 then
-		return "a sector"
+local function squareStr(squares: number): string
+	if squares == 0 then
+		return "zero squares"
+	elseif squares == 1 then
+		return "a square"
 	else
-		return sectors .. " sectors"
+		return squares .. " squares"
 	end
 end
 
@@ -52,7 +52,7 @@ local function commandBodyText(unitName: string, command: any): string
 	elseif command.Type == "zero" then
 		bodyText = "Remove a tile from the grid"
 	elseif command.Type == "damage" then
-		bodyText = "Delete " .. sectorStr(command.Amount) .. " from the target"
+		bodyText = "Delete " .. squareStr(command.Amount) .. " from the target"
 	elseif command.Type == "speedMod" then
 		if command.Amount > 0 then
 			bodyText = "Increase target speed by " .. command.Amount
@@ -62,12 +62,12 @@ local function commandBodyText(unitName: string, command: any): string
 	elseif command.Type == "sizeMod" then
 		bodyText = "Increase target max size by " .. command.Amount
 	elseif command.Type == "grow" then
-		bodyText = "Add " .. command.Amount .. " sectors to the target"
+		bodyText = "Add " .. command.Amount .. " squares to the target"
 	else
 		bodyText = ""
 	end
 	if command.Cost > 0 then
-		bodyText = bodyText .. ", and delete " .. sectorStr(command.Cost) .. " from " .. unitName
+		bodyText = bodyText .. ", and delete " .. squareStr(command.Cost) .. " from " .. unitName
 	end
 	bodyText = bodyText .. "."
 	if command.SizeReq > 0 then
@@ -153,7 +153,8 @@ local function commandButton(entry: CommandEntry, selected: boolean, onClick: (e
 		else Color3.new(0, 0, 0)
 	return e(WindowsButton, {
 		Name = entry.Key,
-		Size = UDim2.new(0, 160, 0, 54),
+		-- Wide/tall enough for the longest wrapped descriptions
+		Size = UDim2.new(0, 176, 0, 66),
 		-- Attacks first, the move action last
 		LayoutOrder = entry.IsMove and 1 or 0,
 		ImageColor3 = if selected
@@ -380,12 +381,12 @@ local function BattleHudContent(props: HudState)
 	-- are right handed, and dragging scripts out of a left-edge list meant
 	-- crossing the board with the hand covering it.
 	local commandCount = #props.commands
-	local commandRowHeight = commandCount * 54 + math.max(0, commandCount - 1) * 8
+	local commandRowHeight = commandCount * 66 + math.max(0, commandCount - 1) * 8
 
 	return e(React.Fragment, nil, {
 		LeftColumn = e("Frame", {
 			Position = UDim2.new(0, 12, 0, 12),
-			Size = UDim2.new(0, 160, 1, -24),
+			Size = UDim2.new(0, 176, 1, -24),
 			BackgroundTransparency = 1,
 			ZIndex = 3,
 		}, {
@@ -397,14 +398,14 @@ local function BattleHudContent(props: HudState)
 			Padding = UDim.new(0, 8),
 		}),
 		CommandRow = e("Frame", {
-			Size = UDim2.new(0, 160, 0, commandRowHeight),
+			Size = UDim2.new(0, 176, 0, commandRowHeight),
 			BackgroundTransparency = 1,
 			LayoutOrder = 2,
 		}, commandItems),
 		InfoWindow = if pane
 			then windowChrome(pane.name, {
 				Name = "InfoWindow",
-				Size = UDim2.new(0, 160, 0, 130),
+				Size = UDim2.new(0, 176, 0, 130),
 				LayoutOrder = 1,
 			}, {
 				UnitImage = e("ImageLabel", {

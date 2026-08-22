@@ -1175,7 +1175,7 @@ function GameState.new(placeData, unitInventory, delayFunc)
 		-- EXCEPT deliberate suicide commands (Kamikazee / Self-Destruct),
 		-- marked by a cost the unit could never satisfy (>= its max size).
 		if #unit.Tail <= command.Cost and command.Cost < unit.Definition.MaxSize then
-			invalidAction("Attack costs "..command.Cost.." sectors but the unit only has "..#unit.Tail)
+			invalidAction("Attack costs "..command.Cost.." squares but the unit only has "..#unit.Tail)
 			return
 		end
 		

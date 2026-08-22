@@ -186,7 +186,7 @@ function Tutorial:PlayTutorial(container, netmapView, mainDialogue, mainMenu, to
 	waitForClick(4, 5)
 	tutorialDialogue:SetText("The highlighted squares show where it can move. Move here.")
 	waitForClick(5, 5)
-	tutorialDialogue:SetText("Scripts stretch out as they move. Each square is a sector, up to the script's max size. One more move: click here.")
+	tutorialDialogue:SetText("Scripts stretch out as they move, growing up to their max size. One more move: click here.")
 	waitForClick(6, 5)
 	-- Select the attack for the player; making them click Slice here feels bad
 	gameView:TutorialSelectCommand('slice')

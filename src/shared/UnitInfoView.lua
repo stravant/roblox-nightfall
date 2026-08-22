@@ -389,13 +389,13 @@ function UnitInfoView.new(container: Instance, availablePrograms: { any })
 		mTutorialArrow:Hide()
 	end
 
-	local function sectorStr(sectors: number): string
-		if sectors == 0 then
-			return "zero sectors"
-		elseif sectors == 1 then
-			return "a sector"
+	local function squareStr(squares: number): string
+		if squares == 0 then
+			return "zero squares"
+		elseif squares == 1 then
+			return "a square"
 		else
-			return sectors .. " sectors"
+			return squares .. " squares"
 		end
 	end
 
@@ -454,16 +454,16 @@ function UnitInfoView.new(container: Instance, availablePrograms: { any })
 			elseif command.Type == "zero" then
 				bodyText = "Remove a tile from the grid"
 			elseif command.Type == "damage" then
-				bodyText = "Delete " .. sectorStr(command.Amount) .. " from the target"
+				bodyText = "Delete " .. squareStr(command.Amount) .. " from the target"
 			elseif command.Type == "speedMod" then
 				bodyText = "Modify target speed by " .. command.Amount
 			elseif command.Type == "sizeMod" then
 				bodyText = "Increase target max size by " .. command.Amount
 			elseif command.Type == "grow" then
-				bodyText = "Add " .. command.Amount .. " sectors to the target"
+				bodyText = "Add " .. command.Amount .. " squares to the target"
 			end
 			if command.Cost > 0 then
-				bodyText = bodyText .. ", and delete " .. sectorStr(command.Cost) .. " from " .. unit.Definition.Name
+				bodyText = bodyText .. ", and delete " .. squareStr(command.Cost) .. " from " .. unit.Definition.Name
 			end
 			bodyText = bodyText .. "."
 			if command.SizeReq > 0 then

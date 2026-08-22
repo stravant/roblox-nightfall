@@ -54,7 +54,7 @@ return scripts{
     --======================================================================--
     script('bitman', "Bit-Man", 3, 3,
 		ScriptColors.LightGreen, 'rbxassetid://1338011879',
-        "Make sectors of the grid appear or disappear... forever!",
+        "Make squares of the grid appear or disappear... forever!",
         command('zero', "Zero", 'zero', 0, 0, 1, 1),
         command('one', "One", 'one', 0, 0, 1, 1));    
 

@@ -124,7 +124,7 @@ local function commandSummary(command: any): string
 	elseif command.Type == "sizeMod" then
 		effect = "+" .. command.Amount .. " max size"
 	elseif command.Type == "grow" then
-		effect = "+" .. command.Amount .. " sectors"
+		effect = "+" .. command.Amount .. " squares"
 	else
 		effect = ""
 	end
