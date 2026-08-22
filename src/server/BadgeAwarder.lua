@@ -49,6 +49,52 @@ function BadgeAwarder:Award(player: any, badgeKey: string)
 	end)
 end
 
+-- Award only the badges the player doesn't already own, after one batched
+-- ownership check. The plain Award path deliberately skips the check: for
+-- event-driven awards the player almost never owns the badge yet, and
+-- AwardBadge no-ops on owned ones anyway - but it WARNS, so the login-time
+-- retroactive sweep (which mostly re-derives owned badges) must pre-filter
+-- to keep the live log clean.
+function BadgeAwarder:AwardMissing(player: any, badgeKeys: { string })
+	local ids: { number } = {}
+	local keyById: { [number]: string } = {}
+	for _, key in pairs(badgeKeys) do
+		local id = Badges.Ids[key]
+		if id ~= nil and id ~= 0 then
+			table.insert(ids, id)
+			keyById[id] = key
+		end
+	end
+	if #ids == 0 then
+		return
+	end
+	task.spawn(function()
+		local owned: { [number]: boolean } = {}
+		for i = 1, #ids, 10 do
+			local batch = {}
+			for j = i, math.min(i + 9, #ids) do
+				table.insert(batch, ids[j])
+			end
+			local ok, result = pcall(function()
+				return BadgeService:CheckUserBadgesAsync(player.UserId, batch)
+			end)
+			if not ok then
+				-- Can't verify ownership: skip this pass rather than spam
+				-- re-awards (the next login tries again)
+				return
+			end
+			for _, id in pairs(result) do
+				owned[id] = true
+			end
+		end
+		for _, id in pairs(ids) do
+			if not owned[id] then
+				BadgeAwarder:Award(player, keyById[id])
+			end
+		end
+	end)
+end
+
 -- The badge keys awarded to this player during this server's lifetime. Used
 -- to show freshly earned badges immediately even if the badge web API hasn't
 -- caught up with (or a player's ownership was cached before) the award.
