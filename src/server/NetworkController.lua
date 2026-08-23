@@ -32,6 +32,9 @@ function NetworkController.install(remotes)
 	-- Per session: the last databattle each player attempted ({NodeId, Won}),
 	-- reported by the LastPlayed analytic when they leave
 	local LastBattleCache = {}
+	-- Per-player cache of assembled node records (the friend sweep is the
+	-- expensive part); dropped when the player wins (records may improve)
+	local NodeRecordsCache = {}
 
 	-- Session journey recording (the UX study tool)
 	JourneyService.install(remotes)
@@ -107,7 +110,13 @@ function NetworkController.install(remotes)
 		-- If we successfully processed it, save
 		if result.Valid then
 			print("Replay was good, saving player data")
-			DataStoreService:SavePlayerDataAsync(player, playerData)		
+			DataStoreService:SavePlayerDataAsync(player, playerData)
+		end
+
+		-- A win can improve records: drop this player's assembled-records
+		-- cache so their next stats fetch shows the best they just set
+		if result.Valid and result.Won then
+			NodeRecordsCache[player] = nil
 		end
 	end)
 
@@ -302,9 +311,6 @@ function NetworkController.install(remotes)
 		return name
 	end
 
-	-- Per-player cache of assembled node records (the friend sweep is the
-	-- expensive part; one assembly per node per session is plenty)
-	local NodeRecordsCache = {}
 	remotes.GetNodeRecords.OnServerInvoke = function(player, nodeId)
 		if type(nodeId) ~= "string" or not Netmap.ById[nodeId] then
 			return nil
@@ -454,6 +460,9 @@ function NetworkController.install(remotes)
 	PlayersService.PlayerRemoving:connect(function(player)
 		local playerData = PlayerDataCache[player]
 		if playerData then
+			-- Any pending debounced save writes now: a quick rejoin (same
+			-- server especially) must read this session's final state
+			DataStoreService:FlushPlayerSave(player)
 			ServerStatistics:PlayerLeft(player, playerData:HasBeatenTutorial())
 			-- Where the session ended: the last battle attempted and its
 			-- outcome (empty fields pre-tutorial / with no battles played)

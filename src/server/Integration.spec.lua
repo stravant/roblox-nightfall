@@ -643,6 +643,23 @@ return function(t)
 		-- used to wipe it, which left every fresh session replay-less)
 		remotes.Load:InvokeServer_TEST(rival)
 		t.expect(remotes.GetNodeReplay:InvokeServer_TEST(rival, "lm12")).toBe(kL12WinningReplay)
+
+		-- Same-server record freshness: the session world-record cache is
+		-- patched as records are written, so a player who sets a best and
+		-- rejoins this server sees it (the cache otherwise never expires)
+		local cachedA = remotes.GetNodeRecords:InvokeServer_TEST(rival, "lm12")
+		local before = cachedA.World.turns.Value
+		DataStoreService:UpdateNodeRecords("lm12", 4242, { turns = before - 1 })
+		local value, holder = DataStoreService:GetWorldRecord("lm12", "turns")
+		t.expect(value).toBe(before - 1)
+		t.expect(holder).toBe(4242)
+		-- The rival's ASSEMBLED records are still session-cached (old value)...
+		t.expect(remotes.GetNodeRecords:InvokeServer_TEST(rival, "lm12").World.turns.Value).toBe(before)
+		-- ...until a fresh win drops the winner's cache: the next fetch
+		-- re-assembles and shows the new record
+		remotes.ProcessReplay:FireServer_TEST(rival, kL12WinningReplay)
+		task.wait(0.1)
+		t.expect(remotes.GetNodeRecords:InvokeServer_TEST(rival, "lm12").World.turns.Value).toBe(before - 1)
 	end)
 
 	t.test("skip-sweeping the netmap awards the progression badges", function()

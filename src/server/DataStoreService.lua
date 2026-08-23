@@ -104,10 +104,12 @@ function DataStoreService:SavePlayerDataAsync(player, serverPlayerData)
 		state.Writing = true
 		task.spawn(function()
 			while state.Pending do
-				local sinceLast = os.clock() - state.LastWrite
-				if sinceLast < kSaveDebounceSeconds then
-					task.wait(kSaveDebounceSeconds - sinceLast)
+				-- Debounce in short steps so a flush (player leaving) can
+				-- cut the wait short
+				while os.clock() - state.LastWrite < kSaveDebounceSeconds and not state.Flush do
+					task.wait(0.25)
 				end
+				state.Flush = false
 				local data = state.Pending
 				state.Pending = nil
 				local st, err = pcall(function()
@@ -122,6 +124,20 @@ function DataStoreService:SavePlayerDataAsync(player, serverPlayerData)
 		end)
 	end
 	return true
+end
+
+-- Skip any remaining debounce on the player's pending save (called as they
+-- leave): a quick rejoin - same server especially - must read the state
+-- they just left with, not a snapshot from before the debounce window
+function DataStoreService:FlushPlayerSave(player)
+	local st, key = pcall(playerKey, player)
+	if not st then
+		return
+	end
+	local state = mSaveStates[key]
+	if state and state.Pending then
+		state.Flush = true
+	end
 end
 
 -- Node stats datastores
@@ -199,12 +215,24 @@ local function recordStoreName(nodeId, stat)
 	return PREFIX .. "_rec_" .. stat .. "_" .. nodeId
 end
 
+-- World record session cache (nodeId_stat -> {Value, UserId}); declared
+-- here so record WRITES can keep it honest (see UpdateNodeRecords)
+local mWorldRecordCache = {}
+
 -- Write improved personal bests (improved = {turns=?, moves=?, units=?},
 -- only the stats that got better). Fire-and-forget.
 function DataStoreService:UpdateNodeRecords(nodeId, userId, improved)
 	for _, stat in pairs(kRecordStats) do
 		local value = improved[stat]
 		if value then
+			-- Keep the session world-record cache honest: it never expires,
+			-- so without this a player who just set the record still saw the
+			-- old one on this server (even after rejoining it)
+			local cacheKey = nodeId .. "_" .. stat
+			local cached = mWorldRecordCache[cacheKey]
+			if not cached or value < cached.Value then
+				mWorldRecordCache[cacheKey] = { Value = value, UserId = userId }
+			end
 			spawn(function()
 				local st, err = pcall(function()
 					DataStore:GetOrderedDataStore(recordStoreName(nodeId, stat))
@@ -218,8 +246,8 @@ function DataStoreService:UpdateNodeRecords(nodeId, userId, improved)
 	end
 end
 
--- World record for one node+stat: (value, userId) or nil. Session-cached.
-local mWorldRecordCache = {}
+-- World record for one node+stat: (value, userId) or nil. Session-cached
+-- (the cache lives above UpdateNodeRecords, which patches it on writes).
 function DataStoreService:GetWorldRecord(nodeId, stat)
 	local cacheKey = nodeId .. "_" .. stat
 	local cached = mWorldRecordCache[cacheKey]
