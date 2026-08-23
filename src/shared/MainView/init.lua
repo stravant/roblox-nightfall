@@ -670,10 +670,13 @@ function MainView.new()
 			if didStart and not skipped then
 				if didWin then
 					LocalPlayerData:RecordNodeCompletion(nodeId, gameState:GetPlayStats())
-					-- Feed the stats thumbnail playback with this fresh win
+					-- Feed the stats thumbnail playback with this fresh win,
+					-- and drop the node's cached records - the win may have
+					-- set new ones (the server busts its caches likewise)
 					if replay then
 						mMainMenu:SetNodeReplay(nodeId, replay)
 					end
+					mMainMenu:InvalidateNodeRecords(nodeId)
 				else
 					LocalPlayerData:RecordNodeAttempt(nodeId)
 				end

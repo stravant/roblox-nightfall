@@ -252,6 +252,7 @@ return function(t)
 		FunnelStep = mockRemoteEvent("FunnelStep"),
 		ServerError = mockRemoteEvent("ServerError"),
 		GetNodeRecords = mockRemoteFunction("GetNodeRecords"),
+		GetKnownNodeRecords = mockRemoteFunction("GetKnownNodeRecords"),
 		GetNodeReplay = mockRemoteFunction("GetNodeReplay"),
 		GetBadges = mockRemoteFunction("GetBadges"),
 		SaveSettings = mockRemoteEvent("SaveSettings"),
@@ -1149,6 +1150,24 @@ return function(t)
 		t.expect(#seen).toBe(2)
 		t.expect(seen[1]).toBe("close/stayed")
 		t.expect(seen[2]).toBe("play_again/browsed")
+	end)
+
+	t.test("known-records prefetch returns only what's already cached", function()
+		local fresh = makePlayer(9700, "Prefetcher")
+		remotes.Load:InvokeServer_TEST(fresh)
+		-- No assembled per-player cache yet: lm12 comes back world-only
+		-- (the session world-record cache is warm from the records test),
+		-- marked Partial so the client still does a full fetch on selection
+		local known = remotes.GetKnownNodeRecords:InvokeServer_TEST(fresh)
+		t.expect(known.lm12 ~= nil).toBeTruthy()
+		t.expect(known.lm12.Partial).toBeTruthy()
+		t.expect(known.lm12.World.turns ~= nil).toBeTruthy()
+		t.expect(known.lm12.Friend).toBe(nil)
+		-- After a real fetch the full assembly is known (Friend included)
+		remotes.GetNodeRecords:InvokeServer_TEST(fresh, "lm12")
+		known = remotes.GetKnownNodeRecords:InvokeServer_TEST(fresh)
+		t.expect(known.lm12.Partial).toBe(nil)
+		t.expect(known.lm12.Friend ~= nil).toBeTruthy()
 	end)
 
 	t.test("leaving logs the session's last databattle", function()

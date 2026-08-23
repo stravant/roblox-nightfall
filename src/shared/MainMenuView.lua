@@ -1121,14 +1121,56 @@ function MainMenuView.new(container: Instance)
 		end
 	end
 
+	-- Local cache of fetched/prefetched node records ({Friend, World,
+	-- Partial?}). Partial entries (world-only, prefetched from the server's
+	-- session cache) still get a full fetch on selection; full entries skip
+	-- the round trip entirely.
+	local mRecordsCache: { [string]: any } = {}
+
+	-- Pull everything the server already knows (no datastore requests) so
+	-- selecting a node usually shows records with no loading state
+	local function prefetchKnownRecords()
+		task.spawn(function()
+			local ok, known = pcall(function()
+				return game.ReplicatedStorage.Remotes.GetKnownNodeRecords:InvokeServer()
+			end)
+			if ok and type(known) == "table" then
+				for nodeId, records in pairs(known) do
+					local existing = mRecordsCache[nodeId]
+					-- Never downgrade a full entry to a partial one
+					if not existing or (existing.Partial and not records.Partial) then
+						mRecordsCache[nodeId] = records
+					end
+				end
+			end
+		end)
+	end
+
+	-- Cache-bust a node's records (the player just won there: their new
+	-- bests may be records, and the server dropped its caches likewise)
+	function this:InvalidateNodeRecords(nodeId: string)
+		mRecordsCache[nodeId] = nil
+	end
+
 	local function selectStatsNode(nodeId)
 		mSelectedStatsNode = nodeId
 		startStatsPlayback(nodeId)
-		pushStatsDetail(nodeId, "pending", "pending")
+		local cached = mRecordsCache[nodeId]
+		if cached and not cached.Partial then
+			-- Fully known: no loading state, no fetch
+			pushStatsDetail(nodeId, cached.Friend or {}, cached.World or {})
+			return
+		end
+		-- Partially known: show the known world records while the full
+		-- fetch (friend sweep included) runs
+		pushStatsDetail(nodeId, "pending", if cached then cached.World or {} else "pending")
 		task.spawn(function()
 			local ok, records = pcall(function()
 				return game.ReplicatedStorage.Remotes.GetNodeRecords:InvokeServer(nodeId)
 			end)
+			if ok and records then
+				mRecordsCache[nodeId] = records
+			end
 			if mSelectedStatsNode ~= nodeId then
 				return -- a different node was picked while fetching
 			end
@@ -1263,6 +1305,7 @@ function MainMenuView.new(container: Instance)
 		ModalManager:SetModal(true)
 		updateStats()
 		updateBadges()
+		prefetchKnownRecords()
 		-- Remount the tab view so the default tab re-applies on each open
 		mSession += 1
 		if mRoot then

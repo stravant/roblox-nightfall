@@ -246,6 +246,17 @@ function DataStoreService:UpdateNodeRecords(nodeId, userId, improved)
 	end
 end
 
+-- The already-cached world record for one node+stat: (value, userId) or
+-- nil, NEVER fetching - for eagerly sharing what this server happens to
+-- know without burning datastore requests
+function DataStoreService:GetCachedWorldRecord(nodeId, stat)
+	local cached = mWorldRecordCache[nodeId .. "_" .. stat]
+	if cached then
+		return cached.Value, cached.UserId
+	end
+	return nil
+end
+
 -- World record for one node+stat: (value, userId) or nil. Session-cached
 -- (the cache lives above UpdateNodeRecords, which patches it on writes).
 function DataStoreService:GetWorldRecord(nodeId, stat)

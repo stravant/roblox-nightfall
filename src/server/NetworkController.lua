@@ -356,6 +356,39 @@ function NetworkController.install(remotes)
 		return result
 	end
 
+	-- Everything the server already KNOWS about node records without fetching
+	-- anything: the player's fully assembled per-node caches, plus world
+	-- records other lookups/writes already put in the session cache. The
+	-- stats screen prefetches this so already-known records show instantly.
+	-- Entries synthesized from the world cache alone are marked Partial
+	-- (Friend records unknown): the client still fetches the full set on
+	-- selection.
+	remotes.GetKnownNodeRecords.OnServerInvoke = function(player)
+		local known = {}
+		local mine = NodeRecordsCache[player]
+		if mine then
+			for nodeId, records in pairs(mine) do
+				known[nodeId] = records
+			end
+		end
+		for nodeId in pairs(Netmap.ById) do
+			if not known[nodeId] then
+				local world = nil
+				for _, stat in pairs(DataStoreService.RecordStats) do
+					local value, userId = DataStoreService:GetCachedWorldRecord(nodeId, stat)
+					if value then
+						world = world or {}
+						world[stat] = { Value = value, Name = nameForUserId(userId) }
+					end
+				end
+				if world then
+					known[nodeId] = { World = world, Partial = true }
+				end
+			end
+		end
+		return known
+	end
+
 	-- The player's own stored winning replay for a node (recorded on the
 	-- first win), for the stats screen's animated thumbnail playback
 	remotes.GetNodeReplay.OnServerInvoke = function(player, nodeId)
