@@ -593,8 +593,8 @@ node{
 			a = part("Looks like it must have been an inside job. Just happened too quickly. The hacker had the passwords.", "Do you have any idea who's responsible?", 'b', "So what do we do?", 'b');
 			b = part("A couple ideas, but nothing definite. I'll keep woring on it. Still, as the only smart angent left, you'll have to handle the net problems.", "Actually, another agent wrote me.", 'c', "What about Dignity?", 'd');
 			c = part("Hold on, Smart's down. Who was the agent?", "His name was Dignity.", 'd');
-			d = part("If you're talking about who I think you are, that's bad news. I was training an agent named disarray a couple of months ago. He got thrown out for being the reckless and greedy loser that he is. Don't trust a word he says.", "What do we do about him?", 'e', "He asked me to do a mission.", 'e');
-			e = part("__ __ __ don't have a lot of time left. I'll start tracing disarray. Go along with his idea so I can see what he's doing. On, and, __ __ __ __.", "Close", 'end');
+			d = part("If you're talking about who I think you are, that's bad news. I was training an agent named Dignity a couple of months ago. He got thrown out for being the reckless and greedy loser that he is. Don't trust a word he says.", "What do we do about him?", 'e', "He asked me to do a mission.", 'e');
+			e = part("__ __ __ don't have a lot of time left. I'll start tracing Dignity. Go along with his idea so I can see what he's doing. On, and, __ __ __ __.", "Close", 'end');
 		};
 		Function = nil;
 	}
@@ -693,8 +693,8 @@ node{
 	Conversation = conversation{
 		User = 'superphreak';
 		Parts = {
-			main = part("Hey, I can see which script disarray's getting. It has to do with rapid sumiltaneous network communication - Floodinga huge number of nodes at once.", "Why would he want to do that?", 'a');
-			a = part("I don't know. What would disarray be doing that would affect the whole net? He'd still have to have hacked every node individually to be able to do anything.", "What's the next step?", 'b');
+			main = part("Hey, I can see which script Dignity's getting. It has to do with rapid sumiltaneous network communication - Floodinga huge number of nodes at once.", "Why would he want to do that?", 'a');
+			a = part("I don't know. What would Dignity be doing that would affect the whole net? He'd still have to have hacked every node individually to be able to do anything.", "What's the next step?", 'b');
 			b = part("Keep following him, and watch what he says. I'll keep up my trace and get back to you when I have more. L8r.", "Done", 'end');
 		};
 		Function = nil;
@@ -874,7 +874,7 @@ node{
 			main = part("Awesome job! That's how it's done!", "Thanks.", 'a');
 			a = part("You stood up for smart when everything was on the line and saved the net from complete shutdown, at least for now. I'd say that makes you an elite agent.", "You're not so bad yourself.", 'b');
 			b = part("Dignity was so arrogant that he never disguised his upload location. Once nightfall was destroyed we traced his signal back to his home. Smart agents are on their way right now to apprehend him.", "What a loser.", 'c');
-			c = part("It turns out he was working on this plan for years. All the time disarray was a smart agent, he was really just casing the network in preparation for his master plan. But that's all over now.", "So what now?", 'd');
+			c = part("It turns out he was working on this plan for years. All the time Dignity was a smart agent, he was really just casing the network in preparation for his master plan. But that's all over now.", "So what now?", 'd');
 			d = part("Well, until smart has another crisis for us to solve, take a break. You earned it. Kick back, relax, play some video games. :) cul8r.", "Who has time for video games?", 'end');
 		};
 		Function = functionEndNightfall();
@@ -910,12 +910,12 @@ node{
 	Conversation = conversation{
 		User = 'superphreak';
 		Parts = {
-			main = part("Hey, I guess you found out __ __ get the access codes for disarray's node. Good work. I'm looking into how to stall the nightfall software. Gou go get the ___ codes and then de-activate the script. But first __ __ __ ___ what I know about this jerk.", "Tell me.", 'a');
-			a = part("I'm sure disarray __ boobytrapped the node that has his access codes. I don't know __ __ __ when you access that node.", "Okay.", 'b');
+			main = part("Hey, I guess you found out __ __ get the access codes for Dignity's node. Good work. I'm looking into how to stall the nightfall software. Gou go get the ___ codes and then de-activate the script. But first __ __ __ ___ what I know about this jerk.", "Tell me.", 'a');
+			a = part("I'm sure Dignity __ boobytrapped the node that has his access codes. I don't know __ __ __ when you access that node.", "Okay.", 'b');
 			b = part("If you've got any unfinished missions, complete them to __ __ extra cash. ___ __ back to the L4 warez node and stock up on scripts.", "Got it.", 'c');
 			c = part("Dignity's tactics: I know that _______ __ coward and will use ranged scripts to keep you ___ __ distance. Be prepared to see lots of radar and sonar along with __________ _____ ___ fought. I also know he deletes memory cells as a defense, so be sure ___", "Thanks.", 'd');
 			d = part("no problem. Did all of that make sense? __ ___ ____ pretty soon there will be no turning back.", "I'm ready.", 'e');
-			e = part("Alright, I'll be off-line for a while. Good luck ______ ___ codes, and be sure __ show disarray what it means to mess with smart.", "I'll do my best.", 'end');
+			e = part("Alright, I'll be off-line for a while. Good luck ______ ___ codes, and be sure __ show Dignity what it means to mess with smart.", "I'll do my best.", 'end');
 		};
 		Function = nil;
 	}
