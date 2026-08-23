@@ -14,7 +14,10 @@ local DataStoreService = require(game.ServerScriptService.DataStoreService)
 
 local kMaxBatchSize = 200
 local kMaxDetailLength = 80
-local kSaveInterval = 30 -- seconds between persists of a live session
+-- Seconds between persists of a live session. Journeys are low-priority
+-- diagnostics sharing the universe-wide datastore request budget with the
+-- player-data saves: keep their write rate low.
+local kSaveInterval = 60
 local kMaxListedJourneys = 30
 
 local JourneyService = {}
