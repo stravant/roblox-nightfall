@@ -546,6 +546,10 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 	local mSelectionType = 'none'
 	local mSelectedCommand = nil
 	local mActionableSquares = nil
+	-- The command whose attack-from squares the combined move+attack view
+	-- advertised (see setSelectionUnit); a move-then-attack tap must execute
+	-- THIS command, not a fresh auto-pick that may differ after the move
+	local mTentativeCommandId = nil
 
 	-- The last command used by each type of unit
 	local mLastUsedCommandId = {}
@@ -633,6 +637,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		mSelection = unit
 		mSelectedCommand = nil
 		mSelectionType = 'unit'
+		mTentativeCommandId = nil
 		-- Always drop the previous selection's actionable squares here: the
 		-- rebuild below only runs for friendly, live selections, and stale
 		-- entries would let a tap act with the wrong unit/command pairing
@@ -662,6 +667,7 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 			elseif unit.MoveLeft > 0 then
 				local headX, headY = unit.Tail[1].x, unit.Tail[1].y
 				local tentativeCommandId = getUsableCommand(unit)
+				mTentativeCommandId = tentativeCommandId
 				local points, attackFrom = gameState:GetMovementAndCommandRange(unit, tentativeCommandId)
 				if not unit.Enemy then
 					mActionableSquares = {}
@@ -785,16 +791,28 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 		end
 	end
 
+	-- Whether the unit has nothing left worth doing with its commands. Checks
+	-- EVERY usable command, not just the auto-selected one: a unit whose
+	-- preferred attack has nothing in range may still have an alternative
+	-- (longer-ranged, or newly usable at this size) that does - auto-passing
+	-- it skipped real actions. Targets are judged per command type: Zero/One
+	-- act on TILES, so any square in range counts; everything else needs a
+	-- unit to aim at.
 	local function hasNoAttackTargets(unit)
-		local autoCommandId = getUsableCommand(unit)
-		if not autoCommandId then
-			return true
-		end
-		local attackTargets = gameState:GetCommandRange(unit, autoCommandId)
-		local command = unit.Definition.Commands[autoCommandId]
-		for _, tile in pairs(attackTargets) do
-			if gameState:GetUnit(tile.x, tile.y) then
-				return false
+		for _, command in pairs(unit.Definition.CommandList) do
+			if canUseCommand(unit, command) then
+				local attackTargets = gameState:GetCommandRange(unit, command.Id)
+				if command.Type == 'zero' or command.Type == 'one' then
+					if #attackTargets > 0 then
+						return false
+					end
+				else
+					for _, tile in pairs(attackTargets) do
+						if gameState:GetUnit(tile.x, tile.y) then
+							return false
+						end
+					end
+				end
 			end
 		end
 		return true
@@ -860,7 +878,10 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 				end
 			else
 				-- Attack, but need to move first (recorded as Move + Attack so
-				-- playback can replay two uniform actions)
+				-- playback can replay two uniform actions). Capture the
+				-- advertised command NOW: the move's selection re-render
+				-- clears mTentativeCommandId before the execute below.
+				local advertisedCommandId = mTentativeCommandId
 				JourneyRecorder:Record("Move", unit.Definition.Id
 					.. " " .. unit.Tail[1].x .. "," .. unit.Tail[1].y .. ">" .. action.x .. "," .. action.y)
 				doAnimatedMove(unit, action.x, action.y)
@@ -873,7 +894,11 @@ function GameView.new(gameState, controller, menu, topbar, entrySoundName)
 				if gameState:HasWon() then
 					return
 				end
-				local commandId = getUsableCommand(unit)
+				-- Execute the command the attack-from squares were computed
+				-- with: re-picking here could choose a different command
+				-- whose range doesn't cover the tapped target (the execute
+				-- then no-ops invalid and the unit gets skipped)
+				local commandId = advertisedCommandId or getUsableCommand(unit)
 				if commandId then
 					JourneyRecorder:Record("Attack", unit.Definition.Id .. " " .. commandId
 						.. " " .. unit.Tail[1].x .. "," .. unit.Tail[1].y .. ">" .. x .. "," .. y)
